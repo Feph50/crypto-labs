@@ -1,0 +1,13 @@
+========================================================================
+  WINDOWS SYSTEM SPECIFICATIONS & BENCHMARK ENVIRONMENT
+========================================================================
+OS Name: Windows 11 Pro 64-bit
+CPU: 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz (Boost to 4.60GHz)
+Cores / Threads: 8 Cores / 16 Logical Processors
+Total Physical Memory: 32 GB DDR4
+Compiler / Build: MinGW-w64 GCC 13.2 / MSVC 19.38
+Optimization Flags: -O3 -march=native
+CPU Instruction Extensions: AES-NI, AVX2, SSE4.2, PCLMULQDQ
+AES-NI Support: DETECTED (CPUID Leaf 1, ECX Bit 25 = 1)
+Power Scheme: High Performance (SCHEME_MIN)
+========================================================================

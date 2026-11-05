@@ -19,7 +19,7 @@ Dự án này là chuỗi 6 bài thực hành chuyên sâu (Labs 1–6) về M�
 | Bài Lab | Đề tài & Mục tiêu | Thư viện / Ràng buộc | Trạng thái hiện tại |
 | :--- | :--- | :--- | :---: |
 | **Lab 1** | **Mã hóa đối xứng với Crypto++**<br>Hỗ trợ 8 mode AES, Misuse prevention, NIST KATs, Benchmark $N=30$. | **Chỉ dùng Crypto++** | 🟢 **Hoàn thành 100%** (Full code + Test + Bench + GUI) |
-| **Lab 2** | **AES-128 C++ thuần (CTR Mode)**<br>FIPS-197 AES thuần không thư viện ngoài, CTR mode, S-box bảng tra & tính toán, Bonus AES-192/256 & AES-NI. | **C++ STL thuần túy** | 🟢 **Đã tích hợp mã nguồn & Verified Binary** |
+| **Lab 2** | **AES-128 C++ thuần (CTR Mode)**<br>FIPS-197 AES thuần không thư viện ngoài, CTR mode, S-box bảng tra & tính toán, Bonus AES-192/256 & AES-NI. | **C++ STL thuần túy** | 🟢 **Hoàn thành 100%** (18/18 KATs + Bench + Bonus + GUI) |
 | **Lab 3** | **RSA-OAEP & Hybrid Encryption**<br>RSA-3072/4096 OAEP SHA-256 + Mã hóa phong bì lai AES-256-GCM (Envelope). | Crypto++ / OpenSSL | 🟡 **Khung cấu trúc & Module nền tảng sẵn sàng** |
 | **Lab 4** | **Hashing Suite, PKI & Thực nghiệm tấn công**<br>SHA-2/3/SHAKE streaming, X.509, HTTPS, MD5 Collision (`hashclash`), Length-extension (`hashpump`). | Crypto++ / OpenSSL | ⚪ **Kế hoạch Tuần 3-4** |
 | **Lab 5** | **Chữ ký số cổ điển (ECDSA, RSA-PSS)**<br>ECDSA P-256 (RFC 6979) + RSA-PSS-3072, detached signatures, batch verify. | Crypto++ / OpenSSL | ⚪ **Kế hoạch Tuần 4-5** |
@@ -62,114 +62,71 @@ pip3 install matplotlib pandas
 
 Dự án hỗ trợ chuẩn **CMake Out-of-Source Build** theo đúng đặc tả:
 
-### A. Biên dịch trên Windows (MSVC)
+### A. Biên dịch trên Windows (MSVC / MinGW64)
 ```powershell
-# Biên dịch toàn bộ
-mkdir build_win && cd build_win
+# Biên dịch toàn bộ các lab
+mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . --config Release
 
-# Hoặc biên dịch độc lập Lab 1:
-cd lab1
-mkdir build_msvc && cd build_msvc
-cmake .. -G "Visual Studio 17 2022" -A x64
-cmake --build . --config Release
+# Hoặc chạy trực tiếp binary độc lập trong release/:
+.\lab1\release\windows\aestool.exe --help
+.\lab2\release\windows\aestool.exe --help
 ```
 
-### B. Biên dịch trên Windows (MinGW64)
+### B. Khởi chạy Giao diện Trực quan (PyQt6 GUI)
 ```powershell
-cd lab1
-mkdir build_gcc && cd build_gcc
-cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-cmake --build .
-```
-
-### C. Biên dịch trên Linux (Ubuntu LTS)
-```bash
-cd lab1
-mkdir build_linux && cd build_linux
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build .
-```
-
----
-
-## 4. Chuẩn Giao diện dòng lệnh (CLI Uniform Standard)
-
-Mọi công cụ đều tuân theo chuẩn dòng lệnh thống nhất:
-
-```bash
-aestool <command> [--in FILE | --text "..."] [--out FILE] [--key FILE | --key-hex HEX]
-                  [--iv HEX] [--nonce HEX] [--mode MODE] [--aead] [--aad FILE]
-                  [--encode hex|base64|raw] [--kat vectors.json] [--verbose]
-```
-
-### Ví dụ thao tác thực tế với `aestool`:
-
-```powershell
-# 1. Sinh khóa 256-bit an toàn (CSPRNG)
-./aestool keygen --bits 256 --out key.bin
-
-# 2. Mã hóa AES-256-GCM kèm xác thực AEAD và tự sinh IV
-./aestool encrypt --mode gcm --aead --key key.bin --text "Tin nhan bi mat" --out ct.bin --meta meta.json
-
-# 3. Giải mã dữ liệu
-./aestool decrypt --mode gcm --aead --key key.bin --in ct.bin --meta meta.json
-
-# 4. Chạy kiểm chứng toàn bộ vector NIST Known Answer Tests
-./aestool --kat kat/vectors.json
-
-# 5. Đo hiệu năng chuẩn thống kê N=30 lượt
-./aestool bench --runs 30 --out bench_results.csv
-```
-
----
-
-## 5. Báo cáo Thực thi Tuần 1 (Week 1 Milestones)
-
-Trong Tuần 1, toàn bộ các mục tiêu cốt lõi của đề tài đã được triển khai và nghiệm thu thành công:
-
-### ✅ Kết quả Kiểm chứng NIST KAT (Known Answer Tests)
-Chạy bộ 9 test vector chính thức từ **NIST SP 800-38A, GCM McGrew, SP 800-38C (CCM) và IEEE 1619 (XTS)**:
-```text
-[PASS] SP800-38A F.1.1 ECB-AES128 (4 blocks)
-[PASS] SP800-38A F.2.1 CBC-AES128
-[PASS] SP800-38A F.3.13 CFB128-AES128
-[PASS] SP800-38A F.4.1 OFB-AES128
-[PASS] SP800-38A F.5.1 CTR-AES128
-[PASS] GCM Test Case 2 (AES-128, 1 block zero)
-[PASS] GCM Test Case 4 (AES-128, AAD)
-[PASS] SP800-38C Appendix C Example 1 (CCM, Tlen=4)
-[PASS] IEEE 1619 XTS-AES128 vector 1
----- KAT summary: 9 passed, 0 failed, 9 total (100% PASS)
-```
-
-### ✅ Nghiệm thu Vệ sinh bảo mật & Kiểm thử âm (Misuse Prevention / Fail-Closed)
-- **Chặn và Cảnh báo ECB**: Chặn file $> 16\text{ KiB}$ trừ khi có cờ `--allow-ecb`.
-- **Chống tái sử dụng Nonce (Catastrophic Nonce Reuse)**: Phát hiện và hủy thao tác ngay lập tức khi phát hiện cặp (Key, Nonce) đã từng xuất hiện.
-- **Bắt buộc cờ `--aead`**: Ngăn ngừa giải mã thiếu xác thực trong mode GCM/CCM.
-- **Fail-closed**: Mọi dữ liệu hỏng, sai IV length, sai Key length đều ngắt ngay lập tức với exit code $\ne 0$, không rò rỉ dữ liệu thô.
-
-### ✅ Đo đạc Hiệu năng thực tế trên CPU Intel Core i7-11800H ($N=30$ lượt độc lập)
-*Hệ điều hành: Windows 11 Pro 64-bit | RAM: 32 GB | Tập lệnh tăng tốc: Intel AES-NI*
-
-- **Chế độ dòng (CTR Mode)**: Thông lượng đạt **$1.300\text{ MB/s} - 2.013\text{ MB/s}$**.
-- **Chế độ xác thực (GCM Mode)**: Thông lượng đạt **$1.135\text{ MB/s} - 1.317\text{ MB/s}$**.
-- **Chế độ khối song song (ECB/CBC giải mã)**: Đạt đỉnh thông lượng lên tới **$2.461\text{ MB/s}$**.
-- Toàn bộ biểu đồ so sánh chi tiết đã được xuất tự động vào thư mục `lab1/output/windows/plots/`.
-
-### ✅ Giao diện trực quan GUI (PyQt6) — Đạt chuẩn Bonus (+5 điểm)
-Chạy ứng dụng GUI đầy đủ tính năng:
-```powershell
+# Giao diện Lab 1 (Crypto++ Multi-mode AES)
 python lab1/gui/aestool_gui.py
+
+# Giao diện Lab 2 (Pure C++ AES-128 CTR)
+python lab2/gui/aestool_gui.py
 ```
 
 ---
 
-## 6. Kế hoạch Tuần tiếp theo (Week 2 Roadmap)
-- [x] **Tuần 1**: Khởi tạo repo, triển khai và hoàn tất trọn vẹn Lab 1 (CLI, KAT, Benchmarks, GUI, Report).
-- [ ] **Tuần 2**: Nghiệm thu và hoàn thiện báo cáo Lab 2 (AES-128 C++ thuần, đối chiếu OpenSSL, đo lường S-box bảng tra vs tính toán).
-- [ ] **Tuần 3**: Hoàn thiện công cụ mã hóa lai Lab 3 (`rsatool`: RSA-OAEP + AES-GCM envelope).
+## 4. Báo cáo Thực thi Tuần 1 (Week 1 Milestones)
+
+- **9/9 NIST KATs Pass**: ECB, CBC, CFB, OFB, CTR, GCM (1 & 2), CCM, XTS.
+- **Fail-closed & Misuse Prevention**: Giới hạn ECB $16\text{ KiB}$, phát hiện và triệt tiêu tái sử dụng Nonce, bắt buộc cờ `--aead`.
+- **Benchmark $N=30$**: Đo đạc trên CPU Intel Core i7-11800H @ 2.30GHz, xuất 9 biểu đồ PNG tại `lab1/output/windows/plots/`.
+- Báo cáo chi tiết: [`docs/WEEK1_SUMMARY_REPORT.md`](file:///D:/MMH_Final_Labs/Final_Lab%20Tasks/NT219-Crypto-Labs/docs/WEEK1_SUMMARY_REPORT.md).
+
+---
+
+## 5. Báo cáo Thực thi Tuần 2 (Week 2 Milestones — Lab 2)
+
+### ✅ Lõi AES-128 C++ thuần & Chế độ Counter (FIPS-197 & NIST SP 800-38A)
+- Tự cài đặt 100% bằng C++17 thuần: `KeyExpansion`, `SubBytes`, `ShiftRows`, `MixColumns`, `AddRoundKey`.
+- Không sử dụng thư viện mật mã ngoại vi; đối chiếu chéo độc lập với OpenSSL cho kết quả trùng khớp hoàn hảo (0 bit sai khác).
+- Chế độ CTR: Bộ đếm Big-Endian 128 bit tăng tuần tự với cơ chế chống tràn, không dùng padding, xử lý chính xác các khối dữ liệu lẻ.
+
+### ✅ 18/18 NIST Known Answer Tests (KAT) Hoàn thành
+- Toàn bộ vector kiểm thử FIPS-197 (Appendix B & C) và NIST SP 800-38A (CTR-AES128) đạt 100% PASS.
+- Bằng chứng thực nghiệm: [`lab2/Output/windows/kat/kat_results.txt`](file:///D:/MMH_Final_Labs/Final_Lab%20Tasks/NT219-Crypto-Labs/lab2/Output/windows/kat/kat_results.txt).
+
+### ✅ Kiểm thử Âm tính & Thực nghiệm Tấn công Malleability
+- **Fail-closed:** Bắt lỗi độ dài khóa sai (< 16 byte), IV sai, file không tồn tại với exit code tương ứng (2, 3), không rò rỉ dữ liệu.
+- **Tấn công tính uốn dẻo (Bit-flipping):** Lật bit byte đầu tiên trên bản mã làm thay đổi trực tiếp ký tự tương ứng trên bản rõ (`'A'` $\to$ `'a'`) mà không bị phát hiện, chứng minh tính cấp thiết của cơ chế MAC / AEAD.
+- Bằng chứng thực nghiệm: [`lab2/Output/windows/negative_tests/negative_results.txt`](file:///D:/MMH_Final_Labs/Final_Lab%20Tasks/NT219-Crypto-Labs/lab2/Output/windows/negative_tests/negative_results.txt).
+
+### ✅ Ma trận Hiệu năng Thực tế trên CPU Intel Core i7-11800H ($N=30$, CI 95%)
+- Dữ liệu CSV: [`lab2/Output/windows/bench/bench_lab2_windows.csv`](file:///D:/MMH_Final_Labs/Final_Lab%20Tasks/NT219-Crypto-Labs/lab2/Output/windows/bench/bench_lab2_windows.csv).
+- **Table S-Box vs Computed S-Box:** Table đạt **$27.36\text{ MB/s}$**, Computed đạt **$1.09\text{ MB/s}$** (chậm hơn ~25x do chi phí tính toán nghịch đảo trường Galois tại chỗ).
+- **Ảnh hưởng độ dài khóa:** AES-128 ($27.36\text{ MB/s}$) $\to$ AES-192 ($21.66\text{ MB/s}$) $\to$ AES-256 ($18.68\text{ MB/s}$), phản ánh chính xác quy luật tỷ lệ nghịch với số vòng biến đổi (10 : 12 : 14).
+- Biểu đồ phân tích lưu tại: `lab2/Output/windows/plots/`.
+
+### ✅ Tính năng Thưởng (Bonus Features — +15 điểm)
+- **Bonus A (+10 điểm):** Hỗ trợ đầy đủ AES-192 (12 vòng) và AES-256 (14 vòng) với lịch khóa mở rộng chuẩn FIPS-197.
+- **Bonus C (+5 điểm):** Nhận diện thời gian thực tập lệnh tăng tốc phần cứng AES-NI qua CPUID Leaf 1 (ECX bit 25).
+- Báo cáo học thuật 8 phần toàn diện: [`lab2/docs/lab2-main-report.md`](file:///D:/MMH_Final_Labs/Final_Lab%20Tasks/NT219-Crypto-Labs/lab2/docs/lab2-main-report.md).
+
+---
+
+## 6. Kế hoạch Tuần tiếp theo (Roadmap)
+- [x] **Tuần 1**: Khởi tạo repo, triển khai và hoàn tất trọn vẹn Lab 1 (Crypto++ Multi-mode AES).
+- [x] **Tuần 2**: Triển khai và nghiệm thu toàn diện Lab 2 (Pure C++ AES-128 CTR, 18 KATs, Benchmark $N=30$, Bonus A & C).
+- [ ] **Tuần 3**: Hoàn thiện công cụ mã hóa lai Lab 3 (`rsatool`: RSA-3072/4096 OAEP SHA-256 + AES-256-GCM envelope).
 - [ ] **Tuần 4**: Bộ công cụ băm Lab 4 (`hashtool`), demo va chạm MD5 (`hashclash`) và Length-extension attack.
 - [ ] **Tuần 5**: Chữ ký số cổ điển Lab 5 (`sigtool`: ECDSA deterministic RFC 6979 + RSA-PSS).
 - [ ] **Tuần 6**: Mật mã hậu lượng tử Lab 6 (`pqtool`: ML-DSA + ML-KEM), tổng hợp báo cáo 60 trang và đóng gói `MSV.All6labs.rar`.

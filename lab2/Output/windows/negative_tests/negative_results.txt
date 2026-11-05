@@ -1,0 +1,37 @@
+================================================================================
+  NT219 - LAB 2: AUTOMATED NEGATIVE & MALFORMED INPUT TEST SUITE
+  Student: Feph50 (Trần Lâm Nguyên) | OS: Windows 11 Pro 64-bit
+================================================================================
+
+[TEST 1] Invalid Key Length (10 bytes instead of 16)
+  Result Exit Code: 2 (Expected: 2)
+  Stderr output: Error: Key/IV Error
+  Fail-closed verified: PASS
+
+[TEST 2] Invalid IV Length (8 bytes instead of 16)
+  Result Exit Code: 2 (Expected: 2)
+  Stderr output: Error: Key/IV Error
+  Fail-closed verified: PASS
+
+[TEST 3] Decrypt with Wrong Key
+  Recovered raw bytes: b'\x11\x1d\x93\xa5\xfe\xcc>\x1d\xbb\x08LD\xcej\xf0^\x0cV,m\xda\x91\x0ep'
+  Plaintext corrupt/different: PASS (Output completely scrambled)
+
+[TEST 4] Decrypt with Wrong IV
+  Recovered raw bytes: b'\xbc$\xc9\x0e\xae\x03\x92\xaf\xfd\x96Ox\xdbV\x19\x80\xdb\xb8\x13=\x86x\xf3>'
+  Plaintext corrupt/different: PASS (Keystream mismatch, output scrambled)
+
+[TEST 5] Bit-Flipping Malleability Attack (CTR Tampering Proof)
+  Original Plaintext: ATTACK_AT_DAWN_123456789
+  Decrypted Tampered: aTTACK_AT_DAWN_123456789
+  Malleability success: PASS (Bit flip propagates directly to plaintext, no integrity check)
+  Security conclusion: CTR provides confidentiality ONLY. Authenticity/integrity requires HMAC or GCM AEAD.
+
+[TEST 6] Non-existent input file
+  Result Exit Code: 3 (Expected: 3)
+  Stderr output: Error: I/O Error
+  Fail-closed verified: PASS
+
+================================================================================
+  SUMMARY: 6/6 NEGATIVE & SECURITY PROPERTIES VERIFIED SUCCESSFULLY
+================================================================================

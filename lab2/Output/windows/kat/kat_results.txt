@@ -1,0 +1,20 @@
+=== Running Known Answer Tests (KAT) ===
+  [PASS] Block: 
+  [PASS] Block: 
+  [PASS] Block: 
+  [PASS] Block: 
+  [PASS] Block: 
+  [PASS] Block: 
+  [PASS] Block: 
+  [PASS] CTR:   
+  [PASS] CTR:   
+  [PASS] CTR:   
+  [PASS] CTR:   
+  [PASS] CTR:   
+  [PASS] CTR:   
+  [PASS] CTR:   
+  [PASS] CTR:   
+  [PASS] CTR:   
+  [PASS] CTR:   
+  [PASS] CTR:   
+=== KAT Result: 18/18 Passed ===
