@@ -20,8 +20,8 @@
 - **Giảng viên hướng dẫn / TA:** Giảng viên Bộ môn An toàn Thông tin
 - **Mã nguồn / Archive báo cáo:** `Feph50.All6labs.rar`
 - **Thời gian hoàn thành:** Học kỳ I - Năm học 2026–2027
-- **Tập tin báo cáo Markdown:** [lab1-main-report.md](https://github.com/Feph50/crypto-labs/tree/main/lab1/docs/lab1-main-report.md)
-- **Tập tin báo cáo LaTeX:** [report.tex](https://github.com/Feph50/crypto-labs/tree/main/lab1/docs/report.tex)
+- **Tập tin báo cáo Markdown:** [lab1-main-report.md](../docs/lab1-main-report.md)
+- **Tập tin báo cáo LaTeX:** [report.tex](../docs/report.tex)
 
 ---
 
@@ -38,13 +38,13 @@
 ## KHAI BÁO HỖ TRỢ CÔNG CỤ VÀ TRÍ TUỆ NHÂN TẠO (AI)
 
 - **Công cụ hỗ trợ:** Trình biên dịch GCC 13.x (MinGW-w64), Microsoft Visual C++ 2022/2026 (MSVC x64), Clang 14+, CMake 3.20+, Python 3.10 (Matplotlib, Pandas, NumPy để vẽ biểu đồ và tổng hợp số liệu thực nghiệm), Trợ lý lập trình AI (được dùng để hỗ trợ rà soát văn phong kỹ thuật, tối ưu hóa định dạng Markdown/LaTeX và đối chiếu các mục tiêu kiểm định chất lượng báo cáo).
-- **Phạm vi sử dụng:** Toàn bộ thuật toán lõi trong [aescore.cpp](https://github.com/Feph50/crypto-labs/tree/main/lab1/src/aescore.cpp), kiến trúc CLI trong [main.cpp](https://github.com/Feph50/crypto-labs/tree/main/lab1/src/main.cpp), bộ vector kiểm thử JSON và toàn bộ dữ liệu đo benchmark thực tế trên cả hai hệ điều hành Windows và Linux đều được chạy thực nghiệm trên phần cứng máy tính của tác giả. Tác giả đã kiểm tra, đối chiếu và chịu trách nhiệm toàn bộ về tính chính xác của các phân tích toán học, mật mã học và số liệu thực nghiệm trong báo cáo.
+- **Phạm vi sử dụng:** Toàn bộ thuật toán lõi trong [aescore.cpp](../src/aescore.cpp), kiến trúc CLI trong [main.cpp](../src/main.cpp), bộ vector kiểm thử JSON và toàn bộ dữ liệu đo benchmark thực tế trên cả hai hệ điều hành Windows và Linux đều được chạy thực nghiệm trên phần cứng máy tính của tác giả. Tác giả đã kiểm tra, đối chiếu và chịu trách nhiệm toàn bộ về tính chính xác của các phân tích toán học, mật mã học và số liệu thực nghiệm trong báo cáo.
 
 ---
 
 ## BẢNG TỰ ĐÁNH GIÁ ĐIỂM SỐ (RUBRIC SELF-ASSESSMENT)
 
-Căn cứ theo thang điểm 100 quy định trong [require.md](https://github.com/Feph50/crypto-labs/tree/main/lab1/require.md):
+Căn cứ theo thang điểm 100 quy định trong [require.md](../require.md):
 
 | STT | Thành phần đánh giá | Điểm tối đa | Tự đánh giá | Mục chứng minh trong báo cáo |
 | :---: | :--- | :---: | :---: | :--- |
@@ -130,7 +130,7 @@ Sau khi hoàn thành bài lab, sinh viên làm chủ 6 chuẩn đầu ra cốt l
 6. **Nhận diện và phòng chống lỗi dùng sai mật mã (Misuse Resistance):** Hiện thực hóa các chốt chặn an toàn nhằm tự động phát hiện và ngăn chặn việc tái sử dụng Nonce, lạm dụng chế độ nguy hiểm (ECB), và triệt để tuân thủ nguyên lý Thất bại An toàn (*Fail-Closed*).
 
 ## 1.2. Ràng buộc kỹ thuật nghiêm ngặt
-Tuân thủ tuyệt đối các yêu cầu ràng buộc trong [require.md](https://github.com/Feph50/crypto-labs/tree/main/lab1/require.md):
+Tuân thủ tuyệt đối các yêu cầu ràng buộc trong [require.md](../require.md):
 - **Nguyên thủy mật mã:** Bắt buộc sử dụng duy nhất thư viện **Crypto++ (phiên bản 8.9+)** cho toàn bộ các nguyên thủy mã hóa đối xứng, hàm băm, bộ sinh số ngẫu nhiên mật mã. Tuyệt đối không dùng OpenSSL, libsodium hoặc thư viện khác để thực hiện logic mật mã của Lab.
 - **Ngôn ngữ chuẩn:** C++17 tiêu chuẩn (sử dụng STL cho cấu trúc dữ liệu, quản lý bộ nhớ).
 - **Hệ thống xây dựng:** Bắt buộc dùng **CMake (tối thiểu 3.20)**, hỗ trợ biên dịch độc lập ngoài cây thư mục nguồn (*out-of-source build*).
@@ -150,7 +150,7 @@ Tuân thủ tuyệt đối các yêu cầu ràng buộc trong [require.md](https
 # 2. Thiết kế Kiến trúc và Cài đặt Hệ thống
 
 ## 2.1. Kiến trúc phân tầng phần mềm
-Chương trình [aestool](https://github.com/Feph50/crypto-labs/tree/main/lab1/src/main.cpp) được tổ chức theo mô hình kiến trúc phân tầng dạng module hóa cao (Decoupled Modular Architecture), phân tách triệt để giữa tầng giao diện người dùng CLI, tầng quản lý trạng thái bảo mật, tầng lõi mã hóa và tầng thư viện phần cứng.
+Chương trình [aestool](../src/main.cpp) được tổ chức theo mô hình kiến trúc phân tầng dạng module hóa cao (Decoupled Modular Architecture), phân tách triệt để giữa tầng giao diện người dùng CLI, tầng quản lý trạng thái bảo mật, tầng lõi mã hóa và tầng thư viện phần cứng.
 
 ```mermaid
 flowchart TD
@@ -206,7 +206,7 @@ flowchart TD
     Fail_Closed -.->|Ngăn chặn ghi file nếu giải mã lỗi| FileSystem
 ```
 
-- **Tính độc lập của thư viện lõi:** Logic mã hóa/giải mã được đóng gói trọn vẹn trong module tĩnh [`aescore`](https://github.com/Feph50/crypto-labs/tree/main/lab1/src/aescore.hpp), không phụ thuộc vào `main.cpp`. Cấu trúc này cho phép xuất lõi thành thư viện tĩnh (`.lib` / `.a`) hoặc thư viện động (`.dll` / `.so`), phục vụ trực tiếp cho việc xây dựng GUI mở rộng.
+- **Tính độc lập của thư viện lõi:** Logic mã hóa/giải mã được đóng gói trọn vẹn trong module tĩnh [`aescore`](../src/aescore.hpp), không phụ thuộc vào `main.cpp`. Cấu trúc này cho phép xuất lõi thành thư viện tĩnh (`.lib` / `.a`) hoặc thư viện động (`.dll` / `.so`), phục vụ trực tiếp cho việc xây dựng GUI mở rộng.
 
 ## 2.2. Cấu trúc dự án và hệ thống Build CMake đa nền tảng
 Dự án tuân thủ cấu trúc thư mục quy chuẩn công nghiệp:
@@ -239,7 +239,7 @@ lab1/
     └── lab1-main-report.md     # Toàn văn báo cáo khoa học chi tiết (Tập tin hiện tại)
 ```
 
-**Chiến lược cấu hình CMake ([CMakeLists.txt](https://github.com/Feph50/crypto-labs/tree/main/lab1/CMakeLists.txt)):**
+**Chiến lược cấu hình CMake ([CMakeLists.txt](../CMakeLists.txt)):**
 - Thiết lập tiêu chuẩn bắt buộc: `set(CMAKE_CXX_STANDARD 17)`, `set(CMAKE_CXX_STANDARD_REQUIRED ON)`.
 - Cờ tối ưu hóa và cảnh báo nghiêm ngặt:
   - Trên MSVC: `/W4 /permissive- /utf-8` (đảm bảo biên dịch chính xác mã hóa ký tự tiếng Việt có dấu).
@@ -334,7 +334,7 @@ if (o.mode == "ecb") {
 - Người dùng chỉ có thể thực hiện nếu bổ sung cờ tường minh `--allow-ecb` (dành riêng cho mục đích nghiên cứu, học tập).
 
 ## 3.3. Ràng buộc và xác thực độ dài Khóa và IV/Nonce theo từng chế độ
-Hệ thống cài đặt hàm kiểm tra xác thực nghiêm ngặt [`validate(const Opts& o)`](https://github.com/Feph50/crypto-labs/tree/main/lab1/src/aescore.cpp#L126-L132) trước khi bất kỳ thao tác mật mã nào được thực thi:
+Hệ thống cài đặt hàm kiểm tra xác thực nghiêm ngặt [`validate(const Opts& o)`](../src/aescore.cpp#L126-L132) trước khi bất kỳ thao tác mật mã nào được thực thi:
 
 | Chế độ (Mode) | Độ dài Khóa bắt buộc | Độ dài IV/Nonce chuẩn | Hành vi khi sai quy chuẩn |
 | :--- | :--- | :--- | :--- |
@@ -394,7 +394,7 @@ Hệ thống tuân thủ nguyên lý bảo mật phần mềm cốt lõi: **Khi 
 
 ## 4.2. Cài đặt và vận hành KAT Runner tự động
 Hệ thống tích hợp trực tiếp cờ lệnh `--kat <vectors.json>` trong `main.cpp`. Trình thực thi:
-1. Đọc và phân tích cú pháp tệp tin JSON bằng hàm phân tích cú pháp tối giản tích hợp sẵn [`parseJsonObjects()`](https://github.com/Feph50/crypto-labs/tree/main/lab1/src/aescore.cpp#L292-L331).
+1. Đọc và phân tích cú pháp tệp tin JSON bằng hàm phân tích cú pháp tối giản tích hợp sẵn [`parseJsonObjects()`](../src/aescore.cpp#L292-L331).
 2. Chuyển đổi các trường chuỗi Hex thành mảng byte nhị phân.
 3. Thiết lập cờ `pkcs = false` (vì các vector tiêu chuẩn NIST không áp dụng padding mà làm việc trên độ dài khối chính xác).
 4. Thực thi song song cả hai chiều: Mã hóa kiểm tra Ciphertext + Tag; Giải mã kiểm tra đối sánh ngược lại Plaintext.
@@ -431,21 +431,21 @@ Kiểm thử âm giữ vai trò sống còn trong kiểm định phần mềm an
 | **Lạm dụng ECB > 16 KiB** | Mã hóa file 20,000 bytes bằng ECB | Chặn đứng, yêu cầu cờ bypass | `ECB blocked for inputs > 16 KiB` | `1 (EXIT_USAGE)` |
 | **Dữ liệu Hex bị hư hỏng** | Truyền `--key-hex ZZ` | Phát hiện ký tự phi hex | `invalid hex: bad character` | `1 (EXIT_USAGE)` |
 
-Toàn bộ các ca kiểm thử âm trên đều được tự động hóa thông qua kịch bản kiểm thử tích hợp [`tests/cli_negative.cmake`](https://github.com/Feph50/crypto-labs/tree/main/lab1/tests/cli_negative.cmake) và bộ kiểm thử đơn vị [`tests/test_core.cpp`]( https://github.com/Feph50/crypto-labs/tree/main/lab1/tests/test_core.cpp).
+Toàn bộ các ca kiểm thử âm trên đều được tự động hóa thông qua kịch bản kiểm thử tích hợp [`tests/cli_negative.cmake`](../tests/cli_negative.cmake) và bộ kiểm thử đơn vị [`tests/test_core.cpp`]( ../tests/test_core.cpp).
 
 ## 4.4. Kiểm thử tự động đơn vị và tích hợp với Catch2 & CTest
 Hệ thống tích hợp 3 bộ kiểm thử độc lập trong cơ chế `ctest`:
-1. `unit_tests`: Thực thi [test_core.cpp]( https://github.com/Feph50/crypto-labs/tree/main/lab1/tests/test_core.cpp) với 8 ca kiểm thử Catch2 chuyên sâu: kiểm thử Roundtrip 8 mode, kiểm thử sai khóa, kiểm thử sai IV, kiểm thử tấn công Bit-flipping trên CTR, kiểm thử toàn vẹn AEAD, kiểm thử ràng buộc độ dài khóa/IV, kiểm thử giải mã file CBC bị cắt ngắn (*truncated ciphertext*), kiểm thử bộ phân tích JSON và kiểm thử Nonce registry.
+1. `unit_tests`: Thực thi [test_core.cpp]( ../tests/test_core.cpp) với 8 ca kiểm thử Catch2 chuyên sâu: kiểm thử Roundtrip 8 mode, kiểm thử sai khóa, kiểm thử sai IV, kiểm thử tấn công Bit-flipping trên CTR, kiểm thử toàn vẹn AEAD, kiểm thử ràng buộc độ dài khóa/IV, kiểm thử giải mã file CBC bị cắt ngắn (*truncated ciphertext*), kiểm thử bộ phân tích JSON và kiểm thử Nonce registry.
 2. `nist_kat`: Thực thi tự động `aestool --kat vectors.json`.
-3. `cli_negative`: Thực thi [cli_negative.cmake]( https://github.com/Feph50/crypto-labs/tree/main/lab1/tests/cli_negative.cmake) ở cấp độ tiến trình CLI thực tế.
+3. `cli_negative`: Thực thi [cli_negative.cmake]( ../tests/cli_negative.cmake) ở cấp độ tiến trình CLI thực tế.
 
 ## 4.5. Minh chứng thực nghiệm (Logs thực tế trên Windows và Linux)
 Dưới đây là biên bản trích xuất trực tiếp từ các tệp log kiểm thử trong thư mục `output/`:
 
 ### Biên bản kiểm thử CTest trên Windows 10 (Trình biên dịch MinGW-w64 GCC):
-*Trích lục từ [output/windows/test_windows_gcc.txt]( https://github.com/Feph50/crypto-labs/tree/main/lab1/output/windows/test_windows_gcc.txt):*
+*Trích lục từ [output/windows/test_windows_gcc.txt]( ../output/windows/test_windows_gcc.txt):*
 ```
-Test project https://github.com/Feph50/crypto-labs/tree/main/lab1/build_windows_gcc
+Test project ../build_windows_gcc
     Start 1: unit_tests
 1/3 Test #1: unit_tests .......................   Passed    0.05 sec
     Start 2: nist_kat
@@ -458,7 +458,7 @@ Total Test time (real) =   0.28 sec
 ```
 
 ### Biên bản kiểm thử CTest trên Linux (Ubuntu 22.04 LTS GCC):
-*Trích lục từ [output/ubuntu/test_ubuntu_gcc.txt]( https://github.com/Feph50/crypto-labs/tree/main/lab1/output/ubuntu/test_ubuntu_gcc.txt):*
+*Trích lục từ [output/ubuntu/test_ubuntu_gcc.txt]( ../output/ubuntu/test_ubuntu_gcc.txt):*
 ```
 Test project /home/dell/home-crypto/crypto-labs/lab1/build_ubuntu_gcc
     Start 1: unit_tests
@@ -496,7 +496,7 @@ Toàn bộ dữ liệu đo lường hiệu năng trong bài báo cáo này đư�
 | **Trình biên dịch Linux** | GCC 11.4.0 (`-O3 -DNDEBUG`) và Clang 14.0.0 |
 
 ## 5.2. Giao thức đo lường chuẩn xác (Measurement Protocol)
-Để loại trừ hiện tượng nhiễu do hệ điều hành, cơ chế đo đạc tuân thủ quy trình nghiêm ngặt quy định trong [require.md]( https://github.com/Feph50/crypto-labs/tree/main/lab1/require.md):
+Để loại trừ hiện tượng nhiễu do hệ điều hành, cơ chế đo đạc tuân thủ quy trình nghiêm ngặt quy định trong [require.md]( ../require.md):
 1. **Giai đoạn khởi động (Warm-up Phase):** Trước khi bấm giờ, hệ thống thực hiện mã hóa liên tục dữ liệu mẫu trong **1.5 giây**. Mục đích nhằm đưa CPU thoát khỏi trạng thái tiết kiệm điện năng (C-states), ổn định xung nhịp Turbo Boost cao nhất và nạp sẵn mã lệnh vào bộ nhớ đệm L1 Instruction Cache.
 2. **Kích thước payload thử nghiệm:** Khảo sát đầy đủ 6 mốc kích thước đại diện cho các kịch bản thực tế:
    - **1 KB (1,024 bytes):** Đại diện cho các gói tin mạng nhỏ, phiên TLS handshake, token xác thực JWT.
@@ -522,7 +522,7 @@ Với tập dữ liệu gồm $N$ mẫu đo thời gian thực thi:
   $$\text{Throughput (MB/s)} = \frac{\text{Payload Size (Bytes)}}{\text{Mean Latency (Seconds)} \times 10^6}$$
 
 ## 5.4. Kết quả thực nghiệm: Thông lượng (Throughput) và Độ trễ (Latency)
-Dưới đây là bảng trích xuất số liệu thực nghiệm thực tế từ [bench_windows_gcc.csv]( https://github.com/Feph50/crypto-labs/tree/main/lab1/output/windows/benchmarks/bench_windows_gcc.csv) và [bench_ubuntu_gcc.csv]( https://github.com/Feph50/crypto-labs/tree/main/lab1/output/ubuntu/benchmarks/bench_ubuntu_gcc.csv) tại kích thước payload tiêu chuẩn **1 MB (1,048,576 bytes)**:
+Dưới đây là bảng trích xuất số liệu thực nghiệm thực tế từ [bench_windows_gcc.csv]( ../output/windows/benchmarks/bench_windows_gcc.csv) và [bench_ubuntu_gcc.csv]( ../output/ubuntu/benchmarks/bench_ubuntu_gcc.csv) tại kích thước payload tiêu chuẩn **1 MB (1,048,576 bytes)**:
 
 ### Bảng 3: So sánh Thông lượng và Độ trễ giữa Windows và Ubuntu tại Payload 1 MB (Mean ± CI95)
 | Chế độ | Chiều | Thông lượng Windows (MB/s) | Độ trễ Windows (µs/op) | Thông lượng Ubuntu (MB/s) | Độ trễ Ubuntu (µs/op) | Tỷ lệ Win/Ubuntu | Ý nghĩa thống kê |
@@ -550,24 +550,24 @@ Dưới đây là bảng trích xuất số liệu thực nghiệm thực tế t
 
 ## 5.5. Phân tích 4 so sánh cốt lõi bắt buộc
 
-Nhằm làm sáng tỏ toàn diện đặc tính kỹ thuật của các chế độ AES theo quy định trong [require.md]( https://github.com/Feph50/crypto-labs/tree/main/lab1/require.md), phần này phân tích sâu sắc 4 bài toán so sánh nền tảng, kết hợp các biểu đồ phân tích chuyên biệt và dữ liệu thống kê hình học từ thư mục [output/compare/mode_cmp/]( https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/mode_cmp/).
+Nhằm làm sáng tỏ toàn diện đặc tính kỹ thuật của các chế độ AES theo quy định trong [require.md]( ../require.md), phần này phân tích sâu sắc 4 bài toán so sánh nền tảng, kết hợp các biểu đồ phân tích chuyên biệt và dữ liệu thống kê hình học từ thư mục [output/compare/mode_cmp/]( ../output/compare/mode_cmp/).
 
 ### 5.5.1. So sánh đa nền tảng: Windows vs. Linux (Ubuntu)
 
-![So sánh Thông lượng 1MB giữa Windows và Ubuntu](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/compare_bars_1MB.png)
+![So sánh Thông lượng 1MB giữa Windows và Ubuntu](../output/compare/compare_bars_1MB.png)
 *Hình 1: Biểu đồ cột so sánh trực tiếp Thông lượng (Throughput) tại Payload 1 MB giữa Ubuntu (xanh dương) và Windows (cam) trên cả hai chiều Mã hóa và Giải mã.*
 
-![Lưới đồ thị Thông lượng Mã hóa](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/compare_throughput_enc.png)
+![Lưới đồ thị Thông lượng Mã hóa](../output/compare/compare_throughput_enc.png)
 *Hình 2: Phân bố Thông lượng Mã hóa (Encryption Throughput) trên 8 chế độ hoạt động từ 1 KB đến 8 MB giữa Ubuntu và Windows.*
 
-![Lưới đồ thị Thông lượng Giải mã](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/compare_throughput_dec.png)
+![Lưới đồ thị Thông lượng Giải mã](../output/compare/compare_throughput_dec.png)
 *Hình 3: Phân bố Thông lượng Giải mã (Decryption Throughput) trên 8 chế độ hoạt động từ 1 KB đến 8 MB giữa Ubuntu và Windows.*
 
-![Tỷ lệ Thông lượng Windows so với Baseline Ubuntu](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/compare_ratio_enc.png)
+![Tỷ lệ Thông lượng Windows so với Baseline Ubuntu](../output/compare/compare_ratio_enc.png)
 *Hình 4: Tỷ lệ Throughput Windows / Baseline Ubuntu trên chiều Mã hóa (Giá trị < 1.0 biểu thị Ubuntu nhanh hơn).*
 
 - **Khoảng cách hiệu năng rõ rệt:** Trên hầu hết các chế độ và kích thước payload, Ubuntu đạt hiệu năng vượt trội so với Windows. Tại mốc 1 MB, thông lượng trên Ubuntu cao hơn từ **1.5 lần đến 3.17 lần** so với Windows (ví dụ: GCM Enc trên Ubuntu đạt $1417.03$ MB/s trong khi Windows chỉ đạt $446.94$ MB/s; CBC Dec trên Ubuntu đạt $2394.70$ MB/s so với $1038.91$ MB/s trên Windows).
-- **Tỷ lệ suy giảm ở payload nhỏ:** Quan sát đồ thị tỷ lệ [compare_ratio_enc.png](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/compare_ratio_enc.png), ở các payload nhỏ (1 KB và 4 KB), tỷ lệ thông lượng Windows / Ubuntu chỉ đạt từ $0.28$ đến $0.68$. Nguyên nhân chính là do chi phí lời gọi hàm, cơ chế cấp phát bộ nhớ động của Windows Heap Manager (`RtlAllocateHeap`) có độ trễ lớn hơn đáng kể so với bộ cấp phát `glibc ptmalloc` tối ưu trên nhân Linux.
+- **Tỷ lệ suy giảm ở payload nhỏ:** Quan sát đồ thị tỷ lệ [compare_ratio_enc.png](../output/compare/compare_ratio_enc.png), ở các payload nhỏ (1 KB và 4 KB), tỷ lệ thông lượng Windows / Ubuntu chỉ đạt từ $0.28$ đến $0.68$. Nguyên nhân chính là do chi phí lời gọi hàm, cơ chế cấp phát bộ nhớ động của Windows Heap Manager (`RtlAllocateHeap`) có độ trễ lớn hơn đáng kể so với bộ cấp phát `glibc ptmalloc` tối ưu trên nhân Linux.
 
 ---
 
@@ -596,10 +596,10 @@ $$\text{Group Geomean} = \left( \prod_{i=1}^k \text{Throughput}_i \right)^{1/k}$
 | **Windows GCC** | **Dec** | 1 MB | 817.58 | 810.87 | 0.992 | Tương đương tuyệt đối |
 | **Ubuntu GCC** | **Dec** | 1 MB | 1661.66 | 1385.77 | 0.834 | Block nhanh hơn (CBC dec song song) |
 
-![So sánh Stream vs Block Modes chiều Mã hóa](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/mode_cmp/analysis_stream_vs_block_enc.png)
+![So sánh Stream vs Block Modes chiều Mã hóa](../output/compare/mode_cmp/analysis_stream_vs_block_enc.png)
 *Hình 5: Phân tích so sánh Stream Modes vs. Block Modes trên chiều Mã hóa (Enc): (1) Thông lượng trung bình nhân nhóm; (2) Tỷ số Stream/Block; (3) Phân bố chi tiết từng mode tại 1 MB.*
 
-![So sánh Stream vs Block Modes chiều Giải mã](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/mode_cmp/analysis_stream_vs_block_dec.png)
+![So sánh Stream vs Block Modes chiều Giải mã](../output/compare/mode_cmp/analysis_stream_vs_block_dec.png)
 *Hình 6: Phân tích so sánh Stream Modes vs. Block Modes trên chiều Giải mã (Dec): (1) Thông lượng trung bình nhân nhóm; (2) Tỷ số Stream/Block; (3) Phân bố chi tiết từng mode tại 1 MB.*
 
 #### Phân tích chuyên sâu:
@@ -632,10 +632,10 @@ Chế độ AEAD bổ sung cơ chế tính toán thẻ xác thực toàn vẹn (
 | **Ubuntu GCC** | **Enc** | **1 MB** | **1817.51** | **862.86** | **1417.03** | **0.780** | **1.642** | **555.43** | **0.306** |
 | **Ubuntu GCC** | **Dec** | **1 MB** | **2331.61** | **1517.46** | **1370.24** | **0.588** | **0.903** | **589.79** | **0.253** |
 
-![So sánh AEAD vs Non-AEAD chiều Mã hóa](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/mode_cmp/analysis_aead_vs_nonaead_enc.png)
+![So sánh AEAD vs Non-AEAD chiều Mã hóa](../output/compare/mode_cmp/analysis_aead_vs_nonaead_enc.png)
 *Hình 7: Đánh giá chi tiết AEAD vs. Non-AEAD trên chiều Mã hóa (Enc): (1) Đường cong thông lượng CTR vs. GCM vs. CCM; (2) Tỷ số suy giảm so với CTR baseline; (3) So sánh trực quan tại mốc 1 MB.*
 
-![So sánh AEAD vs Non-AEAD chiều Giải mã](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/mode_cmp/analysis_aead_vs_nonaead_dec.png)
+![So sánh AEAD vs Non-AEAD chiều Giải mã](../output/compare/mode_cmp/analysis_aead_vs_nonaead_dec.png)
 *Hình 8: Đánh giá chi tiết AEAD vs. Non-AEAD trên chiều Giải mã (Dec): (1) Đường cong thông lượng CTR vs. GCM vs. CCM; (2) Tỷ số suy giảm so với CTR baseline; (3) So sánh trực quan tại mốc 1 MB.*
 
 #### Phân tích chuyên sâu:
@@ -677,10 +677,10 @@ $$\text{Latency}(\text{Size}) \approx a + b \cdot \text{Size}$$
 | Ubuntu GCC | Dec | **GCM** | 2.265 | **0.942** | 1062.14 | +0.360 | **+0.310 ns/B** | **+49.1%** |
 | Ubuntu GCC | Dec | **CCM** | 2.409 | **1.957** | 511.11 | +0.504 | **+1.325 ns/B** | **+209.8%** |
 
-![Phân tích Chi phí Phụ trội Tag chiều Mã hóa](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/mode_cmp/analysis_tag_overhead_enc.png)
+![Phân tích Chi phí Phụ trội Tag chiều Mã hóa](../output/compare/mode_cmp/analysis_tag_overhead_enc.png)
 *Hình 9: Phân tích Chi phí phụ trội của Tag (GCM/CCM vs. CTR) chiều Mã hóa (Enc): (1) Độ trễ gia tăng tuyệt đối theo payload; (2) Chi phí cố định mỗi thao tác ngoại suy; (3) Chi phí tính toán biên trên mỗi byte (ns/B).*
 
-![Phân tích Chi phí Phụ trội Tag chiều Giải mã](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/mode_cmp/analysis_tag_overhead_dec.png)
+![Phân tích Chi phí Phụ trội Tag chiều Giải mã](../output/compare/mode_cmp/analysis_tag_overhead_dec.png)
 *Hình 10: Phân tích Chi phí phụ trội của Tag (GCM/CCM vs. CTR) chiều Giải mã (Dec): (1) Độ trễ gia tăng tuyệt đối theo payload; (2) Chi phí cố định mỗi thao tác ngoại suy; (3) Chi phí tính toán biên trên mỗi byte (ns/B).*
 
 #### Phân tích ý nghĩa số liệu mô hình:
@@ -706,11 +706,11 @@ $$\text{Storage Overhead (\%)} = \frac{\text{Tag Length (Bytes)}}{\text{Payload 
 | **1 MB (1,048,576 B)** | 0.0004% | 0.0008% | 0.0015% | Gần như bằng 0 |
 | **8 MB (8,388,608 B)** | 0.0000% | 0.0001% | 0.0002% | Triệt tiêu hoàn toàn |
 
-![Biểu đồ Tỷ lệ Dung lượng Thẻ xác thực](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/mode_cmp/analysis_tag_storage_overhead.png)
+![Biểu đồ Tỷ lệ Dung lượng Thẻ xác thực](../output/compare/mode_cmp/analysis_tag_storage_overhead.png)
 *Hình 11: Biểu đồ suy giảm Log-Log của Tỷ lệ dung lượng Thẻ xác thực (Storage Overhead %) theo kích thước Payload trên các độ dài Tag 4B, 8B và 16B.*
 
 #### Kết luận về chi phí lưu trữ:
-Quan sát đồ thị suy giảm tuyến tính trên hệ trục Log-Log [analysis_tag_storage_overhead.png](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/mode_cmp/analysis_tag_storage_overhead.png):
+Quan sát đồ thị suy giảm tuyến tính trên hệ trục Log-Log [analysis_tag_storage_overhead.png](../output/compare/mode_cmp/analysis_tag_storage_overhead.png):
 - Tại payload nhỏ 1 KB, thẻ tag 16-byte chiếm tỷ trọng $1.56\%$.
 - Ngay khi kích thước dữ liệu đạt từ **16 KB trở lên**, chi phí lưu trữ của thẻ tag lập tức giảm xuống dưới **$0.097\%$** và tiệm cận mức **$0.0015\%$** tại 1 MB.
 - Điều này chứng minh rằng trong các hệ thống truyền dẫn tệp tin thực tế, chi phí lưu trữ thêm 16 bytes của AEAD là **hoàn toàn không đáng kể (negligible)**, hoàn toàn bù đắp được bằng lợi ích an ninh bảo vệ dữ liệu chống giả mạo tuyệt đối.
@@ -833,7 +833,7 @@ Trong quá trình triển khai thực tế hệ thống, tác giả đã phát h
 # 8. Kết luận và Hướng mở rộng Đề tài
 
 ## 8.1. Kết luận tổng kết
-Bài thực hành Lab 1 đã hoàn thành xuất sắc 100% các mục tiêu và chuẩn đầu ra đặt ra trong [require.md](https://github.com/Feph50/crypto-labs/tree/main/lab1/require.md):
+Bài thực hành Lab 1 đã hoàn thành xuất sắc 100% các mục tiêu và chuẩn đầu ra đặt ra trong [require.md](../require.md):
 - Xây dựng thành công bộ công cụ dòng lệnh hoàn chỉnh `aestool` hỗ trợ toàn diện **8 chế độ hoạt động của AES** với thư viện công nghiệp chuẩn Crypto++.
 - Thiết kế và kiểm chứng thực nghiệm các chốt chặn an toàn: cảnh báo và giới hạn ECB dưới 16 KiB, quản lý vòng đời IV/Nonce tự động, chống tái sử dụng Nonce với cơ sở dữ liệu băm SHA-256, triết lý Thất bại An toàn (Fail-Closed).
 - Xác thực tính chính xác toán học tuyệt đối qua **9/9 vector Known Answer Tests (KAT)** chính thức từ NIST và IEEE, cùng ma trận kiểm thử âm toàn diện.
@@ -843,12 +843,19 @@ Bài thực hành Lab 1 đã hoàn thành xuất sắc 100% các mục tiêu và
 
 ## 8.2. Hướng phát triển mở rộng (+5 điểm thưởng)
 1. **Đóng gói lõi mã hóa thành Thư viện Đa nền tảng:**
-   - Cấu trúc module [`aescore`](https://github.com/Feph50/crypto-labs/tree/main/lab1/src/aescore.hpp) hiện tại đã sẵn sàng để xuất thành thư viện liên kết động: `.dll` trên Windows và `.so` trên Linux.
+   - Cấu trúc module [`aescore`](../src/aescore.hpp) hiện tại đã sẵn sàng để xuất thành thư viện liên kết động: `.dll` trên Windows và `.so` trên Linux.
    - Bổ sung định nghĩa `API_EXPORT` chuẩn C-linkage (`extern "C"`) cho phép các ngôn ngữ bậc cao như Python (qua `ctypes`), C# (.NET P/Invoke) hoặc Rust nạp và gọi trực tiếp các hàm mã hóa lõi mà không cần viết lại giải thuật.
-2. **Xây dựng Giao diện Đồ họa trực quan (Minimal GUI):**
-   - Thiết kế giao diện đồ họa tối giản bằng Python (sử dụng thư viện `customtkinter` hoặc `PyQt6`) giao tiếp với binary `aestool` hoặc thư viện `.dll`.
-   - Giao diện cung cấp các tính năng: kéo thả tệp tin để mã hóa/giải mã, hộp thoại chọn chế độ mã hóa, hiển thị cảnh báo đỏ trực quan khi người dùng chọn ECB, và tích hợp khung hiển thị tiến trình đo benchmark theo thời gian thực.
-3. **Cơ chế Streaming I/O cho tệp tin lớn:** Nâng cấp đường ống dữ liệu sang mô hình xử lý theo khối đệm (Chunking Buffer 64KB) cho phép xử lý mượt mà các tệp tin có dung lượng hàng chục Gigabyte với mức tiêu hao bộ nhớ RAM không đổi.
+2. **Xây dựng Giao diện Đồ họa trực quan (PyQt6 GUI — Đã hoàn thành):**
+   - Đã phát triển ứng dụng GUI hiện đại tại [`lab1/gui/aestool_gui.py`](../gui/aestool_gui.py) bằng **PyQt6**, tích hợp hệ thống chủ đề Sáng / Tối (Light / Dark theme), hỗ trợ trực quan 8 chế độ hoạt động của AES, cảnh báo đỏ nguy hiểm khi chọn chế độ ECB, tự động tính toán kích thước tập tin thời gian thực và xem trước lệnh CLI.
+   - Tab Tools độc lập cho phép: sinh khóa an toàn CSPRNG (128/192/256-bit), sinh IV ngẫu nhiên, chạy kiểm thử tự động 9 NIST KAT vectors và thực thi Benchmark thời gian thực hiển thị tiến trình.
+
+![Giao diện trực quan PyQt6 - Form mã hóa AES đa chế độ](../output/windows/screenshots/lab1_gui_encrypt.png)
+*Hình 12: Giao diện trực quan PyQt6 (Tab Encrypt/Decrypt) hỗ trợ 8 mode AES, cấu hình IV/Key, kiểm tra fail-closed và xem trước lệnh CLI.*
+
+![Giao diện trực quan PyQt6 - Công cụ KAT & Benchmark](../output/windows/screenshots/lab1_gui_tools.png)
+*Hình 13: Giao diện trực quan PyQt6 (Tab Tools) tích hợp bộ sinh khóa CSPRNG, runner kiểm chứng NIST KAT và đo đạc benchmark trực quan.*
+
+3. **Cơ chế Streaming I/O3. **Cơ chế Streaming I/O cho tệp tin lớn:** Nâng cấp đường ống dữ liệu sang mô hình xử lý theo khối đệm (Chunking Buffer 64KB) cho phép xử lý mượt mà các tệp tin có dung lượng hàng chục Gigabyte với mức tiêu hao bộ nhớ RAM không đổi.
 
 ---
 
@@ -895,9 +902,9 @@ aestool bench --runs 100 --out bench_results.csv
 ## Phụ lục P2. Toàn văn Biên bản Kiểm thử Tự động CTest
 
 ### 1. Nhật ký CTest trên Windows 10 (MSVC x64 Release):
-*Trích lục từ [output/windows/test_windows_msvc.txt](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/windows/test_windows_msvc.txt):*
+*Trích lục từ [output/windows/test_windows_msvc.txt](../output/windows/test_windows_msvc.txt):*
 ```
-Test project https://github.com/Feph50/crypto-labs/tree/main/lab1/build_windows_msvc
+Test project ../build_windows_msvc
     Start 1: unit_tests
 1/3 Test #1: unit_tests .......................   Passed    0.06 sec
     Start 2: nist_kat
@@ -910,7 +917,7 @@ Total Test time (real) =   0.31 sec
 ```
 
 ### 2. Nhật ký CTest trên Ubuntu 22.04 LTS (Clang 14):
-*Trích lục từ [output/ubuntu/test_ubuntu_clang.txt](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/ubuntu/test_ubuntu_clang.txt):*
+*Trích lục từ [output/ubuntu/test_ubuntu_clang.txt](../output/ubuntu/test_ubuntu_clang.txt):*
 ```
 Test project /home/dell/home-crypto/crypto-labs/lab1/build_ubuntu_clang
     Start 1: unit_tests
@@ -949,7 +956,7 @@ AESKEY-HEX
 ---
 
 ## Phụ lục P4. Trích lục Dữ liệu Benchmark đối chiếu (CSV Preview)
-Trích lục trực tiếp từ tập tin tổng hợp so sánh chéo [compare_summary.csv](https://github.com/Feph50/crypto-labs/tree/main/lab1/output/compare/compare_summary.csv):
+Trích lục trực tiếp từ tập tin tổng hợp so sánh chéo [compare_summary.csv](../output/compare/compare_summary.csv):
 
 ```csv
 platform,baseline,mode,dir,size_bytes,base_MBps,cmp_MBps,ratio,diff_pct,significant
