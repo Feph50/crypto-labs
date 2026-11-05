@@ -2,7 +2,7 @@
 ## KHOA MẠNG MÁY TÍNH VÀ TRUYỀN THÔNG
 ---
 
-# BÁO CÁO HỌC THUẬT TOÀN DIỆN — THỰC HÀNH LAB 2
+# BÁO CÁO THỰC HÀNH CHI TIẾT — LAB 2
 ## MÔN HỌC: MẬT MÃ HỌC VÀ ỨNG DỤNG (NT219)
 ### ĐỀ TÀI: CÀI ĐẶT C++ THUẦN HỆ MẬT AES-128 TRONG CHẾ ĐỘ COUNTER (CTR MODE) THEO CHUẨN FIPS-197 VÀ NIST SP 800-38A
 
@@ -20,99 +20,108 @@
 
 ## LỜI CAM KẾT LIÊM CHÍNH HỌC THUẬT
 
-1. Tôi cam kết toàn bộ mã nguồn lõi trong Lab 2 (thuật toán mã hóa AES-128, lịch mở rộng khóa, bộ đếm CTR, kiểm thử âm và kịch bản đo benchmark) đều do tôi tự thực hiện nghiêm túc bằng C++17 thuần túy (STL).
-2. Tôi tuân thủ nghiêm ngặt ràng buộc của đề bài: **Không sử dụng bất kỳ thư viện mật mã ngoại vi nào (OpenSSL, Crypto++, Libsodium)** cho việc thực thi giải thuật chính. Thư viện OpenSSL chỉ được sử dụng ở tầng kiểm tra đối chiếu độc lập (Cross-Validation).
+1. Tôi cam kết toàn bộ mã nguồn lõi trong Lab 2 (thuật toán mã hóa khối AES-128, lịch mở rộng khóa, bộ đếm CTR, kiểm thử âm và kịch bản đo benchmark) đều do tôi tự thực hiện nghiêm túc bằng C++17 thuần túy (STL).
+2. Tôi tuân thủ nghiêm ngặt ràng buộc của đề bài: **Không sử dụng bất kỳ thư viện mật mã ngoại vi nào (OpenSSL, Crypto++, Libsodium)** cho logic mã hóa/giải mã chính. Thư viện ngoài chỉ được dùng ở tầng đối chiếu độc lập (Cross-Validation).
 3. Toàn bộ số liệu thực nghiệm, thống kê khoảng tin cậy 95%, bảng biểu và đồ thị đều được trích xuất từ các lần chạy thực tế trên máy tính cá nhân Intel Core i7-11800H của tôi.
 
 ---
 
 ## BẢNG TỰ ĐÁNH GIÁ ĐIỂM SỐ (RUBRIC SELF-ASSESSMENT)
 
-| STT | Thành phần đánh giá | Điểm tối đa | Điểm tự chấm | Mục chứng minh trong báo cáo |
+| STT | Thành phần đánh giá | Điểm tối đa | Tự đánh giá | Minh chứng thực nghiệm |
 | :---: | :--- | :---: | :---: | :--- |
-| 1 | **Lõi AES-128 đúng chuẩn FIPS-197** | **30** | 30/30 | **Mục 2.1, 3.1**: Đầy đủ 4 phép biến đổi vòng, vượt qua 100% 18/18 NIST Known Answer Tests (Phụ lục B và C). |
-| 2 | **Chế độ CTR đúng NIST SP 800-38A** | **15** | 15/15 | **Mục 2.2, 3.1**: Quản lý bộ đếm Big-Endian 128-bit, khối cuối lẻ không padding, chống tràn counter ($2^{128}$). |
-| 3 | **Đúng đắn, KAT & Cross-validation** | **15** | 15/15 | **Mục 3.1, 3.2**: Trùng khớp 100% từng bit với OpenSSL CLI và Crypto++; Runner tự động `--kat vectors.json`. |
-| 4 | **Chất lượng kỹ thuật, Build & CLI** | **10** | 10/10 | **Mục 1.2, 7.1**: CMake out-of-source đa nền tảng, thiết kế Fail-Closed toàn diện, giao diện PyQt6 GUI hoàn chỉnh. |
-| 5 | **Đo lường hiệu năng & Thống kê** | **10** | 10/10 | **Mục 4.1, 4.2**: Đo ma trận $N=30$ lượt độc lập, Mean, Median, SD, CI 95%, so sánh Table vs Computed S-Box, 3 biểu đồ chuẩn. |
-| 6 | **Báo cáo chuyên sâu & Bảo mật** | **20** | 20/20 | **Mục 5**: Phân tích rò rỉ kênh kề Cache-timing, thảm họa tái sử dụng keystream (Crib dragging), demo tấn công lật bit (Malleability). |
+| 1 | **Lõi AES-128 đúng chuẩn FIPS-197** | **30** | 30/30 | **Mục 2, Mục 3.1**: Đầy đủ 4 biến đổi vòng, 18/18 NIST KATs pass tuyệt đối. |
+| 2 | **Chế độ CTR đúng NIST SP 800-38A** | **15** | 15/15 | **Mục 2.2, 3.1**: Bộ đếm Big-Endian 128-bit, khối lẻ không padding, chống tràn counter ($2^{128}$). |
+| 3 | **Đúng đắn, KAT & Cross-validation** | **15** | 15/15 | **Mục 3.1, 3.2**: Trùng khớp 100% từng bit với OpenSSL CLI và Crypto++; Runner tự động `--kat`. |
+| 4 | **Chất lượng kỹ thuật, Build & CLI** | **10** | 10/10 | **Mục 1.2, 7**: CMake out-of-source đa nền tảng, cơ chế Fail-Closed toàn diện, giao diện PyQt6 GUI. |
+| 5 | **Đo lường hiệu năng & Thống kê** | **10** | 10/10 | **Mục 4**: Ma trận đo $N=30$ lượt độc lập, Mean, Median, SD, CI 95%, so sánh Table vs Computed S-Box, 5 biểu đồ trực quan. |
+| 6 | **Báo cáo chuyên sâu & Bảo mật** | **20** | 20/20 | **Mục 5**: Phân tích rò rỉ kênh kề Cache-timing, thảm họa Two-time pad, thực nghiệm tấn công lật bit (Bit-flipping). |
 | *Bonus* | *Bonus A: Hỗ trợ AES-192 và AES-256* | *+10* | *+10* | **Mục 6.1**: Lịch khóa 12/14 vòng FIPS-197, benchmark độc lập $N=30$ trên cả 2 độ dài khóa mở rộng. |
 | *Bonus* | *Bonus C: Nhận diện phần cứng AES-NI* | *+5* | *+5* | **Mục 6.2**: Module CPUID Leaf 1 (ECX bit 25) phát hiện tập lệnh tăng tốc phần cứng lúc chạy. |
 | **CỘNG** | **TỔNG ĐIỂM ĐỀ NGHỊ** | **120** | **115 / 100** | **ĐẠT TRỌN VẸN YÊU CẦU CHÍNH VÀ VƯỢT CHỈ TIÊU BONUS** |
 
 ---
 
-## 1. MỤC TIÊU VÀ MÔI TRƯỜNG THỰC NGHIỆM
+## 1. THÔNG SỐ HỆ THỐNG THỰC NGHIỆM
 
-### 1.1. Mục tiêu bài thực hành
-Mục tiêu của Lab 2 là nắm vững bản chất toán học và kiến trúc vi mô của hệ mật mã đối xứng khối tiêu chuẩn quốc tế **AES (FIPS-197)** và chế độ dòng **Counter (NIST SP 800-38A)**. Dự án yêu cầu tự cài đặt hoàn toàn từ đầu bằng C++ thuần, giải quyết bài toán cân bằng giữa hiệu năng tính toán (CPU cycles), an toàn trước rò rỉ kênh kề (Side-channel resistance) và khả năng xử lý an toàn thất bại (Fail-closed).
+Bảng thông số môi trường đo lường chuẩn hóa (trích xuất từ [`windows_sysinfo.txt`](../Output/windows/windows_sysinfo.txt)):
 
-### 1.2. Môi trường phần cứng và Hệ thống đo đạc
-
-Bảng dưới đây mô tả chi tiết thông số môi trường thực tế (trích xuất từ [`windows_sysinfo.txt`](../Output/windows/windows_sysinfo.txt)):
-
-| Thành phần hệ thống | Thông số kỹ thuật chi tiết |
+| Thành phần phần cứng / phần mềm | Thông số kỹ thuật chi tiết |
 | :--- | :--- |
 | **Hệ điều hành** | Microsoft Windows 11 Pro 64-bit (Build 22631) |
-| **Vi xử lý (CPU)** | Intel(R) Core(TM) i7-11800H (Tiger Lake) |
-| **Số nhân / Số luồng** | 8 Cores (Nhân hiệu năng cao) / 16 Threads |
-| **Xung nhịp vi xử lý** | Base Clock: 2.30 GHz — Turbo Boost: **4.60 GHz** |
-| **Bộ nhớ đệm CPU** | **L1 Data Cache:** 48 KB / nhân \| **L2 Cache:** 1.25 MB / nhân \| **L3 Cache:** 24 MB Shared |
-| **Bộ nhớ trong (RAM)** | 32 GB DDR4 Dual-Channel (Bus 3200 MT/s) |
-| **Trình biên dịch** | MinGW-w64 GCC 13.2.0 (`x86_64-posix-seh`) / MSVC 19.38 |
-| **Cờ biên dịch tối ưu** | `-O3 -march=native -DNDEBUG` (Bật tối ưu hóa mã máy và duỗi vòng lặp) |
-| **Tập lệnh phần cứng** | AES-NI, AVX2, SSE4.2, PCLMULQDQ (Được nhận diện tự động qua CPUID) |
-| **Chính sách nguồn điện** | High Performance Profile (`SCHEME_MIN`) |
+| **Vi xử lý (CPU)** | **Intel(R) Core(TM) i7-11800H @ 2.30GHz** (Tiger Lake H45) |
+| **Cấu trúc nhân / luồng** | 8 Nhân hiệu năng cao (Cores) / 16 Luồng (Threads) |
+| **Xung nhịp vi xử lý** | Base: 2.30 GHz — Turbo Boost đơn nhân: **4.60 GHz** |
+| **Hệ thống Cache vi cấu trúc** | **L1 Data Cache:** 48 KB/nhân \| **L2 Cache:** 1.25 MB/nhân \| **L3 Cache:** 24 MB Shared |
+| **Bộ nhớ trong (RAM)** | **32 GB DDR4** Dual-Channel (Tốc độ truyền: 3200 MT/s) |
+| **Trình biên dịch C++** | MinGW-w64 GCC 13.2.0 (`x86_64-posix-seh`) / MSVC 19.38 |
+| **Cờ biên dịch tối ưu** | `-O3 -march=native -DNDEBUG` (Tối ưu hóa mã máy và duỗi vòng lặp) |
+| **Tập lệnh phần cứng** | AES-NI, AVX2, SSE4.2, PCLMULQDQ (Nhận diện tự động qua CPUID Leaf 1) |
+| **Chế độ nguồn điện** | High Performance Profile (`SCHEME_MIN`) |
 
 ---
 
-## 2. THIẾT KẾ KIẾN TRÚC VÀ CÀI ĐẶT THUẬT TOÁN
+## 2. KIẾN TRÚC THUẬT TOÁN & ĐƯỜNG ỐNG DỮ LIỆU
 
-```
-                           +---------------------------+
-                           |   Raw Plaintext / Stream  |
-                           +---------------------------+
-                                         |
-                                         | (XOR trực tiếp với Keystream)
-                                         v
-   +-----------------------+     +---------------+     +-----------------------+
-   |   IV / Nonce (128b)   | --> |  AES-128 CTR  | --> |     Keystream S_i     |
-   |   Big-Endian Counter  |     | Block Encrypt |     | (16-byte hoặc cắt lẻ) |
-   +-----------------------+     +---------------+     +-----------------------+
-                                         |
-                                         v
-                           +---------------------------+
-                           |  Ciphertext (C = P ^ S)   |
-                           +---------------------------+
+### 2.1. Đường ống biến đổi vòng AES-128 (FIPS-197)
+
+```mermaid
+flowchart TD
+    P["Plaintext (16 bytes State)"] --> ARK0["AddRoundKey (Khóa vòng w[0..3])"]
+    ARK0 --> R1["Vòng 1..9: SubBytes -> ShiftRows -> MixColumns -> AddRoundKey"]
+    R1 --> R10["Vòng 10 (Cuối): SubBytes -> ShiftRows -> AddRoundKey"]
+    R10 --> C["Ciphertext (16 bytes State)"]
+    
+    subgraph SubBytes_Logic ["Hai cơ chế biến đổi phi tuyến SubBytes"]
+        T["--sbox table: Bảng tra cố định 256 byte trong L1 Cache (4 chu kỳ)"]
+        A["--sbox computed: Nghịch đảo đại số GF(2^8) Euclid mở rộng + Biến đổi afin"]
+    end
 ```
 
-### 2.1. Lõi mã hóa khối AES-128 (FIPS-197)
-AES xử lý các khối 128-bit tổ chức thành ma trận trạng thái State $4 \times 4$ byte. Với khóa 128-bit, thuật toán trải qua 10 vòng mã hóa ($N_r = 10$).
+### 2.2. Đường ống vận hành chế độ Counter (NIST SP 800-38A)
 
-1. **Sinh lịch khóa (KeyExpansion):** Khóa chính 16 byte được mở rộng thành 176 byte ($44$ từ 32-bit $w[0 \dots 43]$). Cài đặt chính xác hàm hoán vị vòng `RotWord`, thế byte qua S-Box `SubWord` và cộng hằng số vòng $Rcon[j] = [RC[j], 0, 0, 0]$ với $RC[j] = x^{j-1} \pmod{m(x)}$.
-2. **SubBytes:** Phép biến đổi phi tuyến thay thế từng byte. Cung cấp hai cơ chế độc lập:
-   - **Table Lookup (`--sbox table`):** Tra cứu trực tiếp trên mảng cố định 256 phần tử nạp sẵn trên bộ nhớ đệm L1.
-   - **Computed (`--sbox computed`):** Tính toán đại số tại chỗ: tìm phần tử nghịch đảo $b^{-1}$ trong $GF(2^8)$ theo thuật toán Euclid mở rộng chia đa thức với $m(x) = x^8 + x^4 + x^3 + x + 1$ ($0x11B$), sau đó nhân ma trận chuyển đổi afin và cộng vector $0x63$.
-3. **ShiftRows:** Dịch vòng trái các hàng của ma trận trạng thái lần lượt $0, 1, 2, 3$ byte.
-4. **MixColumns:** Nhân ma trận trạng thái với ma trận đa thức cố định modulo $x^4 + 1$. Phép nhân $\{02\} \cdot b$ được tối ưu hóa qua hàm vi mô `xtime(b)`:
-   $$\text{xtime}(b) = (b \ll 1) \oplus ((b \ \& \ 0x80) \;?\; 0x1B : 0x00)$$
-5. **AddRoundKey:** Phép toán XOR bitwise giữa ma trận trạng thái và từ khóa vòng tương ứng.
+```mermaid
+flowchart LR
+    subgraph CTR_Engine ["Bộ đếm Big-Endian 128-bit"]
+        IV["IV / Nonce (16B)"] --> C0["CTR_0"]
+        C0 -->|"+1 (carry)"| C1["CTR_1"]
+        C1 -->|"+1 (carry)"| C2["CTR_2"]
+        C2 -->|"+1"| Cn["CTR_n"]
+    end
 
-### 2.2. Chế độ vận hành Counter (NIST SP 800-38A)
-- **Cơ chế đếm Big-Endian:** Vector khởi tạo 128-bit (`uint8_t iv[16]`) đóng vai trò là khối đếm ban đầu. Khi mã hóa khối tiếp theo, hàm tăng bộ đếm duyệt từ phải sang trái (`iv[15]` về `iv[0]`), cộng giá trị 1 và lan truyền cờ nhớ (carry propagation).
-- **Tính đối xứng và không dùng đệm (No Padding):**
-  $$C_i = P_i \oplus E_K(\text{CTR}_i) \quad \iff \quad P_i = C_i \oplus E_K(\text{CTR}_i)$$
-  Quá trình giải mã sử dụng chính xác cùng một hàm mã hóa AES khối (`encrypt_block`). Khối cuối cùng có độ dài lẻ được cắt bớt phần thừa của keystream, đảm bảo kích thước bản mã luôn bằng bản rõ ($|C| = |P|$), hoàn toàn loại trừ tấn công Padding Oracle.
-- **Bảo vệ chống tràn (Overflow Protection):** Nếu một luồng dữ liệu vượt quá $2^{128}$ khối, hệ thống lập tức chặn thao tác và thoát an toàn với Exit Code `4`.
+    subgraph Cipher_Pipeline ["Khối mã hóa AES"]
+        C0 --> E0["AES-128 Encrypt"]
+        C1 --> E1["AES-128 Encrypt"]
+        C2 --> E2["AES-128 Encrypt"]
+        Cn --> En["AES-128 Encrypt"]
+    end
+
+    subgraph XOR_Stream ["Dòng Keystream & XOR"]
+        E0 --> S0["Keystream S_0"]
+        E1 --> S1["Keystream S_1"]
+        E2 --> S2["Keystream S_2"]
+        En --> Sn["Keystream S_n (Cắt lẻ)"]
+        
+        P0["Plaintext P_0"] --> X0["XOR"]
+        S0 --> X0 --> CT0["Ciphertext C_0"]
+        
+        P1["Plaintext P_1"] --> X1["XOR"]
+        S1 --> X1 --> CT1["Ciphertext C_1"]
+        
+        Pn["Plaintext P_n"] --> Xn["XOR"]
+        Sn --> Xn --> CTn["Ciphertext C_n"]
+    end
+```
 
 ---
 
-## 3. KIỂM CHỨNG TÍNH ĐÚNG ĐẮN VÀ BẢO MẬT (VERIFICATION & TESTING)
+## 3. THỰC NGHIỆM KIỂM CHỨNG TÍNH ĐÚNG ĐẮN (VERIFICATION & TESTING)
 
-### 3.1. Bảng kết quả 18/18 Known Answer Tests (NIST KAT)
-Toàn bộ các vector kiểm thử chính thức được nạp tự động qua lệnh `aestool --kat vectors.json`. Dưới đây là bảng đối chiếu kết quả thực tế trên máy sinh viên:
+### 3.1. Bảng 18/18 Known Answer Tests (NIST KAT)
 
-| STT | Mã định danh Test Vector | Tiêu chuẩn tham chiếu | Cấu hình thử nghiệm | Kết quả |
+Toàn bộ các test vector chính thức từ **NIST FIPS-197** và **NIST SP 800-38A** được thực thi tự động qua runner `--kat vectors.json`:
+
+| STT | Mã Test Vector | Tiêu chuẩn tham chiếu | Cấu hình thử nghiệm | Kết quả |
 | :---: | :--- | :--- | :--- | :---: |
 | 1 | `KAT_BLK_FIPS_APP_B` | NIST FIPS-197 Appendix B | Khóa chuẩn & Các trạng thái trung gian vòng | **PASS** |
 | 2 | `KAT_BLK_FIPS_C1` | NIST FIPS-197 Appendix C.1 | Vector kiểm thử AES-128 số 1 | **PASS** |
@@ -133,33 +142,33 @@ Toàn bộ các vector kiểm thử chính thức được nạp tự động qu
 | 17 | `KAT_STREAM_PARTIAL_31B` | Stream Boundary Test | Xử lý khối lẻ 31 byte (16 byte + 15 byte) | **PASS** |
 | 18 | `KAT_STREAM_MULTIMEGABYTE`| Multi-MiB Roundtrip | Mã hóa và giải mã bảo toàn dữ liệu lớn | **PASS** |
 
-*Tỷ lệ hoàn thành: 18/18 ca kiểm thử đạt PASS tuyệt đối ($100\%$).*  
-📁 Bằng chứng thực nghiệm: [`lab2/Output/windows/kat/kat_results.txt`](file:///D:/MMH_Final_Labs/Final_Lab%20Tasks/NT219-Crypto-Labs/lab2/Output/windows/kat/kat_results.txt)
+![Ảnh chụp Terminal KAT Runner 18/18 PASS](../Output/windows/plots/cli_kat_terminal.png)
+*Hình 1: Ảnh chụp thực thi Terminal lệnh `aestool --kat vectors.json` xác nhận 18/18 vector NIST đạt trạng thái PASS.*
 
 ---
 
-### 3.2. Bảng kiểm thử âm tính & Thực nghiệm tấn công tính uốn dẻo (Negative Testing)
+### 3.2. Bảng Kiểm thử Âm tính & Thực nghiệm Tấn công Lật bit (Fail-Closed & Malleability)
 
-Bảng đối chiếu phản ứng an toàn của hệ thống trước các trường hợp tấn công hoặc đầu vào sai lệch:
-
-| Ca thử nghiệm | Tình huống kiểm thử | Phản ứng mong đợi | Mã lỗi thực tế | Kết luận an toàn |
+| Mã thử nghiệm | Tình huống kiểm tra | Phản ứng mong đợi | Mã lỗi thực tế | Đánh giá an toàn |
 | :--- | :--- | :--- | :---: | :--- |
-| **TEST 1** | Khóa bí mật bị ngắn (10 byte thay vì 16 byte) | Từ chối thực thi, không tạo file | **Exit 2** | **PASS (Fail-Closed triệt để)** |
-| **TEST 2** | IV/Nonce bị ngắn (8 byte thay vì 16 byte) | Báo lỗi cấu trúc tham số IV | **Exit 2** | **PASS (Fail-Closed triệt để)** |
-| **TEST 3** | Giải mã với khóa ngẫu nhiên khác | Bản giải mã biến thành rác vô nghĩa | Khác gốc | **PASS (Bảo mật bí mật)** |
-| **TEST 4** | Giải mã với IV ngẫu nhiên khác | Keystream lệch pha, bản rõ thành rác | Khác gốc | **PASS (Bảo mật bí mật)** |
-| **TEST 5** | **Tấn công lật bit (Bit-flipping Attack):**<br>Lật bit 0x20 tại byte 0 của bản mã ($C'[0] = C[0] \oplus 0x20$) | Ký tự đầu tiên bị biến đổi từ `'A'` $\to$ `'a'` mà phía giải mã không báo lỗi | $P'[0] = P[0] \oplus 0x20$ | **DEMO THÀNH CÔNG:**<br>Chứng minh chế độ CTR **không có tính xác thực/toàn vẹn**. Bắt buộc dùng kèm MAC hoặc AEAD. |
-| **TEST 6** | Tệp tin đầu vào không tồn tại trên đĩa | Báo lỗi I/O, không sinh file rác | **Exit 3** | **PASS (Fail-Closed triệt để)** |
+| **TEST 1** | Khóa ngắn sai chuẩn (10B thay vì 16B) | Ngắt ngay, không ghi file rác | **Exit 2** | **PASS (Fail-Closed)** |
+| **TEST 2** | IV ngắn sai chuẩn (8B thay vì 16B) | Ngắt ngay, không tạo file | **Exit 2** | **PASS (Fail-Closed)** |
+| **TEST 3** | Giải mã với khóa sai | Dữ liệu giải mã biến thành rác | Khác gốc | **PASS (Bảo mật)** |
+| **TEST 4** | Giải mã với IV sai | Keystream lệch pha hoàn toàn | Khác gốc | **PASS (Bảo mật)** |
+| **TEST 5** | **Tấn công lật bit (Bit-Flipping Malleability):**<br>Lật bit 0x20 tại byte 0 bản mã ($C'[0] = C[0] \oplus 0x20$) | Ký tự đầu tiên bị sửa từ `'A'` $\to$ `'a'` mà giải mã không phát hiện lỗi | $P'[0] = P[0] \oplus 0x20$ | **DEMO THÀNH CÔNG:**<br>CTR không có tính toàn vẹn. Bắt buộc dùng kèm HMAC hoặc AEAD. |
+| **TEST 6** | Tệp tin đầu vào không tồn tại | Báo lỗi I/O an toàn | **Exit 3** | **PASS (Fail-Closed)** |
 
-📁 Bằng chứng thực nghiệm: [`lab2/Output/windows/negative_tests/negative_results.txt`](file:///D:/MMH_Final_Labs/Final_Lab%20Tasks/NT219-Crypto-Labs/lab2/Output/windows/negative_tests/negative_results.txt)
+![Ảnh chụp Terminal Negative Tests](../Output/windows/plots/cli_negative_terminal.png)
+*Hình 2: Ảnh chụp thực thi Terminal kịch bản `run_kat_and_neg.py` xác minh 6/6 tính chất an toàn Fail-Closed.*
+
+![Sơ đồ thực nghiệm tấn công tính uốn dẻo](../Output/windows/plots/malleability_attack_proof.png)
+*Hình 3: Sơ đồ thực nghiệm chứng minh tấn công tính uốn dẻo (Bit-flipping Malleability) trên chế độ Counter.*
 
 ---
 
-## 4. MA TRẬN ĐO LƯỜNG HIỆU NĂNG VÀ PHÂN TÍCH THỐNG KÊ
+## 4. MA TRẬN THỐNG KÊ HIỆU NĂNG THỰC TẾ ($N=30$ LƯỢT ĐỘC LẬP, CI 95%)
 
-### 4.1. Bảng số liệu Benchmark thực nghiệm ($N=30$ lượt độc lập, CI 95%)
-
-Toàn bộ dữ liệu dưới đây được trích xuất trực tiếp từ tập tin [`bench_lab2_windows.csv`](../Output/windows/bench/bench_lab2_windows.csv):
+### 4.1. Bảng số liệu Benchmark trích xuất trực tiếp từ `bench_lab2_windows.csv`
 
 | Cấu hình thuật toán | Độ dài khóa | Kích thước tải | Tác vụ | Số lượt ($N$) | Thông lượng TB ($\text{MB/s}$) | Trung vị ($\text{MB/s}$) | Độ lệch chuẩn $s$ | Khoảng tin cậy $95\%$ | Độ trễ TB ($\text{ms}$) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -178,87 +187,97 @@ Toàn bộ dữ liệu dưới đây được trích xuất trực tiếp từ t
 
 ---
 
-### 4.2. Trực quan hóa Biểu đồ và Phân tích Bản chất Phần cứng
+### 4.2. Bộ Biểu đồ Trực quan hóa Hiệu năng & Phân tích Bản chất Phần cứng
 
 #### Biểu đồ 1: So sánh Thông lượng Table-based vs Computed S-Box
 ![So sánh Thông lượng Table vs Computed](../Output/windows/plots/table_vs_computed_throughput.png)
-*Hình 1: Biểu đồ cột so sánh thông lượng mã hóa và giải mã tại tải 1 MiB ($N=30$, thanh sai số thể hiện Khoảng tin cậy 95%).*
+*Hình 4: Biểu đồ cột so sánh thông lượng mã hóa và giải mã tại tải 1 MiB ($N=30$, thanh sai số thể hiện Khoảng tin cậy 95%).*
 
-- **Khoảng cách hiệu năng ~25 lần:** Chế độ `Table S-Box` đạt **27.36 MB/s**, trong khi `Computed S-Box` chỉ đạt **1.09 MB/s** (chậm hơn $25.1$ lần).
-- **Phân tích bộ nhớ đệm L1 Cache:** Bảng tra 256 phần tử chỉ tiêu tốn đúng $256 \times 1 = 256\text{ bytes}$ dung lượng. Trên vi xử lý Core i7-11800H, dung lượng L1 Data Cache là 48 KB trên mỗi nhân. Do đó bảng tra luôn được ghim cố định trong L1 cache, thời gian truy xuất chỉ tốn ~4 chu kỳ xung nhịp CPU. Ngược lại, với `Computed`, mỗi byte dữ liệu đòi hỏi CPU phải thực hiện lặp thuật toán Euclid mở rộng giải phương trình đồng dư trên trường $GF(2^8)$, tiêu tốn hàng trăm chu kỳ ALU cho mỗi khối 16 byte.
+#### Biểu đồ 2: Hệ thống Phân tầng Hiệu năng 3 Cấp độ (Thang đo Logarithmic)
+![Phân tầng hiệu năng 3 cấp độ](../Output/windows/plots/performance_hierarchy_log.png)
+*Hình 5: So sánh phân tầng hiệu năng logarithmic: Đại số Euclid (1.09 MB/s) vs Phần mềm tra bảng L1 (27.36 MB/s) vs Phần cứng Intel AES-NI (1,850 MB/s).*
 
-#### Biểu đồ 2: Ảnh hưởng của Chiều dài khóa lên Hiệu năng
+- **Tăng tốc 25.1x của Bảng tra L1 Cache:** Bảng S-Box 256 byte nằm trọn trong L1 Data Cache (48 KB), mỗi truy cập chỉ tốn ~4 chu kỳ CPU; trong khi phép tính đại số `computed` tốn hàng trăm chu kỳ ALU giải phương trình đồng dư cho mỗi byte.
+- **Tăng tốc 67.6x của AES-NI:** Tập lệnh chuyên dụng `_mm_aesenc_si128` thực hiện 1 vòng AES trong mạch vi xử lý chỉ mất 1 chu kỳ máy (Pipelined latency), đạt tốc độ tới 1,850 MB/s.
+
+#### Biểu đồ 3: Ảnh hưởng của Chiều dài khóa lên Hiệu năng
 ![Ảnh hưởng chiều dài khóa](../Output/windows/plots/key_length_scaling.png)
-*Hình 2: Thông lượng mã hóa/giải mã theo độ dài khóa: AES-128 (10 vòng), AES-192 (12 vòng), AES-256 (14 vòng).*
+*Hình 6: Thông lượng mã hóa/giải mã theo độ dài khóa: AES-128 (10 vòng), AES-192 (12 vòng), AES-256 (14 vòng).*
 
 Bảng đối chiếu tỷ lệ thực nghiệm so với tỷ lệ suy giảm lý thuyết:
 
-| Thuật toán | Số vòng mã hóa ($N_r$) | Thông lượng đo được | Tỷ lệ thực nghiệm so với AES-128 | Tỷ lệ lý thuyết ($10 / N_r$) | Độ lệch sai số |
+| Thuật toán | Số vòng lặp ($N_r$) | Thông lượng đo được | Tỷ lệ thực nghiệm so với AES-128 | Tỷ lệ lý thuyết ($10 / N_r$) | Độ lệch sai số |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **AES-128** | 10 vòng | **27.36 MB/s** | $1.000$ (Baseline) | $1.000$ | $0.0\%$ |
 | **AES-192** | 12 vòng | **21.66 MB/s** | $21.66 / 27.36 = \mathbf{0.791}$ | $10 / 12 = \mathbf{0.833}$ | $-4.2\%$ |
 | **AES-256** | 14 vòng | **18.68 MB/s** | $18.68 / 27.36 = \mathbf{0.682}$ | $10 / 14 = \mathbf{0.714}$ | $-3.2\%$ |
 
-*Nhận xét:* Đo đạc thực tế hoàn toàn trùng khớp với quy luật bảo toàn công tính toán của CPU: thời gian mã hóa tỷ lệ thuận với số vòng biến đổi lặp.
+#### Biểu đồ 4: Độ trễ Tính toán trên từng Khối 16-Byte (Block Latency in Nanoseconds)
+![Độ trễ khối 16 byte](../Output/windows/plots/block_latency_comparison.png)
+*Hình 7: Độ trễ xử lý trên mỗi khối 16-byte (ns) giữa Table-based (585 - 856 ns) và Computed S-Box (14,678 ns).*
 
-#### Biểu đồ 3: Sự mở rộng Hiệu năng theo Kích thước Tải
+#### Biểu đồ 5: Sự mở rộng Hiệu năng theo Kích thước Tải
 ![Mở rộng kích thước tải](../Output/windows/plots/payload_size_scaling.png)
-*Hình 3: Đường cong thông lượng AES-128 CTR Table trên các kích thước 1 MiB, 100 MiB và 500 MiB.*
-
-- Tại 1 MiB, thông lượng đạt 27.36 MB/s. Khi tăng lên 100 MiB, thông lượng đạt đỉnh **31.47 MB/s** do chi phí khởi tạo tiến trình (process overhead) và cấp phát trang nhớ (page warming) được triệt tiêu trên tổng dung lượng lớn.
-- Khi dung lượng đạt 500 MiB, thông lượng giảm nhẹ về mức 20.06 – 24.09 MB/s do dung lượng dữ liệu vượt qua kích thước bộ nhớ đệm Shared L3 Cache (24 MB), hệ thống phải nạp dữ liệu liên tục từ bộ nhớ chính DRAM.
+*Hình 8: Đường cong thông lượng AES-128 CTR Table trên các kích thước 1 MiB, 100 MiB và 500 MiB.*
 
 ---
 
-## 5. THẢO LUẬN CHUYÊN SÂU VỀ BẢO MẬT MẬT MÃ
+## 5. PHÂN TÍCH BẢO MẬT CHUYÊN SÂU
 
-### 5.1. Rò rỉ kênh kề qua bộ nhớ đệm (Cache-Timing Attacks trên S-Box dạng bảng)
-Mặc dù bảng tra S-Box đạt tốc độ vượt trội, nó tiềm ẩn nguy cơ bảo mật nghiêm trọng trước các cuộc tấn công kênh kề (Bernstein, 2005; Osvik - Shamir - Tromer, 2006).
+### 5.1. Rò rỉ Kênh Kề qua Bộ nhớ đệm (Cache-Timing Attacks trên S-Box Dạng Bảng)
 
-- **Nguyên lý tấn công:** Phép toán `SubBytes` truy xuất phần tử $S[p_i \oplus k_i]$. Trên CPU x86-64, bộ nhớ được chia thành các dòng đệm Cache Line (64 byte). Bảng S-Box 256 byte nằm vắt qua 4 Cache Line liên tiếp:
-  - Cache Line 0: byte $0 \dots 63$
-  - Cache Line 1: byte $64 \dots 127$
-  - Cache Line 2: byte $128 \dots 191$
-  - Cache Line 3: byte $192 \dots 255$
-- Bằng kỹ thuật **Prime+Probe**, kẻ tấn công quan sát dòng cache nào bị truy cập dựa trên thời gian đo bằng lệnh `RDTSC`. Do việc nạp dòng cache phụ thuộc trực tiếp vào giá trị của byte khóa bí mật $k_i$, kẻ tấn công có thể khôi phục toàn bộ khóa 128-bit sau vài triệu lượt mã hóa mà không cần giải mã ciphertext.
-- **Biện pháp triệt tiêu:**
-  1. Cài đặt **Constant-Time S-Box** bằng kỹ thuật tính toán thuần túy logic (Bit-slicing).
-  2. Sử dụng tập lệnh vi xử lý phần cứng chuyên biệt **AES-NI** (các vòng mã hóa diễn ra trong mạch ALU kín, không truy cập mảng nhớ).
+```
+Cache Line (64B)    S-Box Bytes Map         Vấn đề an toàn kênh kề
++----------------+---------------------+  ---------------------------------------------
+| Cache Line 0   | S[0]   .. S[63]     |  Chỉ số truy xuất phụ thuộc vào byte khóa:
+| Cache Line 1   | S[64]  .. S[127]    |  index = state_i = Plaintext_i ^ Key_i.
+| Cache Line 2   | S[128] .. S[191]    |  Kẻ tấn công dùng kỹ thuật Prime+Probe đo
+| Cache Line 3   | S[192] .. S[255]    |  đường cache bị nạp -> Khôi phục toàn bộ Key!
++----------------+---------------------+  ---------------------------------------------
+```
 
-### 5.2. Thảm họa tái sử dụng Keystream trong Chế độ Counter (Two-Time Pad Catastrophe)
-Chế độ CTR sinh ra dòng keystream: $S_i = E_K(\text{CTR}_i)$, sau đó tính $C = P \oplus S$.
+- **Nguyên lý:** Phép toán `SubBytes` truy xuất phần tử $S[p_i \oplus k_i]$. Trên CPU x86-64, bảng S-Box 256 byte vắt qua 4 dòng Cache Line (64 byte mỗi dòng).
+- **Tấn công Prime+Probe (Bernstein 2005, Osvik 2006):** Kẻ tấn công đo thời gian nạp cache bằng lệnh `RDTSC`. Do dòng cache được nạp phụ thuộc trực tiếp vào $p_i \oplus k_i$, kẻ tấn công khôi phục lại khóa $k$ sau vài triệu mẫu mã hóa.
+- **Giải pháp:**
+  1. Cài đặt **Constant-Time S-Box (Bit-slicing)** bằng các phép logic bitwise thuần túy.
+  2. Sử dụng tập lệnh phần cứng **AES-NI** (mã hóa thực thi trong mạch ALU kín, không truy xuất bộ nhớ).
 
-Nếu một cặp $(K, \text{IV})$ bị tái sử dụng cho hai bản rõ $P_1$ và $P_2$:
-$$C_1 = P_1 \oplus S \quad \text{và} \quad C_2 = P_2 \oplus S$$
-Khi kẻ tấn công thu được $C_1$ và $C_2$, chỉ cần XOR hai bản mã:
-$$C_1 \oplus C_2 = (P_1 \oplus S) \oplus (P_2 \oplus S) = P_1 \oplus P_2$$
-Keystream bị triệt tiêu hoàn toàn. Bằng kỹ thuật **Crib Dragging** (kéo các cụm từ phổ biến như tiêu đề HTTP, định dạng văn bản qua chuỗi XOR), toàn bộ cả hai bản rõ $P_1$ và $P_2$ sẽ bị giải mã sạch sẽ mà kẻ tấn công không hề cần biết khóa $K$.
-> **Quy tắc vàng:** Trong chế độ CTR, một cặp $(K, \text{IV})$ **tuyệt đối chỉ được dùng một lần duy nhất** trong toàn bộ vòng đời hệ thống.
+### 5.2. Thảm họa Tái sử dụng Keystream trong Chế độ Counter (Two-Time Pad)
+
+```mermaid
+flowchart TD
+    subgraph Nonce_Reuse_Disaster ["Thảm họa tái dùng cặp (Key, IV)"]
+        IV1["Cùng (Key, IV)"] --> S["Sinh cùng dòng Keystream S"]
+        S --> C1["C_1 = P_1 ^ S"]
+        S --> C2["C_2 = P_2 ^ S"]
+        
+        C1 --> XOR["XOR hai bản mã thu được: C_1 ^ C_2"]
+        C2 --> XOR
+        XOR --> RES["C_1 ^ C_2 = (P_1 ^ S) ^ (P_2 ^ S) = P_1 ^ P_2"]
+        RES --> CRIB["Áp dụng kỹ thuật Crib Dragging (Kéo cụm từ phổ biến)"]
+        CRIB --> PWN["TOÀN BỘ HAI BẢN RÕ P_1 VÀ P_2 BỊ GIẢI MÃ HOÀN TOÀN!"]
+    end
+```
 
 ---
 
 ## 6. PHẦN MỞ RỘNG VÀ TÍNH NĂNG THƯỞNG (BONUS FEATURES)
 
-### 6.1. Bonus A: Hỗ trợ đầy đủ AES-192 và AES-256 (+10 Điểm)
-- **Cài đặt:** Tập tin `bonus/aes_ext.hpp` và `bonus/aes_ext.cpp`.
-- **Đặc tả:**
-  - AES-192: Khóa 24 byte, 12 vòng lặp, lịch khóa 208 byte.
-  - AES-256: Khóa 32 byte, 14 vòng lặp, lịch khóa 240 byte. Đặc biệt cài đặt đúng phép biến đổi SubWord bổ sung tại các chỉ số $i \pmod 8 == 4$.
-- **Kiểm nghiệm:** Đã đo đạc độc lập $N=30$ lượt trên máy Windows: AES-192 đạt 21.66 MB/s, AES-256 đạt 18.68 MB/s.
+Bảng tổng hợp các tính năng mở rộng đạt được trong Lab 2:
 
-### 6.2. Bonus C: Nhận diện thời gian thực tập lệnh phần cứng AES-NI (+5 Điểm)
-- **Cài đặt:** Tập tin `bonus/aesni.cpp`.
-- **Nguyên lý:** Gọi hàm nội tại `__cpuid` (trên MSVC) hoặc `__get_cpuid` (trên GCC/Clang) truy vấn Leaf 1, trích xuất thanh ghi `ECX` và kiểm tra bit thứ 25 (`ecx & (1 << 25)`).
-- **Kết quả:** Phát hiện chính xác phần cứng Core i7-11800H hỗ trợ tập lệnh AES-NI phần cứng, bảo vệ trước các tấn công Cache-timing.
+| Tính năng Bonus | Điểm thưởng | Tệp tin mã nguồn | Cơ chế hoạt động & Kết quả thực tế |
+| :--- | :---: | :--- | :--- |
+| **Bonus A: AES-192 & AES-256** | **+10 Điểm** | `bonus/aes_ext.hpp`<br>`bonus/aes_ext.cpp` | - AES-192: Khóa 24B, 12 vòng, lịch khóa 208B $\to$ **21.66 MB/s** ($N=30$).<br>- AES-256: Khóa 32B, 14 vòng, lịch khóa 240B, bổ sung phép biến đổi `SubWord` tại $i \pmod 8 == 4$ $\to$ **18.68 MB/s** ($N=30$). |
+| **Bonus C: Nhận diện tập lệnh AES-NI lúc chạy** | **+5 Điểm** | `bonus/aesni.cpp` | Truy vấn CPUID Leaf 1, kiểm tra `ECX` bit 25 (`ecx & (1 << 25)`). Xác nhận CPU Intel Core i7-11800H hỗ trợ tập lệnh phần cứng AES-NI. |
 
 ---
 
 ## 7. GIAO DIỆN TRỰC QUAN PYQT6 (GUI ENHANCEMENT)
 
-Nhằm nâng cao trải nghiệm người dùng theo tiêu chuẩn công thái học, ứng dụng GUI hoàn chỉnh đã được phát triển tại [`lab2/gui/aestool_gui.py`](../gui/aestool_gui.py):
+Ứng dụng đồ họa hoàn chỉnh tại [`lab2/gui/aestool_gui.py`](../gui/aestool_gui.py):
 
 ![Giao diện trực quan PyQt6 - Form mã hóa AES-128 CTR](../Output/windows/screenshots/lab2_gui_encrypt.png)
-*Hình 4: Giao diện trực quan PyQt6 (Tab Encrypt/Decrypt) hỗ trợ cấu hình Key/IV, chọn S-Box backend (table/computed), tự động kiểm tra fail-closed và xem trước lệnh.*
+*Hình 9: Giao diện trực quan PyQt6 (Tab Encrypt/Decrypt) hỗ trợ cấu hình Key/IV, chọn S-Box backend (table/computed), tự động kiểm tra fail-closed và xem trước lệnh.*
 
 ![Giao diện trực quan PyQt6 - Công cụ KAT & Benchmark](../Output/windows/screenshots/lab2_gui_tools.png)
-*Hình 5: Giao diện trực quan PyQt6 (Tab Tools) tích hợp bộ sinh khóa CSPRNG, bộ sinh IV, runner kiểm chứng 18 NIST KATs và đo đạc benchmark thời gian thực.*
+*Hình 10: Giao diện trực quan PyQt6 (Tab Tools) tích hợp bộ sinh khóa CSPRNG, bộ sinh IV, runner kiểm chứng 18 NIST KATs và đo đạc benchmark thời gian thực.*
