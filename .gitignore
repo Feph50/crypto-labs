@@ -1,0 +1,41 @@
+# Build directories
+build*/
+out/
+cmake-build-*/
+.cache/
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Object files & intermediates
+*.o
+*.obj
+*.ilk
+*.pdb
+*.tlog
+*.idb
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary test outputs
+work/
+*.tmp
+temp/
+aestool_test/
+lab1_neg_run/
+
+# Keep prebuilt release binaries in release/
+!release/**

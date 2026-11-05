@@ -1,0 +1,13 @@
+platform,dir,size_bytes,block_geomean_MBps,stream_geomean_MBps,stream_over_block
+windows_msvc,enc,1024,345.767,484.813,1.402
+windows_msvc,enc,4096,759.718,915.991,1.206
+windows_msvc,enc,16384,1119.271,1141.989,1.02
+windows_msvc,enc,262144,1243.872,1260.219,1.013
+windows_msvc,enc,1048576,872.072,938.003,1.076
+windows_msvc,enc,8388608,804.48,769.687,0.957
+windows_msvc,dec,1024,490.787,510.318,1.04
+windows_msvc,dec,4096,1063.458,1067.446,1.004
+windows_msvc,dec,16384,1531.971,1398.472,0.913
+windows_msvc,dec,262144,1687.428,1403.546,0.832
+windows_msvc,dec,1048576,1222.956,1042.235,0.852
+windows_msvc,dec,8388608,1027.079,835.86,0.814

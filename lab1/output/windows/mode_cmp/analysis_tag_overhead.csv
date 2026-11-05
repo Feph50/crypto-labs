@@ -1,0 +1,7 @@
+platform,dir,mode,fixed_us_per_op,ns_per_byte,equiv_MBps,delta_fixed_us_vs_ctr,delta_ns_per_byte_vs_ctr,per_byte_overhead_pct_vs_ctr
+windows_msvc,enc,ctr,0.6786,1.2855,777.9297,,,
+windows_msvc,enc,gcm,1.2589,2.3056,433.7355,0.5803,1.0201,79.3558
+windows_msvc,enc,ccm,1.7624,2.6508,377.2409,1.0838,1.3654,106.2156
+windows_msvc,dec,ctr,0.5829,1.4543,687.6238,,,
+windows_msvc,dec,gcm,3.2009,1.5808,632.5715,2.6179,0.1266,8.7029
+windows_msvc,dec,ccm,4.883,2.2077,452.9661,4.3001,0.7534,51.8047
