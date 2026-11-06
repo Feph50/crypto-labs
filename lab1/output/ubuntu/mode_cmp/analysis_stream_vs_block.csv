@@ -1,0 +1,13 @@
+platform,dir,size_bytes,block_geomean_MBps,stream_geomean_MBps,stream_over_block
+ubuntu_gcc,enc,1024,753.512,744.386,0.988
+ubuntu_gcc,enc,4096,1629.939,1480.295,0.908
+ubuntu_gcc,enc,16384,2278.157,1961.38,0.861
+ubuntu_gcc,enc,262144,2266.574,2114.983,0.933
+ubuntu_gcc,enc,1048576,1275.205,1899.835,1.49
+ubuntu_gcc,enc,8388608,1059.275,1747.698,1.65
+ubuntu_gcc,dec,1024,887.745,803.256,0.905
+ubuntu_gcc,dec,4096,2313.123,1814.441,0.784
+ubuntu_gcc,dec,16384,3579.987,2565.128,0.717
+ubuntu_gcc,dec,262144,3994.954,2998.363,0.751
+ubuntu_gcc,dec,1048576,3558.203,2685.424,0.755
+ubuntu_gcc,dec,8388608,2881.027,2328.497,0.808

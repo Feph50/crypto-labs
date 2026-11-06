@@ -54,17 +54,19 @@ find_package(CryptoPP REQUIRED)
 # Hint paths for different platforms/compilers
 if(WIN32)
     if(MSVC)
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/msvc" CACHE PATH "OpenSSL root dir" FORCE)
+        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/msvc" CACHE PATH "OpenSSL root dir")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/clang" CACHE PATH "OpenSSL root dir" FORCE)
+        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/clang" CACHE PATH "OpenSSL root dir")
     else()
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/gcc" CACHE PATH "OpenSSL root dir" FORCE)
+        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/gcc" CACHE PATH "OpenSSL root dir")
     endif()
 else()
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/clang" CACHE PATH "OpenSSL root dir" FORCE)
-    else()
-        set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/gcc" CACHE PATH "OpenSSL root dir" FORCE)
+    if(NOT DEFINED OPENSSL_ROOT_DIR AND NOT DEFINED ENV{OPENSSL_ROOT_DIR})
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND EXISTS "$ENV{HOME}/Desktop/nt219lib/openssl/clang")
+            set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/clang" CACHE PATH "OpenSSL root dir")
+        elseif(EXISTS "$ENV{HOME}/Desktop/nt219lib/openssl/gcc")
+            set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/gcc" CACHE PATH "OpenSSL root dir")
+        endif()
     endif()
 endif()
 
@@ -133,17 +135,17 @@ if(BUILD_TESTS)
         if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
             target_compile_options(test_core PRIVATE -Wno-c2y-extensions)
         endif()
-        add_test(NAME unit_tests COMMAND test_core)
+        add_test(NAME lab1_unit_tests COMMAND test_core)
     endif()
     
     # KAT test (if vectors exist) - skip on Windows Clang
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/kat/vectors.json" AND NOT SKIP_TESTS_FOR_CLANG_WINDOWS)
-        add_test(NAME nist_kat COMMAND aestool --kat ${CMAKE_CURRENT_SOURCE_DIR}/kat/vectors.json)
+        add_test(NAME lab1_nist_kat COMMAND aestool --kat ${CMAKE_CURRENT_SOURCE_DIR}/kat/vectors.json)
     endif()
     
     # CLI negative tests (if script exists) - skip on Windows Clang
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_negative.cmake" AND NOT SKIP_TESTS_FOR_CLANG_WINDOWS)
-        add_test(NAME cli_negative
+        add_test(NAME lab1_cli_negative
             COMMAND ${CMAKE_COMMAND}
                 -DTOOL=$<TARGET_FILE:aestool>
                 -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_neg

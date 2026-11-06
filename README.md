@@ -74,7 +74,35 @@ cmake --build . --config Release
 .\lab2\release\windows\aestool.exe --help
 ```
 
-### B. Khởi chạy Giao diện Trực quan (PyQt6 GUI)
+### B. Biên dịch & Vận hành trên Ubuntu Linux (Khuyến nghị dùng Unified Runner)
+
+Xem hướng dẫn chi tiết tại: [docs/RUN_UBUNTU.md](file:///home/lngu/crypto-labs/docs/RUN_UBUNTU.md).
+
+```bash
+# Nạp môi trường phát triển
+source ~/.bashrc
+
+# 1. Biên dịch toàn bộ các lab (Release -O3)
+./run.sh build
+
+# 2. Chạy 100% bộ kiểm thử tự động (6/6 tests passed)
+./run.sh test
+
+# 3. Kiểm thử Known Answer Tests chuẩn NIST
+./run.sh kat
+
+# 4. Kiểm thử âm tính & minh chứng tấn công Bit-Flipping Malleability
+./run.sh demo
+
+# 5. Đo hiệu năng đa kích thước (1MiB, 100MiB, 1GiB) và sinh đồ thị trực quan
+./run.sh bench
+
+# 6. Khởi chạy Giao diện Trực quan (PyQt6 GUI)
+./run.sh gui 1    # Lab 1 Multi-mode AES GUI
+./run.sh gui 2    # Lab 2 Pure C++ AES-128 CTR GUI
+```
+
+### C. Khởi chạy Giao diện Trực quan (PyQt6 GUI) thủ công
 ```powershell
 # Giao diện Lab 1 (Crypto++ Multi-mode AES)
 python lab1/gui/aestool_gui.py

@@ -25,6 +25,10 @@ option(BUILD_LAB5 "Build Lab 5: Digital Signatures" OFF)
 option(BUILD_LAB6 "Build Lab 6: Post-Quantum Cryptography" OFF)
 option(BUILD_TESTS "Build Unit Tests" ON)
 
+if(BUILD_TESTS)
+    enable_testing()
+endif()
+
 if(BUILD_LAB1)
     add_subdirectory(lab1)
 endif()

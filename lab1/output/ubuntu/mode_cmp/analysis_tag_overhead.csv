@@ -1,0 +1,7 @@
+platform,dir,mode,fixed_us_per_op,ns_per_byte,equiv_MBps,delta_fixed_us_vs_ctr,delta_ns_per_byte_vs_ctr,per_byte_overhead_pct_vs_ctr
+ubuntu_gcc,enc,ctr,0.7218,0.314,3185.0239,,,
+ubuntu_gcc,enc,gcm,0.6531,0.5472,1827.6366,-0.0687,0.2332,74.2701
+ubuntu_gcc,enc,ccm,0.6127,1.1747,851.3095,-0.1091,0.8607,274.1323
+ubuntu_gcc,dec,ctr,0.8283,0.283,3533.7179,,,
+ubuntu_gcc,dec,gcm,1.1468,0.4981,2007.7824,0.3185,0.2151,76.001
+ubuntu_gcc,dec,ccm,1.1163,1.1645,858.701,0.288,0.8816,311.519

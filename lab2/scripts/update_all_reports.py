@@ -1,8 +1,10 @@
 import os
 import re
+from pathlib import Path
 
 # 1. Update Lab 1 Report
-lab1_md = r"D:\MMH_Final_Labs\Final_Lab Tasks\NT219-Crypto-Labs\lab1\docs\lab1-main-report.md"
+ROOT = Path(__file__).resolve().parent.parent.parent
+lab1_md = ROOT / "lab1" / "docs" / "lab1-main-report.md"
 with open(lab1_md, "r", encoding="utf-8") as f:
     text1 = f.read()
 

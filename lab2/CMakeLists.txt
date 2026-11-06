@@ -51,17 +51,19 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake")
 # implementation for cross-validation (xval) and benchmark comparisons.
 if(WIN32)
     if(MSVC)
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/msvc" CACHE PATH "OpenSSL root dir" FORCE)
+        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/msvc" CACHE PATH "OpenSSL root dir")
     elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/clang" CACHE PATH "OpenSSL root dir" FORCE)
+        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/clang" CACHE PATH "OpenSSL root dir")
     else()
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/gcc" CACHE PATH "OpenSSL root dir" FORCE)
+        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/gcc" CACHE PATH "OpenSSL root dir")
     endif()
 else()
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/clang" CACHE PATH "OpenSSL root dir" FORCE)
-    else()
-        set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/gcc" CACHE PATH "OpenSSL root dir" FORCE)
+    if(NOT DEFINED OPENSSL_ROOT_DIR AND NOT DEFINED ENV{OPENSSL_ROOT_DIR})
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND EXISTS "$ENV{HOME}/Desktop/nt219lib/openssl/clang")
+            set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/clang" CACHE PATH "OpenSSL root dir")
+        elseif(EXISTS "$ENV{HOME}/Desktop/nt219lib/openssl/gcc")
+            set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/gcc" CACHE PATH "OpenSSL root dir")
+        endif()
     endif()
 endif()
 
@@ -126,10 +128,17 @@ target_compile_definitions(aes_pure PRIVATE
 )
 
 # --- Executable: aestool ---
-add_executable(aestool src/main.cpp)
-target_link_libraries(aestool PRIVATE aes_pure)
+if(TARGET aestool)
+    set(LAB2_EXE_TARGET aestool_lab2)
+    add_executable(${LAB2_EXE_TARGET} src/main.cpp)
+    set_target_properties(${LAB2_EXE_TARGET} PROPERTIES OUTPUT_NAME "aestool")
+else()
+    set(LAB2_EXE_TARGET aestool)
+    add_executable(${LAB2_EXE_TARGET} src/main.cpp)
+endif()
+target_link_libraries(${LAB2_EXE_TARGET} PRIVATE aes_pure)
 if(WIN32)
-    target_link_libraries(aestool PRIVATE shell32)   # CommandLineToArgvW (UTF-8 argv)
+    target_link_libraries(${LAB2_EXE_TARGET} PRIVATE shell32)   # CommandLineToArgvW (UTF-8 argv)
 endif()
 
 # =============================================================================
@@ -169,19 +178,19 @@ if(BUILD_TESTS)
         if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
             target_compile_options(aes_tests PRIVATE -Wno-c2y-extensions)
         endif()
-        add_test(NAME unit_tests COMMAND aes_tests)
+        add_test(NAME lab2_unit_tests COMMAND aes_tests)
     endif()
 
     # KAT runner
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/kat/vectors.json" AND NOT SKIP_TESTS_FOR_CLANG_WINDOWS)
-        add_test(NAME kat_runner COMMAND aestool --kat ${CMAKE_CURRENT_SOURCE_DIR}/kat/vectors.json)
+        add_test(NAME lab2_kat_runner COMMAND ${LAB2_EXE_TARGET} --kat ${CMAKE_CURRENT_SOURCE_DIR}/kat/vectors.json)
     endif()
 
     # CLI end-to-end regression tests
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_e2e.cmake" AND NOT SKIP_TESTS_FOR_CLANG_WINDOWS)
-        add_test(NAME cli_end_to_end
+        add_test(NAME lab2_cli_end_to_end
             COMMAND ${CMAKE_COMMAND}
-                    -DTOOL=$<TARGET_FILE:aestool>
+                    -DTOOL=$<TARGET_FILE:${LAB2_EXE_TARGET}>
                     -DWORK=${CMAKE_CURRENT_BINARY_DIR}/e2e_work
                     -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_e2e.cmake
         )
@@ -191,7 +200,7 @@ endif()
 # =============================================================================
 # Installation (Optional)
 # =============================================================================
-install(TARGETS aes_pure aestool
+install(TARGETS aes_pure ${LAB2_EXE_TARGET}
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin

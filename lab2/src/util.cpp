@@ -243,6 +243,9 @@ std::filesystem::path get_project_root() {
         (fs::exists(cur / "CMakeLists.txt", ec) && fs::exists(cur / "src" / "aes128.cpp", ec))) {
       return cur;
     }
+    if (fs::exists(cur / "lab2" / "kat" / "vectors.json", ec)) {
+      return cur / "lab2";
+    }
     if (cur == cur.parent_path()) break;
     cur = cur.parent_path();
   }
@@ -252,6 +255,9 @@ std::filesystem::path get_project_root() {
     if (fs::exists(exe / "kat" / "vectors.json", ec) ||
         (fs::exists(exe / "CMakeLists.txt", ec) && fs::exists(exe / "src" / "aes128.cpp", ec))) {
       return exe;
+    }
+    if (fs::exists(exe / "lab2" / "kat" / "vectors.json", ec)) {
+      return exe / "lab2";
     }
     if (exe == exe.parent_path()) break;
     exe = exe.parent_path();

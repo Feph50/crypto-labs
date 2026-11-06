@@ -911,6 +911,7 @@ class AesToolWindow(QMainWindow):
         candidates = [
             LAB_ROOT / "build_ubuntu_gcc" / "aestool",
             LAB_ROOT / "build_ubuntu_clang" / "aestool",
+            LAB_ROOT / "release" / "ubuntu" / "aestool_gcc",
             LAB_ROOT / "build_windows_gcc" / "aestool.exe",
             LAB_ROOT / "build_windows_clang" / "aestool.exe",
             LAB_ROOT / "build_windows_msvc" / "Release" / "aestool.exe",

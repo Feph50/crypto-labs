@@ -1,12 +1,22 @@
 import os
+import platform
 import sys
+from pathlib import Path
 import numpy as np
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
-OUT_PLOTS = r"D:\MMH_Final_Labs\Final_Lab Tasks\NT219-Crypto-Labs\lab2\Output\windows\plots"
-CSV_PATH = r"D:\MMH_Final_Labs\Final_Lab Tasks\NT219-Crypto-Labs\lab2\Output\windows\bench\bench_lab2_windows.csv"
+LAB_DIR = Path(__file__).resolve().parent.parent
+OS_NAME = "windows" if sys.platform.startswith("win") else "ubuntu"
+
+OUT_PLOTS = str(LAB_DIR / "Output" / OS_NAME / "plots")
+CSV_PATH = LAB_DIR / "Output" / OS_NAME / "bench" / f"bench_lab2_{OS_NAME}.csv"
+if not CSV_PATH.exists():
+    CSV_PATH = LAB_DIR / "Output" / "windows" / "bench" / "bench_lab2_windows.csv"
+CSV_PATH = str(CSV_PATH)
 os.makedirs(OUT_PLOTS, exist_ok=True)
 
 df = pd.read_csv(CSV_PATH)
