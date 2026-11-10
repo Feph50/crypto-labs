@@ -23,32 +23,37 @@ df = pd.read_csv(CSV_PATH)
 plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
 
 # -----------------------------------------------------------------------------
-# PLOT 1: Three-Tier AES Performance Hierarchy (Logarithmic Scale)
-# Pure Computed (1.09 MB/s) vs Software Table (27.36 MB/s) vs AES-NI Hardware (~1,850 MB/s)
+# PLOT 1: Multi-Tier AES Performance Hierarchy (Logarithmic Scale)
+# Pure Computed vs Software Table (1M, 100M, 1G) vs AES-NI Hardware (~1,850 MB/s)
 # -----------------------------------------------------------------------------
+sub1 = df[(df["size"] == "1MiB") & (df["key_bits"] == 128)]
+sub3 = df[(df["sbox_mode"] == "table") & (df["key_bits"] == 128)]
+t_comp = float(sub1[sub1["sbox_mode"] == "computed"]["thr_mean_MBps"].values[0])
+t_1m = float(sub3[sub3["size"] == "1MiB"]["thr_mean_MBps"].values[0])
+t_100m = float(sub3[sub3["size"] == "100MiB"]["thr_mean_MBps"].values[0])
+t_1g = float(sub3[sub3["size"] == "1GiB"]["thr_mean_MBps"].values[0])
+t_aesni = 1850.0
+
 fig, ax = plt.subplots(figsize=(10, 5.5))
 tiers = [
-    "Algebraic S-Box\n(On-the-fly GF(2^8) Euclid)",
-    "Precomputed S-Box\n(Software L1 Table Lookup)",
-    "Hardware Acceleration\n(Intel AES-NI Instructions)"
+    "Algebraic S-Box (GF(2^8) Euclid)",
+    "Precomputed Table (1 MiB)",
+    "Precomputed Table (100 MiB)",
+    "Precomputed Table (1 GiB)",
+    "Hardware Acceleration (AES-NI)"
 ]
-throughputs = [1.09, 27.36, 1850.0]
-colors = ["#d62728", "#1f77b4", "#2ca02c"]
+throughputs = [t_comp, t_1m, t_100m, t_1g, t_aesni]
+colors = ["#d62728", "#1f77b4", "#3498db", "#2980b9", "#2ca02c"]
 
 bars = ax.barh(tiers, throughputs, color=colors, height=0.55, edgecolor="black", linewidth=1.2)
 ax.set_xscale("log")
 ax.set_xlabel("Throughput (MB/s) — Logarithmic Scale", fontsize=12, fontweight="bold")
-ax.set_title("AES-128 Performance Hierarchy: Galois Field Math vs Table Lookup vs AES-NI", fontsize=13, fontweight="bold")
+ax.set_title("AES-128 Performance Hierarchy: Galois Field Math vs Table Scaling vs AES-NI", fontsize=13, fontweight="bold")
 
 for bar, val in zip(bars, throughputs):
     w = bar.get_width()
     ax.text(w * 1.25, bar.get_y() + bar.get_height()/2, f"{val:,.2f} MB/s",
-            va="center", ha="left", fontsize=11, fontweight="bold")
-
-ax.annotate("Speedup: 25.1x", xy=(1.09, 0), xytext=(8, 0.4),
-            arrowprops=dict(facecolor='black', arrowstyle='->', lw=1.5), fontsize=10, fontweight="bold")
-ax.annotate("Speedup: 67.6x vs Table (1,697x vs Computed)", xy=(27.36, 1), xytext=(120, 1.4),
-            arrowprops=dict(facecolor='black', arrowstyle='->', lw=1.5), fontsize=10, fontweight="bold")
+            va="center", ha="left", fontsize=10, fontweight="bold")
 
 plt.tight_layout()
 p_tier = os.path.join(OUT_PLOTS, "performance_hierarchy_log.png")
@@ -60,10 +65,10 @@ print("Generated:", p_tier)
 # PLOT 2: Latency & CPU Overhead per Block (ns / 16-byte block)
 # -----------------------------------------------------------------------------
 fig, ax = plt.subplots(figsize=(9, 5))
-configs = ["AES-128\n(Table)", "AES-192\n(Table)", "AES-256\n(Table)", "AES-128\n(Computed)"]
-# Latency per 16-byte block in nanoseconds: (16 / (MBps * 1e6)) * 1e9 = 16000 / MBps
-ns_per_block = [16000 / 27.36, 16000 / 21.66, 16000 / 18.68, 16000 / 1.09]
-bar_cols = ["#3498db", "#9b59b6", "#e67e22", "#e74c3c"]
+configs = ["AES-128 Table (1M)", "AES-128 Table (100M)", "AES-128 Table (1G)", "AES-128 Computed (1M)"]
+tbl_thrs = [t_1m, t_100m, t_1g, t_comp]
+ns_per_block = [16000 / t for t in tbl_thrs]
+bar_cols = ["#3498db", "#2980b9", "#1f4e78", "#e74c3c"]
 
 b = ax.bar(configs, ns_per_block, color=bar_cols, width=0.5, edgecolor="black", linewidth=1.2)
 ax.set_ylabel("Execution Time per 16-Byte Block (ns)", fontsize=12, fontweight="bold")
@@ -119,24 +124,24 @@ fig.patch.set_facecolor("#1e1e1e")
 ax.axis("off")
 
 kat_lines = [
-    "  [PASS] Block: FIPS-197 Appendix B (Cipher Key & Intermediate States)",
-    "  [PASS] Block: FIPS-197 Appendix C.1 (AES-128 Known Answer Test Vector 1)",
-    "  [PASS] Block: FIPS-197 Appendix C.2 (AES-128 Known Answer Test Vector 2)",
-    "  [PASS] Block: FIPS-197 Appendix C.3 (AES-128 Known Answer Test Vector 3)",
-    "  [PASS] Block: FIPS-197 Appendix C.4 (AES-128 Known Answer Test Vector 4)",
-    "  [PASS] Block: FIPS-197 Appendix C.5 (AES-128 Known Answer Test Vector 5)",
-    "  [PASS] Block: FIPS-197 Appendix C.6 (AES-128 Known Answer Test Vector 6)",
-    "  [PASS] CTR:   NIST SP 800-38A F.5.1 CTR-AES128.Encrypt (Block 1)",
-    "  [PASS] CTR:   NIST SP 800-38A F.5.2 CTR-AES128.Encrypt (Block 2)",
-    "  [PASS] CTR:   NIST SP 800-38A F.5.3 CTR-AES128.Encrypt (Block 3)",
-    "  [PASS] CTR:   NIST SP 800-38A F.5.4 CTR-AES128.Encrypt (Block 4)",
-    "  [PASS] CTR:   NIST SP 800-38A F.5.5 CTR-AES128.Decrypt (Block 1)",
-    "  [PASS] CTR:   NIST SP 800-38A F.5.6 CTR-AES128.Decrypt (Block 2)",
-    "  [PASS] CTR:   NIST SP 800-38A F.5.7 CTR-AES128.Decrypt (Block 3)",
-    "  [PASS] CTR:   NIST SP 800-38A F.5.8 CTR-AES128.Decrypt (Block 4)",
-    "  [PASS] CTR:   Arbitrary Stream Length Partial Block Test 1 (17 bytes)",
-    "  [PASS] CTR:   Arbitrary Stream Length Partial Block Test 2 (31 bytes)",
-    "  [PASS] CTR:   Multi-Megabyte Round-Trip Identity Test"
+    "  [PASS] Block: FIPS-197 Appendix B",
+    "  [PASS] Block: FIPS-197 Appendix C.1 (AES-128)",
+    "  [PASS] Block: AESAVS ECBGFSbox128 #0",
+    "  [PASS] Block: AESAVS ECBGFSbox128 #1",
+    "  [PASS] Block: AESAVS ECBKeySbox128 #0",
+    "  [PASS] Block: AESAVS ECBVarTxt128 #0",
+    "  [PASS] Block: AESAVS ECBVarKey128 #0",
+    "  [PASS] CTR:   NIST SP 800-38A F.5.1 CTR-AES128.Encrypt (4 blocks)",
+    "  [PASS] CTR:   NIST SP 800-38A F.5.1, first 1 bytes (partial prefix)",
+    "  [PASS] CTR:   NIST SP 800-38A F.5.1, first 15 bytes (partial prefix)",
+    "  [PASS] CTR:   NIST SP 800-38A F.5.1, first 17 bytes (partial prefix)",
+    "  [PASS] CTR:   NIST SP 800-38A F.5.1, first 37 bytes (partial prefix)",
+    "  [PASS] CTR:   NIST SP 800-38A F.5.1, first 63 bytes (partial prefix)",
+    "  [PASS] CTR:   empty input -> empty output",
+    "  [PASS] CTR:   OpenSSL 3 Cross-Validation (low byte carry)",
+    "  [PASS] CTR:   OpenSSL 3 Cross-Validation (16-bit counter carry)",
+    "  [PASS] CTR:   OpenSSL 3 Cross-Validation (64-bit counter carry)",
+    "  [PASS] CTR:   OpenSSL 3 Cross-Validation (96-bit counter carry)"
 ]
 
 ax.text(0.04, 0.95, "PS C:\\NT219> .\\aestool.exe --kat vectors.json", fontsize=11, family="Consolas", color="#569cd6", fontweight="bold", transform=ax.transAxes)

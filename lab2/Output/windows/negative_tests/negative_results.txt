@@ -14,11 +14,11 @@
   Fail-closed verified: PASS
 
 [TEST 3] Decrypt with Wrong Key
-  Recovered raw bytes: b'\x11\x1d\x93\xa5\xfe\xcc>\x1d\xbb\x08LD\xcej\xf0^\x0cV,m\xda\x91\x0ep'
+  Recovered raw bytes: b'0\xb0t\x03r&\xf3\xa4\x82\xfd:\xa8n\xc8,(\x1c\xef\x7fi\x8b\xf7H\xf3'
   Plaintext corrupt/different: PASS (Output completely scrambled)
 
 [TEST 4] Decrypt with Wrong IV
-  Recovered raw bytes: b'\xbc$\xc9\x0e\xae\x03\x92\xaf\xfd\x96Ox\xdbV\x19\x80\xdb\xb8\x13=\x86x\xf3>'
+  Recovered raw bytes: b'\xf6\x1f\xdf@\xc2\x02\x0f\xe0[\xcd\xb5\xc0\xbb\xed\xeeq)\xb1\x12\xa8\xf4x\xfff'
   Plaintext corrupt/different: PASS (Keystream mismatch, output scrambled)
 
 [TEST 5] Bit-Flipping Malleability Attack (CTR Tampering Proof)

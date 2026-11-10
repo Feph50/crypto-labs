@@ -1,20 +1,20 @@
 === Running Known Answer Tests (KAT) ===
-  [PASS] Block: 
-  [PASS] Block: 
-  [PASS] Block: 
-  [PASS] Block: 
-  [PASS] Block: 
-  [PASS] Block: 
-  [PASS] Block: 
-  [PASS] CTR:   
-  [PASS] CTR:   
-  [PASS] CTR:   
-  [PASS] CTR:   
-  [PASS] CTR:   
-  [PASS] CTR:   
-  [PASS] CTR:   
-  [PASS] CTR:   
-  [PASS] CTR:   
-  [PASS] CTR:   
-  [PASS] CTR:   
+  [PASS] Block: FIPS-197 Appendix B
+  [PASS] Block: FIPS-197 Appendix C.1 (AES-128)
+  [PASS] Block: AESAVS ECBGFSbox128 #0
+  [PASS] Block: AESAVS ECBGFSbox128 #1
+  [PASS] Block: AESAVS ECBKeySbox128 #0
+  [PASS] Block: AESAVS ECBVarTxt128 #0
+  [PASS] Block: AESAVS ECBVarKey128 #0
+  [PASS] CTR:   NIST SP 800-38A F.5.1 CTR-AES128.Encrypt (4 blocks)
+  [PASS] CTR:   NIST SP 800-38A F.5.1, first 1 bytes (partial final block; prefix property)
+  [PASS] CTR:   NIST SP 800-38A F.5.1, first 15 bytes (partial final block; prefix property)
+  [PASS] CTR:   NIST SP 800-38A F.5.1, first 17 bytes (partial final block; prefix property)
+  [PASS] CTR:   NIST SP 800-38A F.5.1, first 37 bytes (partial final block; prefix property)
+  [PASS] CTR:   NIST SP 800-38A F.5.1, first 63 bytes (partial final block; prefix property)
+  [PASS] CTR:   empty input -> empty output
+  [PASS] CTR:   cross-generated with OpenSSL 3 aes-128-ctr (counter carry test, not a NIST vector)
+  [PASS] CTR:   cross-generated with OpenSSL 3 aes-128-ctr (counter carry test, not a NIST vector)
+  [PASS] CTR:   cross-generated with OpenSSL 3 aes-128-ctr (counter carry test, not a NIST vector)
+  [PASS] CTR:   cross-generated with OpenSSL 3 aes-128-ctr (counter carry test, not a NIST vector)
 === KAT Result: 18/18 Passed ===

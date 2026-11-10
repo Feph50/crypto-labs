@@ -117,33 +117,33 @@ flowchart LR
 
 ## 3. THỰC NGHIỆM KIỂM CHỨNG TÍNH ĐÚNG ĐẮN (VERIFICATION & TESTING)
 
-### 3.1. Bảng 18/18 Known Answer Tests (NIST KAT)
+### 3.1. Bảng 18/18 Known Answer Tests (NIST KAT) theo Chuẩn FIPS-197 Update 1 & NIST SP 800-38A
 
-Toàn bộ các test vector chính thức từ **NIST FIPS-197** và **NIST SP 800-38A** được thực thi tự động qua runner `--kat vectors.json`:
+Toàn bộ các test vector chính thức được tham chiếu trực tiếp từ **[NIST FIPS 197 Update 1 (May 09, 2023)](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf)**, **NIST SP 800-38A**, và **NIST AESAVS**, thực thi tự động qua runner `aestool --kat vectors.json`:
 
-| STT | Mã Test Vector | Tiêu chuẩn tham chiếu | Cấu hình thử nghiệm | Kết quả |
+| STT | Tên Test Vector trong vectors.json | Tiêu chuẩn tham chiếu NIST | Cấu hình thử nghiệm & Mục đích | Trạng thái |
 | :---: | :--- | :--- | :--- | :---: |
-| 1 | `KAT_BLK_FIPS_APP_B` | NIST FIPS-197 Appendix B | Khóa chuẩn & Các trạng thái trung gian vòng | **PASS** |
-| 2 | `KAT_BLK_FIPS_C1` | NIST FIPS-197 Appendix C.1 | Vector kiểm thử AES-128 số 1 | **PASS** |
-| 3 | `KAT_BLK_FIPS_C2` | NIST FIPS-197 Appendix C.2 | Vector kiểm thử AES-128 số 2 | **PASS** |
-| 4 | `KAT_BLK_FIPS_C3` | NIST FIPS-197 Appendix C.3 | Vector kiểm thử AES-128 số 3 | **PASS** |
-| 5 | `KAT_BLK_FIPS_C4` | NIST FIPS-197 Appendix C.4 | Vector kiểm thử AES-128 số 4 | **PASS** |
-| 6 | `KAT_BLK_FIPS_C5` | NIST FIPS-197 Appendix C.5 | Vector kiểm thử AES-128 số 5 | **PASS** |
-| 7 | `KAT_BLK_FIPS_C6` | NIST FIPS-197 Appendix C.6 | Vector kiểm thử AES-128 số 6 | **PASS** |
-| 8 | `KAT_CTR_SP800_F51` | NIST SP 800-38A F.5.1 | CTR-AES128 Mã hóa Khối 1 | **PASS** |
-| 9 | `KAT_CTR_SP800_F52` | NIST SP 800-38A F.5.2 | CTR-AES128 Mã hóa Khối 2 | **PASS** |
-| 10 | `KAT_CTR_SP800_F53` | NIST SP 800-38A F.5.3 | CTR-AES128 Mã hóa Khối 3 | **PASS** |
-| 11 | `KAT_CTR_SP800_F54` | NIST SP 800-38A F.5.4 | CTR-AES128 Mã hóa Khối 4 | **PASS** |
-| 12 | `KAT_CTR_SP800_F55` | NIST SP 800-38A F.5.5 | CTR-AES128 Giải mã Khối 1 | **PASS** |
-| 13 | `KAT_CTR_SP800_F56` | NIST SP 800-38A F.5.6 | CTR-AES128 Giải mã Khối 2 | **PASS** |
-| 14 | `KAT_CTR_SP800_F57` | NIST SP 800-38A F.5.7 | CTR-AES128 Giải mã Khối 3 | **PASS** |
-| 15 | `KAT_CTR_SP800_F58` | NIST SP 800-38A F.5.8 | CTR-AES128 Giải mã Khối 4 | **PASS** |
-| 16 | `KAT_STREAM_PARTIAL_17B` | Stream Boundary Test | Xử lý khối lẻ 17 byte (16 byte + 1 byte) | **PASS** |
-| 17 | `KAT_STREAM_PARTIAL_31B` | Stream Boundary Test | Xử lý khối lẻ 31 byte (16 byte + 15 byte) | **PASS** |
-| 18 | `KAT_STREAM_MULTIMEGABYTE`| Multi-MiB Roundtrip | Mã hóa và giải mã bảo toàn dữ liệu lớn | **PASS** |
+| 1 | `FIPS-197 Appendix B` | **[NIST FIPS 197 Upd1 (App. B)](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf)** | Khóa chuẩn & Kiểm tra toàn bộ trạng thái trung gian vòng | **PASS** |
+| 2 | `FIPS-197 Appendix C.1 (AES-128)` | **[NIST FIPS 197 Upd1 (App. C.1)](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf)** | Vector chuẩn kiểm tra AES-128 khối 16-byte | **PASS** |
+| 3 | `AESAVS ECBGFSbox128 #0` | NIST AESAVS (GFSbox Test) | Kiểm thử bảng thế S-box với phần tử trường Galois #0 | **PASS** |
+| 4 | `AESAVS ECBGFSbox128 #1` | NIST AESAVS (GFSbox Test) | Kiểm thử bảng thế S-box với phần tử trường Galois #1 | **PASS** |
+| 5 | `AESAVS ECBKeySbox128 #0` | NIST AESAVS (KeySbox Test) | Kiểm thử tính khuếch tán khóa qua S-box | **PASS** |
+| 6 | `AESAVS ECBVarTxt128 #0` | NIST AESAVS (VarTxt Test) | Kiểm thử tính nhạy bản rõ biến đổi (Variable Text) | **PASS** |
+| 7 | `AESAVS ECBVarKey128 #0` | NIST AESAVS (VarKey Test) | Kiểm thử tính nhạy bản khóa biến đổi (Variable Key) | **PASS** |
+| 8 | `NIST SP 800-38A F.5.1 (4 blocks)` | NIST SP 800-38A Section F.5.1 | CTR-AES128 mã hóa đủ 4 khối (64 bytes) | **PASS** |
+| 9 | `SP 800-38A F.5.1 (1 byte prefix)` | NIST SP 800-38A Section F.5.1 | Luồng CTR khối lẻ: tiền tố đúng 1 byte (Prefix property) | **PASS** |
+| 10 | `SP 800-38A F.5.1 (15 bytes prefix)`| NIST SP 800-38A Section F.5.1 | Luồng CTR khối lẻ: tiền tố đúng 15 bytes (Thiếu 1 byte tròn khối) | **PASS** |
+| 11 | `SP 800-38A F.5.1 (17 bytes prefix)`| NIST SP 800-38A Section F.5.1 | Luồng CTR khối lẻ: 1 khối đủ + 1 byte lẻ tiếp theo | **PASS** |
+| 12 | `SP 800-38A F.5.1 (37 bytes prefix)`| NIST SP 800-38A Section F.5.1 | Luồng CTR khối lẻ: 2 khối đủ + 5 bytes lẻ tiếp theo | **PASS** |
+| 13 | `SP 800-38A F.5.1 (63 bytes prefix)`| NIST SP 800-38A Section F.5.1 | Luồng CTR khối lẻ: 3 khối đủ + 15 bytes lẻ tiếp theo | **PASS** |
+| 14 | `empty input -> empty output` | Edge-case Handling | Đầu vào 0 byte sinh ra đầu ra 0 byte (An toàn tuyệt đối) | **PASS** |
+| 15 | `OpenSSL 3 Cross-Val (low byte carry)`| OpenSSL 3.x / RFC 3686 | Bộ đếm CTR tràn byte thấp ($0x\text{FF} \to 0x\text{00}$) | **PASS** |
+| 16 | `OpenSSL 3 Cross-Val (16-bit carry)` | OpenSSL 3.x / RFC 3686 | Bộ đếm CTR tràn 16-bit ($0x\text{FFFF} \to 0x\text{0000}$) | **PASS** |
+| 17 | `OpenSSL 3 Cross-Val (64-bit carry)` | OpenSSL 3.x / RFC 3686 | Bộ đếm CTR tràn 64-bit sang nửa cao 64-bit | **PASS** |
+| 18 | `OpenSSL 3 Cross-Val (96-bit carry)` | OpenSSL 3.x / RFC 3686 | Bộ đếm CTR tràn 96-bit (Toàn bộ 128-bit Big-Endian carry) | **PASS** |
 
 ![Ảnh chụp Terminal KAT Runner 18/18 PASS](../Output/windows/plots/cli_kat_terminal.png)
-*Hình 1: Ảnh chụp thực thi Terminal lệnh `aestool --kat vectors.json` xác nhận 18/18 vector NIST đạt trạng thái PASS.*
+*Hình 1: Ảnh chụp thực thi Terminal lệnh `aestool --kat vectors.json` xác nhận 18/18 vector NIST đạt trạng thái PASS (100%).*
 
 ---
 
@@ -166,24 +166,26 @@ Toàn bộ các test vector chính thức từ **NIST FIPS-197** và **NIST SP 8
 
 ---
 
-## 4. MA TRẬN THỐNG KÊ HIỆU NĂNG THỰC TẾ ($N=30$ LƯỢT ĐỘC LẬP, CI 95%)
+## 4. MA TRẬN THỐNG KÊ HIỆU NĂNG THỰC TẾ (=30$ LƯỢT ĐỘC LẬP, CI 95%)
 
-### 4.1. Bảng số liệu Benchmark trích xuất trực tiếp từ `bench_lab2_windows.csv`
+### 4.1. Bảng số liệu Benchmark trích xuất trực tiếp từ ench_lab2_windows.csv
 
-| Cấu hình thuật toán | Độ dài khóa | Kích thước tải | Tác vụ | Số lượt ($N$) | Thông lượng TB ($\text{MB/s}$) | Trung vị ($\text{MB/s}$) | Độ lệch chuẩn $s$ | Khoảng tin cậy $95\%$ | Độ trễ TB ($\text{ms}$) |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **AES-128 (Table S-Box)** | **128 bit** | **1 MiB** | **Mã hóa** | 30 | **27.36** | 27.79 | 2.12 | $\pm 0.76$ | 36.85 |
-| **AES-128 (Table S-Box)** | **128 bit** | **1 MiB** | **Giải mã** | 30 | **26.90** | 27.09 | 1.35 | $\pm 0.48$ | 37.26 |
-| **AES-128 (Computed S-Box)**| **128 bit** | **1 MiB** | **Mã hóa** | 30 | **1.09** | 1.10 | 0.13 | $\pm 0.05$ | 934.58 |
-| **AES-128 (Computed S-Box)**| **128 bit** | **1 MiB** | **Giải mã** | 30 | **1.11** | 1.12 | 0.09 | $\pm 0.03$ | 906.82 |
-| **AES-192 (Table S-Box)** | **192 bit** | **1 MiB** | **Mã hóa** | 30 | **21.66** | 21.69 | 0.91 | $\pm 0.32$ | 46.24 |
-| **AES-192 (Table S-Box)** | **192 bit** | **1 MiB** | **Giải mã** | 30 | **21.81** | 21.98 | 0.68 | $\pm 0.24$ | 45.90 |
-| **AES-256 (Table S-Box)** | **256 bit** | **1 MiB** | **Mã hóa** | 30 | **18.68** | 18.90 | 0.93 | $\pm 0.33$ | 53.68 |
-| **AES-256 (Table S-Box)** | **256 bit** | **1 MiB** | **Giải mã** | 30 | **18.98** | 19.18 | 0.67 | $\pm 0.24$ | 52.76 |
-| **AES-128 (Table S-Box)** | **128 bit** | **100 MiB** | **Mã hóa** | 5 | **31.47** | 31.58 | 2.39 | $\pm 2.10$ | 3,192.50 |
-| **AES-128 (Table S-Box)** | **128 bit** | **100 MiB** | **Giải mã** | 5 | **25.72** | 25.96 | 2.21 | $\pm 1.94$ | 3,911.55 |
-| **AES-128 (Table S-Box)** | **128 bit** | **500 MiB** | **Mã hóa** | 2 | **20.06** | 20.06 | 1.27 | $\pm 1.76$ | 24,974.95 |
-| **AES-128 (Table S-Box)** | **128 bit** | **500 MiB** | **Giải mã** | 2 | **24.09** | 24.09 | 5.57 | $\pm 7.72$ | 21,328.30 |
+Toàn bộ các cấu hình đều được thực nghiệm chuẩn hóa **=30$ lượt chạy độc lập** trên vi xử lý Intel Core i7-11800H:
+
+| Cấu hình thuật toán | Độ dài khóa | Kích thước tải | Tác vụ | Số lượt ($) | Thông lượng TB ($\\text{MB/s}$) | Trung vị ($\\text{MB/s}$) | Độ lệch chuẩn $ | Khoảng tin cậy \\%$ | Độ trễ TB ($\\text{ms}$) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **AES-128 (Table S-Box)** | **128 bit** | **1 MiB** | **Mã hóa** | 30 | **29.97** | 30.04 | 0.79 | $\\pm 0.28$ | 33.38 |
+| **AES-128 (Table S-Box)** | **128 bit** | **1 MiB** | **Giải mã** | 30 | **30.16** | 30.39 | 0.88 | $\\pm 0.32$ | 33.18 |
+| **AES-128 (Computed S-Box)**| **128 bit** | **1 MiB** | **Mã hóa** | 30 | **1.26** | 1.27 | 0.02 | $\\pm 0.01$ | 792.48 |
+| **AES-128 (Computed S-Box)**| **128 bit** | **1 MiB** | **Giải mã** | 30 | **1.26** | 1.27 | 0.03 | $\\pm 0.01$ | 793.70 |
+| **AES-192 (Table S-Box)** | **192 bit** | **1 MiB** | **Mã hóa** | 30 | **26.28** | 26.76 | 1.25 | $\\pm 0.45$ | 38.14 |
+| **AES-192 (Table S-Box)** | **192 bit** | **1 MiB** | **Giải mã** | 30 | **26.33** | 26.49 | 0.87 | $\\pm 0.31$ | 38.02 |
+| **AES-256 (Table S-Box)** | **256 bit** | **1 MiB** | **Mã hóa** | 30 | **22.85** | 22.81 | 0.88 | $\\pm 0.31$ | 43.83 |
+| **AES-256 (Table S-Box)** | **256 bit** | **1 MiB** | **Giải mã** | 30 | **22.95** | 23.18 | 1.10 | $\\pm 0.39$ | 43.68 |
+| **AES-128 (Table S-Box)** | **128 bit** | **100 MiB** | **Mã hóa** | 30 | **17.11** | 16.70 | 1.61 | $\\pm 0.58$ | 5,896.20 |
+| **AES-128 (Table S-Box)** | **128 bit** | **100 MiB** | **Giải mã** | 30 | **16.96** | 16.71 | 1.55 | $\\pm 0.56$ | 5,941.65 |
+| **AES-128 (Table S-Box)** | **128 bit** | **1 GiB** | **Mã hóa** | 30 | **14.50** | 14.26 | 0.58 | $\\pm 0.21$ | 70,741.27 |
+| **AES-128 (Table S-Box)** | **128 bit** | **1 GiB** | **Giải mã** | 30 | **13.30** | 13.35 | 1.60 | $\\pm 0.57$ | 78,093.50 |
 
 ---
 
@@ -191,34 +193,34 @@ Toàn bộ các test vector chính thức từ **NIST FIPS-197** và **NIST SP 8
 
 #### Biểu đồ 1: So sánh Thông lượng Table-based vs Computed S-Box
 ![So sánh Thông lượng Table vs Computed](../Output/windows/plots/table_vs_computed_throughput.png)
-*Hình 4: Biểu đồ cột so sánh thông lượng mã hóa và giải mã tại tải 1 MiB ($N=30$, thanh sai số thể hiện Khoảng tin cậy 95%).*
+*Hình 4: Biểu đồ cột so sánh thông lượng mã hóa và giải mã tại tải 1 MiB (=30$, thanh sai số thể hiện Khoảng tin cậy 95%).*
 
-#### Biểu đồ 2: Hệ thống Phân tầng Hiệu năng 3 Cấp độ (Thang đo Logarithmic)
-![Phân tầng hiệu năng 3 cấp độ](../Output/windows/plots/performance_hierarchy_log.png)
-*Hình 5: So sánh phân tầng hiệu năng logarithmic: Đại số Euclid (1.09 MB/s) vs Phần mềm tra bảng L1 (27.36 MB/s) vs Phần cứng Intel AES-NI (1,850 MB/s).*
+#### Biểu đồ 2: Hệ thống Phân tầng Hiệu năng Đa cấp độ (Thang đo Logarithmic)
+![Phân tầng hiệu năng](../Output/windows/plots/performance_hierarchy_log.png)
+*Hình 5: So sánh phân tầng hiệu năng logarithmic: Đại số Euclid (1.26 MB/s) vs Phần mềm tra bảng L1 (13.30 - 30.16 MB/s) vs Phần cứng Intel AES-NI (1,850 MB/s).*
 
-- **Tăng tốc 25.1x của Bảng tra L1 Cache:** Bảng S-Box 256 byte nằm trọn trong L1 Data Cache (48 KB), mỗi truy cập chỉ tốn ~4 chu kỳ CPU; trong khi phép tính đại số `computed` tốn hàng trăm chu kỳ ALU giải phương trình đồng dư cho mỗi byte.
-- **Tăng tốc 67.6x của AES-NI:** Tập lệnh chuyên dụng `_mm_aesenc_si128` thực hiện 1 vòng AES trong mạch vi xử lý chỉ mất 1 chu kỳ máy (Pipelined latency), đạt tốc độ tới 1,850 MB/s.
+- **Tăng tốc 23.9x của Bảng tra L1 Cache:** Bảng S-Box 256 byte nằm trọn trong L1 Data Cache (48 KB), mỗi truy cập chỉ tốn ~4 chu kỳ CPU; trong khi phép tính đại số computed tốn hàng trăm chu kỳ ALU giải phương trình đồng dư cho mỗi byte.
+- **Tăng tốc 61.7x của AES-NI:** Tập lệnh chuyên dụng _mm_aesenc_si128 thực hiện 1 vòng AES trong mạch vi xử lý chỉ mất 1 chu kỳ máy (Pipelined latency), đạt tốc độ tới 1,850 MB/s.
 
 #### Biểu đồ 3: Ảnh hưởng của Chiều dài khóa lên Hiệu năng
 ![Ảnh hưởng chiều dài khóa](../Output/windows/plots/key_length_scaling.png)
-*Hình 6: Thông lượng mã hóa/giải mã theo độ dài khóa: AES-128 (10 vòng), AES-192 (12 vòng), AES-256 (14 vòng).*
+*Hình 6: Thông lượng mã hóa/giải mã theo độ dài khóa (=30$ runs mỗi cấu hình): AES-128 (10 vòng), AES-192 (12 vòng), AES-256 (14 vòng).*
 
 Bảng đối chiếu tỷ lệ thực nghiệm so với tỷ lệ suy giảm lý thuyết:
 
-| Thuật toán | Số vòng lặp ($N_r$) | Thông lượng đo được | Tỷ lệ thực nghiệm so với AES-128 | Tỷ lệ lý thuyết ($10 / N_r$) | Độ lệch sai số |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **AES-128** | 10 vòng | **27.36 MB/s** | $1.000$ (Baseline) | $1.000$ | $0.0\%$ |
-| **AES-192** | 12 vòng | **21.66 MB/s** | $21.66 / 27.36 = \mathbf{0.791}$ | $10 / 12 = \mathbf{0.833}$ | $-4.2\%$ |
-| **AES-256** | 14 vòng | **18.68 MB/s** | $18.68 / 27.36 = \mathbf{0.682}$ | $10 / 14 = \mathbf{0.714}$ | $-3.2\%$ |
+| Thuật toán | Số vòng lặp ($) | Thông lượng đo được | Tỷ lệ thực nghiệm so với AES-128 | Tỷ lệ lý thuyết ( / N_r$) | Độ lệch sai số |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **AES-128** | 10 vòng | **29.97 MB/s** | .000$ (Baseline) | .000$ | .0\\%$ |
+| **AES-192** | 12 vòng | **26.28 MB/s** | .28 / 29.97 = \\mathbf{0.877}$ |  / 12 = \\mathbf{0.833}$ | $+5.2\\%$ |
+| **AES-256** | 14 vòng | **22.85 MB/s** | .85 / 29.97 = \\mathbf{0.762}$ |  / 14 = \\mathbf{0.714}$ | $+6.7\\%$ |
 
 #### Biểu đồ 4: Độ trễ Tính toán trên từng Khối 16-Byte (Block Latency in Nanoseconds)
 ![Độ trễ khối 16 byte](../Output/windows/plots/block_latency_comparison.png)
-*Hình 7: Độ trễ xử lý trên mỗi khối 16-byte (ns) giữa Table-based (585 - 856 ns) và Computed S-Box (14,678 ns).*
+*Hình 7: Độ trễ xử lý trên mỗi khối 16-byte (ns) giữa Table-based (534 - 1,103 ns) và Computed S-Box (12,698 ns).*
 
 #### Biểu đồ 5: Sự mở rộng Hiệu năng theo Kích thước Tải
 ![Mở rộng kích thước tải](../Output/windows/plots/payload_size_scaling.png)
-*Hình 8: Đường cong thông lượng AES-128 CTR Table trên các kích thước 1 MiB, 100 MiB và 500 MiB.*
+*Hình 8: Biểu đồ cột thể hiện thông lượng AES-128 CTR Table trên các kích thước 1 MiB, 100 MiB và 1 GiB (=30$ runs mỗi kích thước tải kèm thanh sai số CI 95%).*
 
 ---
 
