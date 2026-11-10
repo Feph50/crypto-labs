@@ -233,22 +233,23 @@ def run_parallel_benchmark(label, sbox_mode, key_bits, key_file, size_name, tota
 
 
 print("=================================================================", flush=True)
-print("  PURE C++ AES BENCHMARK MATRIX (1MiB, 100MiB, 1GiB | N=30 RUNS) ", flush=True)
+print("  PURE C++ AES BENCHMARK MATRIX (1MiB, 100MiB, 1GiB | N=100 RUNS, 8 THREADS) ", flush=True)
 print("=================================================================", flush=True)
 
-# 1. S-Box Comparison (1MiB, N=30)
-print("\n--- 1. S-Box Comparison (1MiB, N=30) ---", flush=True)
-run_sequential_test("AES-128 (Table)", "table", 128, KEY128, "1MiB", 30)
-run_sequential_test("AES-128 (Computed)", "computed", 128, KEY128, "1MiB", 30)
+# 1. S-Box Comparison (1MiB, N=100) using 8 workers
+print("\n--- 1. S-Box Comparison (1MiB, N=100, 8 workers) ---", flush=True)
+run_parallel_benchmark("AES-128 (Table)", "table", 128, KEY128, "1MiB", total_runs=100, num_workers=8)
+run_parallel_benchmark("AES-128 (Computed)", "computed", 128, KEY128, "1MiB", total_runs=100, num_workers=8)
 
-# 2. Key Length Comparison (Table, 1MiB, N=30)
-print("\n--- 2. Key Length Comparison (Table, 1MiB, N=30) ---", flush=True)
-run_sequential_test("AES-192 (Table)", "table", 192, KEY192, "1MiB", 30)
-run_sequential_test("AES-256 (Table)", "table", 256, KEY256, "1MiB", 30)
+# 2. Key Length Comparison (Table, 1MiB, N=100) using 8 workers
+print("\n--- 2. Key Length Comparison (Table, 1MiB, N=100, 8 workers) ---", flush=True)
+run_parallel_benchmark("AES-192 (Table)", "table", 192, KEY192, "1MiB", total_runs=100, num_workers=8)
+run_parallel_benchmark("AES-256 (Table)", "table", 256, KEY256, "1MiB", total_runs=100, num_workers=8)
 
-# 3. Payload Size Scaling: 100MiB (N=30) and 1GiB (N=30) using 8 parallel workers
-run_parallel_benchmark("AES-128 (Table)", "table", 128, KEY128, "100MiB", total_runs=30, num_workers=8)
-run_parallel_benchmark("AES-128 (Table)", "table", 128, KEY128, "1GiB", total_runs=30, num_workers=8)
+# 3. Payload Size Scaling: 100MiB (N=100) and 1GiB (N=100) using 8 parallel workers
+print("\n--- 3. Payload Scaling: 100MiB & 1GiB (N=100, 8 workers) ---", flush=True)
+run_parallel_benchmark("AES-128 (Table)", "table", 128, KEY128, "100MiB", total_runs=100, num_workers=8)
+run_parallel_benchmark("AES-128 (Table)", "table", 128, KEY128, "1GiB", total_runs=100, num_workers=8)
 
 df = pd.DataFrame(results)
 df.to_csv(OUT_CSV, index=False)
@@ -259,7 +260,7 @@ print(f"\n[DONE] Results saved to CSV: {OUT_CSV}", flush=True)
 # -----------------------------------------------------------------------------
 plt.style.use('seaborn-v0_8-whitegrid' if 'seaborn-v0_8-whitegrid' in plt.style.available else 'default')
 
-# Plot 1: Table vs Computed (1MiB, N=30)
+# Plot 1: Table vs Computed (1MiB, N=100)
 fig, ax = plt.subplots(figsize=(8, 5))
 sub1 = df[(df["size"] == "1MiB") & (df["key_bits"] == 128)]
 ops = ["encrypt", "decrypt"]
@@ -275,7 +276,7 @@ b1 = ax.bar(x - w/2, tbl_vals, w, yerr=tbl_err, capsize=5, label="Precomputed S-
 b2 = ax.bar(x + w/2, cmp_vals, w, yerr=cmp_err, capsize=5, label="Algebraic S-Box (On-the-fly GF(2^8))", color="#ff7f0e")
 
 ax.set_ylabel("Throughput (MB/s)", fontsize=12, fontweight="bold")
-ax.set_title("AES-128 CTR: Table-based vs Computed S-Box (1 MiB, N=30)", fontsize=13, fontweight="bold")
+ax.set_title("AES-128 CTR: Table-based vs Computed S-Box (1 MiB, N=100)", fontsize=13, fontweight="bold")
 ax.set_xticks(x)
 ax.set_xticklabels(["Encrypt", "Decrypt"], fontsize=11)
 ax.legend(fontsize=10)
@@ -292,7 +293,7 @@ p1 = os.path.join(OUT_PLOTS, "table_vs_computed_throughput.png")
 plt.savefig(p1, dpi=300)
 plt.close()
 
-# Plot 2: Key Size Comparison (128 vs 192 vs 256, N=30)
+# Plot 2: Key Size Comparison (128 vs 192 vs 256, N=100)
 fig, ax = plt.subplots(figsize=(8, 5))
 sub2 = df[(df["size"] == "1MiB") & (df["sbox_mode"] == "table")]
 keys = [128, 192, 256]
@@ -309,7 +310,7 @@ b1 = ax.bar(x - w/2, enc_vals, w, yerr=enc_err, capsize=5, label="Encrypt", colo
 b2 = ax.bar(x + w/2, dec_vals, w, yerr=dec_err, capsize=5, label="Decrypt", color="#17becf")
 
 ax.set_ylabel("Throughput (MB/s)", fontsize=12, fontweight="bold")
-ax.set_title("AES Key Length Impact on Throughput (Table S-Box, 1 MiB, N=30)", fontsize=13, fontweight="bold")
+ax.set_title("AES Key Length Impact on Throughput (Table S-Box, 1 MiB, N=100)", fontsize=13, fontweight="bold")
 ax.set_xticks(x)
 ax.set_xticklabels(key_labels, fontsize=10)
 ax.legend(fontsize=10)
@@ -326,7 +327,7 @@ p2 = os.path.join(OUT_PLOTS, "key_length_scaling.png")
 plt.savefig(p2, dpi=300)
 plt.close()
 
-# Plot 3: Payload Size Scaling: 1MiB, 100MiB, 1GiB (ALL N=30)
+# Plot 3: Payload Size Scaling: 1MiB, 100MiB, 1GiB (ALL N=100)
 fig, ax = plt.subplots(figsize=(9, 5))
 sub3 = df[(df["sbox_mode"] == "table") & (df["key_bits"] == 128)]
 sizes_order = ["1MiB", "100MiB", "1GiB"]
@@ -340,11 +341,11 @@ w = 0.35
 b1 = ax.bar(x - w/2, enc_thrs, w, yerr=enc_err, capsize=5, label="Encrypt Throughput", color="#d62728")
 b2 = ax.bar(x + w/2, dec_thrs, w, yerr=dec_err, capsize=5, label="Decrypt Throughput", color="#9467bd")
 
-ax.set_xlabel("Payload Size (N=30 Independent Runs Each)", fontsize=12, fontweight="bold")
+ax.set_xlabel("Payload Size (N=100 Independent Runs Each, 8 Threads)", fontsize=12, fontweight="bold")
 ax.set_ylabel("Throughput (MB/s)", fontsize=12, fontweight="bold")
-ax.set_title("Pure C++ AES-128 CTR: Throughput across 1 MiB, 100 MiB, and 1 GiB (N=30)", fontsize=13, fontweight="bold")
+ax.set_title("Pure C++ AES-128 CTR: Throughput across 1 MiB, 100 MiB, and 1 GiB (N=100)", fontsize=13, fontweight="bold")
 ax.set_xticks(x)
-ax.set_xticklabels(["1 MiB (N=30)", "100 MiB (N=30)", "1 GiB (N=30)"], fontsize=11)
+ax.set_xticklabels(["1 MiB (N=100)", "100 MiB (N=100)", "1 GiB (N=100)"], fontsize=11)
 ax.legend(fontsize=10)
 
 for rect in b1:

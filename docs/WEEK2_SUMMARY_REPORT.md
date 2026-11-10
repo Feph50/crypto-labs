@@ -33,24 +33,24 @@ Hoàn thành toàn diện **Lab 2: Pure C++ AES-128 in CTR mode**, tuân thủ n
 - **Thực nghiệm tính uốn dẻo:** Lật bit 0x20 ở ciphertext làm biến đổi chính xác ký tự tương ứng ở plaintext từ `'A'` thành `'a'` mà không bị phát hiện, chứng minh trực quan lý do chế độ CTR bắt buộc phải đi kèm MAC / AEAD (AES-GCM).
 - Sơ đồ minh chứng: [`lab2/Output/windows/plots/malleability_attack_proof.png`](file:///D:/MMH_Final_Labs/Final_Lab%20Tasks/NT219-Crypto-Labs/lab2/Output/windows/plots/malleability_attack_proof.png) và ảnh chụp terminal: [`lab2/Output/windows/plots/cli_negative_terminal.png`](file:///D:/MMH_Final_Labs/Final_Lab%20Tasks/NT219-Crypto-Labs/lab2/Output/windows/plots/cli_negative_terminal.png).
 
-### 2.3. Đo lường hiệu năng thực tế (=30$ runs, CI 95%) & 10 Hình ảnh Trực quan
+### 2.3. Đo lường hiệu năng thực tế (=100$ runs, 8 threads, CI 95%) & 10 Hình ảnh Trực quan
 - Dữ liệu CSV: [lab2/Output/windows/bench/bench_lab2_windows.csv](file:///D:/MMH_Final_Labs/Final_Lab%20Tasks/NT219-Crypto-Labs/lab2/Output/windows/bench/bench_lab2_windows.csv).
-- Toàn bộ các cấu hình đều được chuẩn hóa đo **=30$ lượt chạy độc lập** trên Intel Core i7-11800H:
-  - **1 MiB Table (AES-128):** Mã hóa **29.97 MB/s** (33.38 ms) | Giải mã **30.16 MB/s** (33.18 ms)
-  - **1 MiB Computed (AES-128):** Mã hóa **1.26 MB/s** (792.48 ms) | Giải mã **1.26 MB/s** (793.70 ms) $\to$ Bảng tra tăng tốc **23.9x**
-  - **1 MiB Table (AES-192):** Mã hóa **26.28 MB/s** | Giải mã **26.33 MB/s**
-  - **1 MiB Table (AES-256):** Mã hóa **22.85 MB/s** | Giải mã **22.95 MB/s**
-  - **100 MiB Table (AES-128, 8 workers):** Mã hóa **17.11 MB/s** | Giải mã **16.96 MB/s**
-  - **1 GiB Table (AES-128, 8 workers):** Mã hóa **14.50 MB/s** | Giải mã **13.30 MB/s**
+- Toàn bộ các cấu hình đều được chuẩn hóa đo **=100$ lượt chạy độc lập** trên Intel Core i7-11800H qua 8 workers song song:
+  - **1 MiB Table (AES-128, 8 threads):** Mã hóa **17.56 MB/s** (57.55 ms) | Giải mã **17.58 MB/s** (57.60 ms)
+  - **1 MiB Computed (AES-128, 8 threads):** Mã hóa **0.54 MB/s** (1,915.92 ms) | Giải mã **0.55 MB/s** (1,833.38 ms) $\to$ Bảng tra tăng tốc **32.5x**
+  - **1 MiB Table (AES-192, 8 threads):** Mã hóa **8.91 MB/s** | Giải mã **8.35 MB/s**
+  - **1 MiB Table (AES-256, 8 threads):** Mã hóa **6.87 MB/s** | Giải mã **7.28 MB/s**
+  - **100 MiB Table (AES-128, 8 threads):** Mã hóa **11.32 MB/s** | Giải mã **14.78 MB/s**
+  - **1 GiB Table (AES-128, 8 threads):** Mã hóa **14.32 MB/s** | Giải mã **17.23 MB/s**
 - Danh mục 10 hình ảnh và biểu đồ trực quan nhúng trong báo cáo:
   1. cli_kat_terminal.png: Ảnh chụp terminal 18 NIST KATs PASS theo chuẩn NIST FIPS 197 Update 1 & SP 800-38A.
   2. cli_negative_terminal.png: Ảnh chụp terminal 6 ca Negative Tests Fail-Closed.
   3. malleability_attack_proof.png: Sơ đồ thực nghiệm tấn công tính uốn dẻo lật bit (Bit-flipping).
-  4. 	able_vs_computed_throughput.png: Biểu đồ so sánh Table (29.97 MB/s) vs Computed (1.26 MB/s) (=30$).
+  4. 	able_vs_computed_throughput.png: Biểu đồ so sánh Table (17.56 MB/s) vs Computed (0.54 MB/s) (=100$).
   5. performance_hierarchy_log.png: Biểu đồ thang Log 3 cấp độ (Đại số Euclid vs Bảng tra L1 vs Intel AES-NI 1,850 MB/s).
-  6. key_length_scaling.png: Biểu đồ thông lượng AES-128 vs AES-192 vs AES-256 (=30$ runs mỗi loại).
-  7. lock_latency_comparison.png: Biểu đồ độ trễ xử lý nano-giây trên mỗi khối 16-byte (534 ns vs 12,698 ns).
-  8. payload_size_scaling.png: Biểu đồ thông lượng theo kích thước tải 1 MiB, 100 MiB, 1 GiB (=30$ runs mỗi kích thước tải).
+  6. key_length_scaling.png: Biểu đồ thông lượng AES-128 vs AES-192 vs AES-256 (=100$ runs mỗi loại, 8 threads).
+  7. lock_latency_comparison.png: Biểu đồ độ trễ xử lý nano-giây trên mỗi khối 16-byte (911 ns vs 29,630 ns).
+  8. payload_size_scaling.png: Biểu đồ thông lượng theo kích thước tải 1 MiB, 100 MiB, 1 GiB (=100$ runs mỗi kích thước tải, 8 threads).
   9. lab2_gui_encrypt.png: Ảnh chụp giao diện PyQt6 Form Mã hóa/Giải mã CTR.
   10. lab2_gui_tools.png: Ảnh chụp giao diện PyQt6 Tab Công cụ KAT & Benchmark.
 

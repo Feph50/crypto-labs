@@ -166,26 +166,26 @@ Toàn bộ các test vector chính thức được tham chiếu trực tiếp t�
 
 ---
 
-## 4. MA TRẬN THỐNG KÊ HIỆU NĂNG THỰC TẾ (=30$ LƯỢT ĐỘC LẬP, CI 95%)
+## 4. MA TRẬN THỐNG KÊ HIỆU NĂNG THỰC TẾ (=100$ LƯỢT ĐỘC LẬP, 8 THREADS, CI 95%)
 
 ### 4.1. Bảng số liệu Benchmark trích xuất trực tiếp từ ench_lab2_windows.csv
 
-Toàn bộ các cấu hình đều được thực nghiệm chuẩn hóa **=30$ lượt chạy độc lập** trên vi xử lý Intel Core i7-11800H:
+Toàn bộ các cấu hình đều được thực nghiệm chuẩn hóa **=100$ lượt chạy độc lập** trên vi xử lý Intel Core i7-11800H (8 nhân vật lý song song):
 
 | Cấu hình thuật toán | Độ dài khóa | Kích thước tải | Tác vụ | Số lượt ($) | Thông lượng TB ($\\text{MB/s}$) | Trung vị ($\\text{MB/s}$) | Độ lệch chuẩn $ | Khoảng tin cậy \\%$ | Độ trễ TB ($\\text{ms}$) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **AES-128 (Table S-Box)** | **128 bit** | **1 MiB** | **Mã hóa** | 30 | **29.97** | 30.04 | 0.79 | $\\pm 0.28$ | 33.38 |
-| **AES-128 (Table S-Box)** | **128 bit** | **1 MiB** | **Giải mã** | 30 | **30.16** | 30.39 | 0.88 | $\\pm 0.32$ | 33.18 |
-| **AES-128 (Computed S-Box)**| **128 bit** | **1 MiB** | **Mã hóa** | 30 | **1.26** | 1.27 | 0.02 | $\\pm 0.01$ | 792.48 |
-| **AES-128 (Computed S-Box)**| **128 bit** | **1 MiB** | **Giải mã** | 30 | **1.26** | 1.27 | 0.03 | $\\pm 0.01$ | 793.70 |
-| **AES-192 (Table S-Box)** | **192 bit** | **1 MiB** | **Mã hóa** | 30 | **26.28** | 26.76 | 1.25 | $\\pm 0.45$ | 38.14 |
-| **AES-192 (Table S-Box)** | **192 bit** | **1 MiB** | **Giải mã** | 30 | **26.33** | 26.49 | 0.87 | $\\pm 0.31$ | 38.02 |
-| **AES-256 (Table S-Box)** | **256 bit** | **1 MiB** | **Mã hóa** | 30 | **22.85** | 22.81 | 0.88 | $\\pm 0.31$ | 43.83 |
-| **AES-256 (Table S-Box)** | **256 bit** | **1 MiB** | **Giải mã** | 30 | **22.95** | 23.18 | 1.10 | $\\pm 0.39$ | 43.68 |
-| **AES-128 (Table S-Box)** | **128 bit** | **100 MiB** | **Mã hóa** | 30 | **17.11** | 16.70 | 1.61 | $\\pm 0.58$ | 5,896.20 |
-| **AES-128 (Table S-Box)** | **128 bit** | **100 MiB** | **Giải mã** | 30 | **16.96** | 16.71 | 1.55 | $\\pm 0.56$ | 5,941.65 |
-| **AES-128 (Table S-Box)** | **128 bit** | **1 GiB** | **Mã hóa** | 30 | **14.50** | 14.26 | 0.58 | $\\pm 0.21$ | 70,741.27 |
-| **AES-128 (Table S-Box)** | **128 bit** | **1 GiB** | **Giải mã** | 30 | **13.30** | 13.35 | 1.60 | $\\pm 0.57$ | 78,093.50 |
+| **AES-128 (Table S-Box)** | **128 bit** | **1 MiB** | **Mã hóa** | **100** | **17.56** | 17.38 | 1.81 | $\\pm 0.35$ | 57.55 |
+| **AES-128 (Table S-Box)** | **128 bit** | **1 MiB** | **Giải mã** | **100** | **17.58** | 17.31 | 2.03 | $\\pm 0.40$ | 57.60 |
+| **AES-128 (Computed S-Box)**| **128 bit** | **1 MiB** | **Mã hóa** | **100** | **0.54** | 0.51 | 0.13 | $\\pm 0.03$ | 1,915.92 |
+| **AES-128 (Computed S-Box)**| **128 bit** | **1 MiB** | **Giải mã** | **100** | **0.55** | 0.54 | 0.05 | $\\pm 0.01$ | 1,833.38 |
+| **AES-192 (Table S-Box)** | **192 bit** | **1 MiB** | **Mã hóa** | **100** | **8.91** | 8.37 | 1.84 | $\\pm 0.36$ | 116.35 |
+| **AES-192 (Table S-Box)** | **192 bit** | **1 MiB** | **Giải mã** | **100** | **8.35** | 8.16 | 1.23 | $\\pm 0.24$ | 122.46 |
+| **AES-256 (Table S-Box)** | **256 bit** | **1 MiB** | **Mã hóa** | **100** | **6.87** | 6.75 | 0.76 | $\\pm 0.15$ | 147.29 |
+| **AES-256 (Table S-Box)** | **256 bit** | **1 MiB** | **Giải mã** | **100** | **7.28** | 7.18 | 0.99 | $\\pm 0.19$ | 139.71 |
+| **AES-128 (Table S-Box)** | **128 bit** | **100 MiB** | **Mã hóa** | **100** | **11.32** | 10.77 | 1.90 | $\\pm 0.37$ | 9,005.40 |
+| **AES-128 (Table S-Box)** | **128 bit** | **100 MiB** | **Giải mã** | **100** | **14.78** | 15.03 | 3.52 | $\\pm 0.69$ | 7,107.30 |
+| **AES-128 (Table S-Box)** | **128 bit** | **1 GiB** | **Mã hóa** | **100** | **14.32** | 14.30 | 0.93 | $\\pm 0.18$ | 71,779.43 |
+| **AES-128 (Table S-Box)** | **128 bit** | **1 GiB** | **Giải mã** | **100** | **17.23** | 18.35 | 2.65 | $\\pm 0.52$ | 60,753.34 |
 
 ---
 
@@ -193,34 +193,34 @@ Toàn bộ các cấu hình đều được thực nghiệm chuẩn hóa **=30$ 
 
 #### Biểu đồ 1: So sánh Thông lượng Table-based vs Computed S-Box
 ![So sánh Thông lượng Table vs Computed](../Output/windows/plots/table_vs_computed_throughput.png)
-*Hình 4: Biểu đồ cột so sánh thông lượng mã hóa và giải mã tại tải 1 MiB (=30$, thanh sai số thể hiện Khoảng tin cậy 95%).*
+*Hình 4: Biểu đồ cột so sánh thông lượng mã hóa và giải mã tại tải 1 MiB (=100$, thanh sai số thể hiện Khoảng tin cậy 95%).*
 
 #### Biểu đồ 2: Hệ thống Phân tầng Hiệu năng Đa cấp độ (Thang đo Logarithmic)
 ![Phân tầng hiệu năng](../Output/windows/plots/performance_hierarchy_log.png)
-*Hình 5: So sánh phân tầng hiệu năng logarithmic: Đại số Euclid (1.26 MB/s) vs Phần mềm tra bảng L1 (13.30 - 30.16 MB/s) vs Phần cứng Intel AES-NI (1,850 MB/s).*
+*Hình 5: So sánh phân tầng hiệu năng logarithmic: Đại số Euclid (0.54 MB/s) vs Phần mềm tra bảng L1 (11.32 - 17.58 MB/s) vs Phần cứng Intel AES-NI (1,850 MB/s).*
 
-- **Tăng tốc 23.9x của Bảng tra L1 Cache:** Bảng S-Box 256 byte nằm trọn trong L1 Data Cache (48 KB), mỗi truy cập chỉ tốn ~4 chu kỳ CPU; trong khi phép tính đại số computed tốn hàng trăm chu kỳ ALU giải phương trình đồng dư cho mỗi byte.
-- **Tăng tốc 61.7x của AES-NI:** Tập lệnh chuyên dụng _mm_aesenc_si128 thực hiện 1 vòng AES trong mạch vi xử lý chỉ mất 1 chu kỳ máy (Pipelined latency), đạt tốc độ tới 1,850 MB/s.
+- **Tăng tốc 32.5x của Bảng tra L1 Cache:** Bảng S-Box 256 byte nằm trọn trong L1 Data Cache (48 KB), mỗi truy cập chỉ tốn ~4 chu kỳ CPU; trong khi phép tính đại số computed tốn hàng trăm chu kỳ ALU giải phương trình đồng dư cho mỗi byte.
+- **Tăng tốc 105.3x của AES-NI:** Tập lệnh chuyên dụng _mm_aesenc_si128 thực hiện 1 vòng AES trong mạch vi xử lý chỉ mất 1 chu kỳ máy (Pipelined latency), đạt tốc độ tới 1,850 MB/s.
 
 #### Biểu đồ 3: Ảnh hưởng của Chiều dài khóa lên Hiệu năng
 ![Ảnh hưởng chiều dài khóa](../Output/windows/plots/key_length_scaling.png)
-*Hình 6: Thông lượng mã hóa/giải mã theo độ dài khóa (=30$ runs mỗi cấu hình): AES-128 (10 vòng), AES-192 (12 vòng), AES-256 (14 vòng).*
+*Hình 6: Thông lượng mã hóa/giải mã theo độ dài khóa (=100$ runs mỗi cấu hình, 8 threads): AES-128 (10 vòng), AES-192 (12 vòng), AES-256 (14 vòng).*
 
 Bảng đối chiếu tỷ lệ thực nghiệm so với tỷ lệ suy giảm lý thuyết:
 
-| Thuật toán | Số vòng lặp ($) | Thông lượng đo được | Tỷ lệ thực nghiệm so với AES-128 | Tỷ lệ lý thuyết ( / N_r$) | Độ lệch sai số |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **AES-128** | 10 vòng | **29.97 MB/s** | .000$ (Baseline) | .000$ | .0\\%$ |
-| **AES-192** | 12 vòng | **26.28 MB/s** | .28 / 29.97 = \\mathbf{0.877}$ |  / 12 = \\mathbf{0.833}$ | $+5.2\\%$ |
-| **AES-256** | 14 vòng | **22.85 MB/s** | .85 / 29.97 = \\mathbf{0.762}$ |  / 14 = \\mathbf{0.714}$ | $+6.7\\%$ |
+| Thuật toán | Số vòng lặp ($) | Thông lượng đo được | Tỷ lệ thực nghiệm so với AES-128 | Tỷ lệ lý thuyết ( / N_r$) |
+| :--- | :---: | :---: | :---: | :---: |
+| **AES-128** | 10 vòng | **17.56 MB/s** | .000$ (Baseline) | .000$ |
+| **AES-192** | 12 vòng | **8.91 MB/s** | .91 / 17.56 = \\mathbf{0.507}$ |  / 12 = \\mathbf{0.833}$ |
+| **AES-256** | 14 vòng | **6.87 MB/s** | .87 / 17.56 = \\mathbf{0.391}$ |  / 14 = \\mathbf{0.714}$ |
 
 #### Biểu đồ 4: Độ trễ Tính toán trên từng Khối 16-Byte (Block Latency in Nanoseconds)
 ![Độ trễ khối 16 byte](../Output/windows/plots/block_latency_comparison.png)
-*Hình 7: Độ trễ xử lý trên mỗi khối 16-byte (ns) giữa Table-based (534 - 1,103 ns) và Computed S-Box (12,698 ns).*
+*Hình 7: Độ trễ xử lý trên mỗi khối 16-byte (ns) giữa Table-based (911 - 1,413 ns) và Computed S-Box (29,630 ns).*
 
 #### Biểu đồ 5: Sự mở rộng Hiệu năng theo Kích thước Tải
 ![Mở rộng kích thước tải](../Output/windows/plots/payload_size_scaling.png)
-*Hình 8: Biểu đồ cột thể hiện thông lượng AES-128 CTR Table trên các kích thước 1 MiB, 100 MiB và 1 GiB (=30$ runs mỗi kích thước tải kèm thanh sai số CI 95%).*
+*Hình 8: Biểu đồ cột thể hiện thông lượng AES-128 CTR Table trên các kích thước 1 MiB, 100 MiB và 1 GiB (=100$ runs mỗi kích thước tải, 8 workers, kèm thanh sai số CI 95%).*
 
 ---
 
