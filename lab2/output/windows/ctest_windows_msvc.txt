@@ -1,0 +1,25 @@
+== ctest: MSVC - Release, /MT, static OpenSSL and Crypto++ from vcpkg ==
+date : Sun 11/15/2026 19:37:56.57
+git  : a119e86
+Microsoft (R) C/C++ Optimizing Compiler Version 19.51.36260 for x64
+cmake: cmake version 4.3.1-msvc1
+openssl : 3.6.5#2 vcpkg x64-windows-static
+cryptopp: 2026-03-02 vcpkg x64-windows-static (Crypto++ 8.9.0)
+catch2  : v3.5.3 (FetchContent)
+
+Test project C:/Users/ThinkPad/AppData/Local/Temp/claude/01a574b694523bd9/0d59724d-09e7-4edd-b480-494c9919cda6/scratchpad/l2_msvc
+    Start 1: lab2_unit_tests
+1/4 Test #1: lab2_unit_tests ..................   Passed    0.12 sec
+    Start 2: lab2_kat_runner
+2/4 Test #2: lab2_kat_runner ..................   Passed    0.03 sec
+    Start 3: lab2_cli_end_to_end
+3/4 Test #3: lab2_cli_end_to_end ..............   Passed    0.63 sec
+    Start 4: lab2_cross_validation
+4/4 Test #4: lab2_cross_validation ............   Passed    1.62 sec
+
+100% tests passed, 0 tests failed out of 4
+
+Total Test time (real) =   2.41 sec
+
+-- unit tests (Catch2) summary:
+All tests passed (3276 assertions in 32 test cases)

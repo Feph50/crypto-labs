@@ -1,138 +1,77 @@
 #!/usr/bin/env bash
-# build_linux.sh - Build + test Lab 2 (aestool) on Linux (Ubuntu/Kali).
+# build_linux.sh - Build + test Lab 2 (aestool) on Linux (Ubuntu LTS / Debian).
 #
-# Usage (from lab2 folder):
-#     scripts/build_linux.sh [compiler] [--clean] [--install-deps]
+# Usage (from anywhere):
+#     lab2/scripts/build_linux.sh [gcc|clang] [--clean] [--install-deps]
 #
-# Compilers:
-#     gcc    - GCC (default)
-#     clang  - Clang
+# What it does: configure (out-of-source, build dir "build_ubuntu_<compiler>"), build, ctest, run the KAT file.
+# It is equivalent to:   mkdir build && cd build && cmake .. && cmake --build . && ctest
 #
-# Examples:
-#     scripts/build_linux.sh gcc
-#     scripts/build_linux.sh clang
-#     scripts/build_linux.sh gcc --clean
-#     scripts/build_linux.sh clang --install-deps
-#
-# Env vars (optional):
-#     CRYPTOPP_ROOT     Crypto++ root (default: ~/Desktop/nt219lib/cryptopp)
-#     OPENSSL_ROOT_DIR  OpenSSL root per compiler (auto-detected if not set)
+# Dependencies (Ubuntu):   sudo apt install -y build-essential cmake libssl-dev libcrypto++-dev catch2
+#                          (--install-deps runs exactly this; catch2 is optional: CMake downloads it if missing;
+#                           libssl-dev / libcrypto++-dev are ONLY for aestool_ref = cross-validation + comparison)
+# No path needs editing. Optional overrides (environment variables):
+#     CRYPTOPP_ROOT_DIR   install prefix of a self-built Crypto++ (headers in include/, library in lib/)
+#     OPENSSL_ROOT_DIR    install prefix of a self-built OpenSSL
+#     CMAKE_GENERATOR     e.g. Ninja (default: CMake's default, normally "Unix Makefiles")
 
 set -euo pipefail
 
-# Resolve lab2 directory (where this script's parent's parent is)
 LAB_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$LAB_DIR"
 
 COMPILER="gcc"
 CLEAN=0
 INSTALL=0
-
-# Parse arguments
 for arg in "$@"; do
     case "$arg" in
         gcc|clang) COMPILER="$arg" ;;
         --clean) CLEAN=1 ;;
         --install-deps) INSTALL=1 ;;
-        -h|--help)
-            sed -n '2,20p' "$0"
-            exit 0
-            ;;
+        -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
         *) echo "[ERROR] Unknown argument: $arg"; exit 1 ;;
     esac
 done
 
-# Install dependencies if requested
 if [[ $INSTALL -eq 1 ]]; then
-    echo "[INFO] Installing dependencies..."
+    echo "[INFO] Installing dependencies (needs sudo)..."
     sudo apt update
-    sudo apt install -y build-essential cmake git libssl-dev pkg-config catch2
+    sudo apt install -y build-essential cmake libssl-dev libcrypto++-dev catch2 pkg-config
+    [[ "$COMPILER" == "clang" ]] && sudo apt install -y clang
 fi
 
-# Check required tools
-for tool in cmake; do
-    command -v "$tool" >/dev/null || { echo "[ERROR] Missing '$tool'. Run with --install-deps"; exit 1; }
-done
+command -v cmake >/dev/null || { echo "[ERROR] cmake not found. Run with --install-deps"; exit 1; }
 
-# Compiler-specific setup
-case "$COMPILER" in
-    gcc)
-        BUILD_DIR="build_ubuntu_gcc"
-        CMAKE_CXX_COMPILER=""
-        CRYPTOPP_COMPILER_SUBDIR="gcc"
-        OPENSSL_COMPILER_SUBDIR="gcc"
-        ;;
-    clang)
-        BUILD_DIR="build_ubuntu_clang"
-        CMAKE_CXX_COMPILER="-DCMAKE_CXX_COMPILER=clang++"
-        CRYPTOPP_COMPILER_SUBDIR="clang"
-        OPENSSL_COMPILER_SUBDIR="clang"
-        command -v clang++ >/dev/null || { echo "[ERROR] clang++ not found"; exit 1; }
-        ;;
-    *)
-        echo "[ERROR] Invalid compiler: $COMPILER (use gcc or clang)"
-        exit 1
-        ;;
-esac
+BUILD_DIR="build_ubuntu_${COMPILER}"
+CXX_ARG=()
+if [[ "$COMPILER" == "clang" ]]; then
+    command -v clang++ >/dev/null || { echo "[ERROR] clang++ not found"; exit 1; }
+    CXX_ARG=(-DCMAKE_CXX_COMPILER=clang++)
+fi
+ROOT_ARG=()
+[[ -n "${CRYPTOPP_ROOT_DIR:-}" ]] && ROOT_ARG+=(-DCRYPTOPP_ROOT_DIR="$CRYPTOPP_ROOT_DIR")
+[[ -n "${OPENSSL_ROOT_DIR:-}" ]] && ROOT_ARG+=(-DOPENSSL_ROOT_DIR="$OPENSSL_ROOT_DIR")
+GEN_ARG=()
+[[ -n "${CMAKE_GENERATOR:-}" ]] && GEN_ARG=(-G "$CMAKE_GENERATOR")
 
-# Default library roots
-OPENSSL_ROOT="${OPENSSL_ROOT_DIR:-$HOME/Desktop/nt219lib/openssl/$OPENSSL_COMPILER_SUBDIR}"
-
-# Clean if requested
 [[ $CLEAN -eq 1 ]] && rm -rf "$BUILD_DIR"
 
-echo
-echo "================================================================================"
-echo "Building Lab 2 - AES-128-CTR (aestool)"
-echo "Compiler: $COMPILER"
-echo "Build dir: $BUILD_DIR"
-echo "OpenSSL root: $OPENSSL_ROOT"
-echo "================================================================================"
-echo
+echo "== 1/4 Configure ($COMPILER, build dir: $BUILD_DIR) =="
+cmake -S . -B "$BUILD_DIR" "${GEN_ARG[@]}" "${CXX_ARG[@]}" "${ROOT_ARG[@]}" -DCMAKE_BUILD_TYPE=Release
 
-# Configure
-echo "== 1/4 Configure =="
-cmake -S . -B "$BUILD_DIR" \
-    ${CMAKE_CXX_COMPILER} \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DOPENSSL_ROOT_DIR="$OPENSSL_ROOT"
-if [[ $? -ne 0 ]]; then
-    echo "[ERROR] Configure failed."
-    exit 1
-fi
-
-# Build
 echo "== 2/4 Build =="
 cmake --build "$BUILD_DIR" -j"$(nproc)"
-if [[ $? -ne 0 ]]; then
-    echo "[ERROR] Build failed."
-    exit 1
-fi
 
-# Test
 echo "== 3/4 Test (ctest) =="
 (cd "$BUILD_DIR" && ctest --output-on-failure)
-if [[ $? -ne 0 ]]; then
-    echo "[ERROR] Tests failed."
-    exit 1
-fi
 
-# KAT
 echo "== 4/4 KAT (Known Answer Tests) =="
-EXE="$BUILD_DIR/aestool"
-if [[ ! -f "$EXE" ]]; then
-    echo "[ERROR] Executable not found: $EXE"
-    exit 1
-fi
-mkdir -p Output/ubuntu/kat
-"$EXE" --kat kat/vectors.json --out Output/ubuntu/kat/result.txt
-if [[ $? -ne 0 ]]; then
-    echo "[ERROR] KAT failed."
-    exit 1
+"$BUILD_DIR/aestool" --kat kat/vectors.json
+
+if [[ -x "$BUILD_DIR/aestool_ref" ]]; then
+    echo "== 4b/4 Cross-validation vs OpenSSL / Crypto++ (aestool_ref) =="
+    "$BUILD_DIR/aestool_ref" xval --ref all
 fi
 
 echo
-echo "================================================================================"
-echo "SUCCESS! Binary: $LAB_DIR/$EXE"
-echo "================================================================================"
-
+echo "SUCCESS! Binary: $LAB_DIR/$BUILD_DIR/aestool"

@@ -1,0 +1,189 @@
+== Lab 2 negative tests (fail-closed evidence) ==
+tool : ./release/windows/aestool_mingw.exe
+date : 2026-11-15T12:37:33Z
+git  : a119e86
+
+################ 0. Setup (test key and IVs, generated with the OS CSPRNG)
++ ./release/windows/aestool_mingw.exe keygen --out neg_tmp/key.bin
+wrote 16 random bytes to neg_tmp/key.bin
+[exit code: 0]
+
++ ./release/windows/aestool_mingw.exe keygen --out neg_tmp/key_wrong.bin
+wrote 16 random bytes to neg_tmp/key_wrong.bin
+[exit code: 0]
+
++ ./release/windows/aestool_mingw.exe ivgen --out neg_tmp/iv.bin
+wrote 16 random bytes to neg_tmp/iv.bin
+[exit code: 0]
+
++ ./release/windows/aestool_mingw.exe ivgen --out neg_tmp/iv_wrong.bin
+wrote 16 random bytes to neg_tmp/iv_wrong.bin
+[exit code: 0]
+
+################ A. Positive controls (spec command line, must succeed, exit code 0)
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv.bin --in neg_tmp/msg.bin --out neg_tmp/ct.bin
+WARNING: IV supplied manually. Reusing a (key, IV) pair destroys confidentiality (two-time pad).
+encrypted 41 bytes -> neg_tmp/ct.bin
+[exit code: 0]
+
++ ./release/windows/aestool_mingw.exe decrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv.bin --in neg_tmp/ct.bin --out neg_tmp/dec.bin
+NOTE: CTR is unauthenticated - tampering with the ciphertext cannot be detected.
+decrypted 41 bytes -> neg_tmp/dec.bin
+[exit code: 0]
+
++ cmp neg_tmp/msg.bin neg_tmp/dec.bin
+[exit code: 0]
+
+--- A2. empty input is valid (no padding): 0 bytes in, 0 bytes out
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv.bin --in neg_tmp/empty.bin --out neg_tmp/empty.ct
+WARNING: IV supplied manually. Reusing a (key, IV) pair destroys confidentiality (two-time pad).
+encrypted 0 bytes -> neg_tmp/empty.ct
+[exit code: 0]
+
+--- A3. IV generated automatically, stored in the sidecar <out>.iv, picked up by decrypt
++ ./release/windows/aestool_mingw.exe encrypt --key neg_tmp/key.bin --in neg_tmp/msg.bin --out neg_tmp/auto.ct
+generated IV: 6371eaf281a13b11fd6de76300000000 (saved to neg_tmp/auto.ct.iv)
+encrypted 41 bytes -> neg_tmp/auto.ct
+[exit code: 0]
+
++ ./release/windows/aestool_mingw.exe decrypt --key neg_tmp/key.bin --in neg_tmp/auto.ct --out neg_tmp/auto.dec
+NOTE: CTR is unauthenticated - tampering with the ciphertext cannot be detected.
+decrypted 41 bytes -> neg_tmp/auto.dec
+[exit code: 0]
+
++ cmp neg_tmp/msg.bin neg_tmp/auto.dec
+[exit code: 0]
+
+################ B. Wrong key -> decryption 'succeeds' but the plaintext is wrong (CTR cannot detect it)
++ ./release/windows/aestool_mingw.exe decrypt --mode ctr --key neg_tmp/key_wrong.bin --iv neg_tmp/iv.bin --in neg_tmp/ct.bin --out neg_tmp/wrongkey.dec
+NOTE: CTR is unauthenticated - tampering with the ciphertext cannot be detected.
+decrypted 41 bytes -> neg_tmp/wrongkey.dec
+[exit code: 0]
+
++ cmp neg_tmp/msg.bin neg_tmp/wrongkey.dec
+neg_tmp/msg.bin neg_tmp/wrongkey.dec differ: char 1, line 1
+[exit code: 1]
+
+(cmp exit code 1 = files differ = expected)
+
+################ C. Wrong IV -> wrong plaintext
++ ./release/windows/aestool_mingw.exe decrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv_wrong.bin --in neg_tmp/ct.bin --out neg_tmp/wrongiv.dec
+NOTE: CTR is unauthenticated - tampering with the ciphertext cannot be detected.
+decrypted 41 bytes -> neg_tmp/wrongiv.dec
+[exit code: 0]
+
++ cmp neg_tmp/msg.bin neg_tmp/wrongiv.dec
+neg_tmp/msg.bin neg_tmp/wrongiv.dec differ: char 1, line 1
+[exit code: 1]
+
+(cmp exit code 1 = files differ = expected)
+
+################ D. Tampered ciphertext -> corrupted plaintext, NOT detected (CTR is not authenticated)
++ ./release/windows/aestool_mingw.exe decrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv.bin --in neg_tmp/ct_bad.bin --out neg_tmp/ct_bad.dec
+NOTE: CTR is unauthenticated - tampering with the ciphertext cannot be detected.
+decrypted 41 bytes -> neg_tmp/ct_bad.dec
+[exit code: 0]
+
+cmp -l lists every differing byte: flipping ONE ciphertext bit flips exactly ONE plaintext bit (malleability)
++ cmp -l neg_tmp/msg.bin neg_tmp/ct_bad.dec
+ 6  40  41
+[exit code: 1]
+
+################ E. Invalid key / IV -> rejected, exit code 3
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key15.bin --iv neg_tmp/iv.bin --in neg_tmp/msg.bin --out neg_tmp/e1.ct
+error: invalid key length: AES requires 16, 24 or 32 bytes (32, 48 or 64 hex chars)
+[exit code: 3]
+
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key-hex 00112233 --iv neg_tmp/iv.bin --in neg_tmp/msg.bin --out neg_tmp/e2.ct
+error: invalid key length: AES requires 16, 24 or 32 bytes (32, 48 or 64 hex chars)
+[exit code: 3]
+
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key-hex ZZ --iv neg_tmp/iv.bin --in neg_tmp/msg.bin --out neg_tmp/e3.ct
+error: malformed hex: invalid character
+[exit code: 3]
+
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv15.bin --in neg_tmp/msg.bin --out neg_tmp/e4.ct
+error: invalid IV file: expected exactly 16 bytes
+[exit code: 3]
+
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --iv-hex 00 --in neg_tmp/msg.bin --out neg_tmp/e5.ct
+error: invalid IV length: expected exactly 16 bytes (32 hex chars)
+[exit code: 3]
+
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --nonce 0011 --in neg_tmp/msg.bin --out neg_tmp/e6.ct
+error: invalid nonce length: expected exactly 12 bytes (24 hex chars)
+[exit code: 3]
+
+RESULT: no output file written (good)
+
+################ F. Counter overflow: IV = FF..FF and a message needing more than one block -> exit code 5, no partial output
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/ivff.bin --in neg_tmp/z33.bin --out neg_tmp/overflow.ct
+WARNING: IV supplied manually. Reusing a (key, IV) pair destroys confidentiality (two-time pad).
+error: CTR counter overflow: message too long for this IV (keystream would repeat)
+[exit code: 5]
+
+RESULT: no output file written (good)
+
+################ G. File I/O errors -> exit code 4
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv.bin --in neg_tmp/no_such_input.bin --out neg_tmp/g1.ct
+WARNING: IV supplied manually. Reusing a (key, IV) pair destroys confidentiality (two-time pad).
+error: cannot open input file 'neg_tmp/no_such_input.bin'
+[exit code: 4]
+
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/no_such_key.bin --iv neg_tmp/iv.bin --in neg_tmp/msg.bin --out neg_tmp/g2.ct
+error: cannot read key file 'neg_tmp/no_such_key.bin'
+[exit code: 4]
+
+--- output already exists (no --force) and input == output
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv.bin --in neg_tmp/msg.bin --out neg_tmp/ct.bin
+WARNING: IV supplied manually. Reusing a (key, IV) pair destroys confidentiality (two-time pad).
+error: output file 'neg_tmp/ct.bin' already exists (use --force)
+[exit code: 4]
+
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv.bin --in neg_tmp/msg.bin --out neg_tmp/msg.bin --force
+WARNING: IV supplied manually. Reusing a (key, IV) pair destroys confidentiality (two-time pad).
+error: input and output must be different files
+[exit code: 3]
+
+--- G3. a relative path is NOT searched in parent directories: ../key.bin exists, ./key.bin does not -> must fail
++ /d/MMH_Final_Labs/Final_Lab Tasks/NT219-Crypto-Labs-Lnguyen/lab2/release/windows/aestool_mingw.exe encrypt --mode ctr --key key.bin --iv iv.bin --in msg.bin --out x.ct
+error: cannot read key file 'key.bin'
+[exit code: 4]
+
+################ H. Misuse prevention
+--- H1. --aead is rejected: CTR has no authentication tag
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --aead --key neg_tmp/key.bin --iv neg_tmp/iv.bin --in neg_tmp/msg.bin --out neg_tmp/h1.ct
+error: --aead is not supported: CTR/XTS provide confidentiality only, no authentication tag
+[exit code: 2]
+
+--- H2. unknown mode / unknown backend
++ ./release/windows/aestool_mingw.exe encrypt --mode des --key neg_tmp/key.bin --iv neg_tmp/iv.bin --in neg_tmp/msg.bin --out neg_tmp/h2.ct
+error: unsupported mode 'des': this tool implements ctr and xts
+[exit code: 2]
+
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --sbox bogus --key neg_tmp/key.bin --iv neg_tmp/iv.bin --in neg_tmp/msg.bin --out neg_tmp/h3.ct
+error: unknown S-box backend 'bogus' (use table|computed|ttable|aesni)
+[exit code: 2]
+
+--- H3. --nonce together with --iv
++ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv.bin --nonce 000102030405060708090a0b --in neg_tmp/msg.bin --out neg_tmp/h4.ct
+error: provide only one of --iv / --iv-hex / --nonce
+[exit code: 2]
+
+--- H4. IV supplied by hand triggers the reuse warning (see the WARNING line above in section A)
+################ I. Bonus modes fail closed too
+--- I1. XTS input shorter than 16 bytes, XTS with K1 == K2
++ ./release/windows/aestool_mingw.exe encrypt --mode xts --key-hex 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f --text short --out neg_tmp/i1.ct
+error: XTS data unit must be between 16 bytes and 16 MiB
+[exit code: 3]
+
++ ./release/windows/aestool_mingw.exe encrypt --mode xts --key-hex 0000000000000000000000000000000000000000000000000000000000000000 --iv neg_tmp/iv.bin --in neg_tmp/msg.bin --out neg_tmp/i2.ct
+error: XTS keys K1 and K2 must be different
+[exit code: 3]
+
+################ J. Known Answer Test file that is not valid JSON must not report success
++ ./release/windows/aestool_mingw.exe --kat neg_tmp/bad_kat.json
+error: JSON parse error at offset 35: expected '}'
+[exit code: 3]
+
+== end ==

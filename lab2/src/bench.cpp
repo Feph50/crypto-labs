@@ -206,7 +206,7 @@ void run_bench(const BenchOptions& opt, std::ostream& os) {
 
   const std::string suffix = opt.key_bytes == 16 ? "" : "-" + std::to_string(opt.key_bytes * 8);  // e.g. pure/ttable-256
   for (std::size_t size : opt.sizes) {
-    // Payload from the CSPRNG (RAND_bytes); no non-cryptographic PRNG anywhere.
+    // Payload from the OS CSPRNG; no non-cryptographic PRNG anywhere.
     const Bytes buf = random_bytes(size);
     for (const char* dir : {"encrypt", "decrypt"}) {
       if ((dir[0] == 'e' && !opt.do_encrypt) || (dir[0] == 'd' && !opt.do_decrypt)) continue;

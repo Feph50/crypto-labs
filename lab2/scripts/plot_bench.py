@@ -1,135 +1,108 @@
 #!/usr/bin/env python3
-"""Plot throughput and latency from one or more `aestool bench --csv` files.
+"""Plot the CSV files written by `aestool bench` (throughput MB/s with 95% CI error bars).
 
-Usage: python3 scripts/plot_bench.py bench.csv [other.csv ...]
-       [--out-prefix PREFIX]
+Usage:
+    python3 scripts/plot_bench.py output/ubuntu/bench --out output/ubuntu/plots
+    python3 scripts/plot_bench.py output/windows/bench/bench_aes128.csv --out output/windows/plots
+
+For every CSV and every direction (encrypt / decrypt) one PNG is written: grouped bars per payload size, one bar
+per implementation (pure/sbox-table, pure/ttable, pure/aesni, pure/sbox-computed, openssl, cryptopp), y axis in
+log scale (the implementations differ by 2-4 orders of magnitude), error bars = 95% confidence interval.
+Only matplotlib and the standard library are needed. The numbers are read from the CSV, never recomputed.
 """
 import argparse
 import csv
-import os
+import pathlib
+import sys
+
 import matplotlib
+
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from matplotlib.ticker import ScalarFormatter
+import matplotlib.pyplot as plt  # noqa: E402
 
-parser = argparse.ArgumentParser()
-parser.add_argument("csv_files", nargs="+", help="benchmark CSV files")
-parser.add_argument("--out-prefix", help="output filename prefix")
-args = parser.parse_args()
+ORDER = ["pure/sbox-table", "pure/sbox-computed", "pure/ttable", "pure/aesni", "cryptopp", "openssl"]
 
-csv_files = args.csv_files
-prefix = args.out_prefix
-# Keep the previous ``plot_bench.py input.csv output_prefix`` form working.
-if prefix is None and len(csv_files) > 1 and not csv_files[-1].lower().endswith(".csv"):
-    prefix = csv_files.pop()
-if prefix is None:
-    prefix = os.path.splitext(csv_files[0])[0]
 
-rows = []
-for csv_file in csv_files:
-    with open(csv_file, newline="", encoding="utf-8-sig") as stream:
-        file_rows = list(csv.DictReader(stream))
-    # Keep files distinguishable when several CSVs contain the same backend names.
-    source = os.path.splitext(os.path.basename(csv_file))[0]
-    for row in file_rows:
-        row["_source"] = source
-        rows.append(row)
-prefix_dir = os.path.dirname(os.path.abspath(prefix))
-if prefix_dir:
-    os.makedirs(prefix_dir, exist_ok=True)
-sizes = sorted({int(r["size_bytes"]) for r in rows})
-implementation_sources = {}
-for row in rows:
-    implementation_sources.setdefault(row["implementation"], {}).setdefault(
-        row["_source"], set()
-    ).add(int(row["size_bytes"]))
+def base_name(impl):
+    for suffix in ("-128", "-192", "-256"):
+        if impl.endswith(suffix):
+            return impl[: -len(suffix)]
+    return impl
 
-series = []
-for implementation in sorted(implementation_sources):
-    sources = implementation_sources[implementation]
-    sizes_by_source = list(sources.values())
-    has_overlapping_sizes = any(
-        left.intersection(right)
-        for index, left in enumerate(sizes_by_source)
-        for right in sizes_by_source[index + 1:]
-    )
-    if has_overlapping_sizes:
-        series.extend(
-            (source, implementation, f"{source}: {implementation}")
-            for source in sorted(sources)
-        )
-    else:
-        series.append((None, implementation, implementation))
-label = lambda n: f"{n >> 20} MiB" if n >= 1 << 20 else f"{n >> 10} KiB"
 
-for direction, direction_label in (("encrypt", "encryption"), ("decrypt", "decryption")):
-    for metric, lo, hi, metric_label, unit, fname in [
-        ("mean_MBps", "ci95_lo_MBps", "ci95_hi_MBps", "throughput", "MB/s", "throughput"),
-        ("mean_ms_per_op", "ci95_lo_ms", "ci95_hi_ms", "latency", "ms/op", "latency"),
-    ]:
-        fig, ax = plt.subplots(figsize=(11, 6))
-        bar_width = 0.8 / max(len(series), 1)
-        plotted_values = []
-        for k, (source, impl, series_label) in enumerate(series):
-            xs, ys, err_low, err_high = [], [], [], []
-            for i, s in enumerate(sizes):
-                matches = [
-                    r for r in rows
-                    if (source is None or r["_source"] == source)
-                    and r["implementation"] == impl
-                    and int(r["size_bytes"]) == s
-                    and r["direction"] == direction
-                ]
-                if matches:
-                    value = float(matches[0][metric])
-                    low = float(matches[0][lo])
-                    high = float(matches[0][hi])
-                    xs.append(i - 0.4 + (k + 0.5) * bar_width)
-                    ys.append(value)
-                    err_low.append(max(value - low, 0))
-                    err_high.append(max(high - value, 0))
-            if ys:
-                ax.bar(
-                    xs,
-                    ys,
-                    width=bar_width,
-                    yerr=[err_low, err_high],
-                    error_kw={"elinewidth": 1, "capsize": 3},
-                    alpha=0.85,
-                    edgecolor="black",
-                    linewidth=0.5,
-                    label=series_label,
-                )
-                plotted_values.extend(
-                    value
-                    for value in ys + err_low + err_high
-                    if value > 0
-                )
+def size_label(n):
+    n = int(n)
+    for unit, div in (("GiB", 1 << 30), ("MiB", 1 << 20), ("KiB", 1 << 10)):
+        if n >= div and n % div == 0:
+            return f"{n // div} {unit}"
+    return f"{n} B"
+
+
+def load(path):
+    with open(path, newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def plot_one(csv_path, out_dir):
+    rows = load(csv_path)
+    if not rows:
+        return []
+    written = []
+    for direction in ("encrypt", "decrypt"):
+        sel = [r for r in rows if r["direction"] == direction]
+        if not sel:
+            continue
+        sizes = sorted({int(r["size_bytes"]) for r in sel})
+        impls = sorted({r["implementation"] for r in sel},
+                       key=lambda s: (ORDER.index(base_name(s)) if base_name(s) in ORDER else 99, s))
+        fig, ax = plt.subplots(figsize=(max(6.0, 2.2 * len(sizes) + 3), 4.6))
+        width = 0.8 / len(impls)
+        for k, impl in enumerate(impls):
+            xs, ys, errs = [], [], []
+            for i, size in enumerate(sizes):
+                match = [r for r in sel if r["implementation"] == impl and int(r["size_bytes"]) == size]
+                if not match:
+                    continue
+                r = match[0]
+                mean = float(r["mean_MBps"])
+                xs.append(i + (k - (len(impls) - 1) / 2) * width)
+                ys.append(mean)
+                errs.append(float(r["ci95_hi_MBps"]) - mean)
+            ax.bar(xs, ys, width * 0.95, yerr=errs, capsize=2, label=impl)
         ax.set_xticks(range(len(sizes)))
-        ax.set_xticklabels([label(s) for s in sizes])
-        if plotted_values:
-            smallest = min(plotted_values)
-            largest = max(plotted_values)
-            # Log scale keeps very small implementations visible when the
-            # benchmark spans several orders of magnitude. For close values,
-            # linear ticks are easier to read.
-            if largest / smallest >= 100:
-                ax.set_yscale("log")
-                ax.set_ylim(max(smallest * 0.7, largest * 1e-6), largest * 1.25)
-            else:
-                ax.set_ylim(0, largest * 1.25)
-                if largest < 0.01:
-                    ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-                else:
-                    ax.yaxis.set_major_formatter(ScalarFormatter())
-        scale_label = "log scale" if plotted_values and max(plotted_values) / min(plotted_values) >= 100 else "linear scale"
-        ax.set_ylabel(f"{unit} ({scale_label})")
-        ax.set_title(f"AES-128-CTR {direction_label} {metric_label} (95% CI)")
+        ax.set_xticklabels([size_label(s) for s in sizes])
+        ax.set_yscale("log")
+        ax.set_ylabel("Throughput (MB/s, log scale)")
         ax.set_xlabel("Payload size")
-        ax.grid(axis="y", alpha=0.3)
-        ax.legend()
+        ax.set_title(f"{pathlib.Path(csv_path).stem} - {direction} (mean, 95% CI)")
+        ax.grid(axis="y", which="both", alpha=0.3)
+        ax.legend(fontsize=8)
         fig.tight_layout()
-        output = f"{prefix}_{fname}_{direction}.png"
-        fig.savefig(output, dpi=150)
+        out = out_dir / f"{pathlib.Path(csv_path).stem}_{direction}.png"
+        fig.savefig(out, dpi=150)
         plt.close(fig)
-        print("wrote", output)
+        written.append(out)
+    return written
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("inputs", nargs="+", help="CSV files or directories containing bench_*.csv")
+    ap.add_argument("--out", default="plots", help="output directory for the PNG files")
+    args = ap.parse_args()
+
+    files = []
+    for item in args.inputs:
+        p = pathlib.Path(item)
+        files += sorted(p.glob("bench_*.csv")) if p.is_dir() else [p]
+    if not files:
+        sys.exit("no CSV files found")
+    out_dir = pathlib.Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for f in files:
+        for out in plot_one(f, out_dir):
+            print("wrote", out)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,30 @@
+== commit ==
+a119e86b16773dae1eb93129aaad23daaaf0a19b
+== kat sha256 ==
+7b73548c2957972eec15f0ce0c71c49ffe35d2134779bffb50edc278046440b3  kat/vectors.json
+== compiler / cmake / libraries ==
+g++ (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+cmake version 4.2.3
+Version: 3.5.5-1ubuntu3.7
+Version: 8.9.0-2build1
+== cpu ==
+CPU(s):                               16
+Model name:                           11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
+Thread(s) per core:                   2
+Core(s) per socket:                   8
+AES-NI: yes (aes flag present)
+== governor ==
+n/a (WSL2: no cpufreq)
+== ram ==
+               total        used        free      shared  buff/cache   available
+Mem:            15Gi       634Mi        14Gi       3.5Mi       514Mi        14Gi
+Swap:          4.0Gi          0B       4.0Gi
+== os ==
+Description:	Ubuntu 26.04.1 LTS
+Linux DESKTOP-CBQ4Q54 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 GNU/Linux
+== disk ==
+NAME ROTA   SIZE MODEL
+sda     1 388.4M Virtual Disk
+sdb     1   186M Virtual Disk
+sdc     1     4G Virtual Disk
+sdd     1     1T Virtual Disk

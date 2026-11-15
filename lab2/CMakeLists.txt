@@ -2,29 +2,35 @@ cmake_minimum_required(VERSION 3.20)
 project(aes_lab2 LANGUAGES CXX)
 
 # =============================================================================
-# Project Configuration
+# Lab 2 - AES-128 in pure C++ (CTR mode).  Build:  mkdir build && cd build && cmake .. && cmake --build .
+#
+# Constraint of the lab: NO external cryptographic library in the AES core or in the submitted tool.
+#   aes_pure      the whole implementation (AES core, CTR, XTS, AES-NI bonus, KAT runner, benchmark).
+#                 Links NOTHING but the C++ runtime and the OS (BCryptGenRandom / getrandom).
+#   aestool       the command-line tool built on aes_pure   (no OpenSSL, no Crypto++, no libsodium)
+#   aestool_ref   the SAME tool + OpenSSL / Crypto++ reference code, used ONLY for cross-validation
+#                 (`xval`) and the performance comparison (`bench --ref`). Built only when one of those
+#                 libraries is installed; skipping it never affects the lab's own code.
 # =============================================================================
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Default build type
+# Single-config generators (Ninja, Makefiles): default to Release. Stored in the cache so that imported
+# libraries (vcpkg debug/release pairs) resolve to the SAME configuration as this project.
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-    set(CMAKE_BUILD_TYPE Release)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
-
-# Export compile commands for clangd/VS Code IntelliSense
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # =============================================================================
-# Platform & Compiler Detection
+# Platform & compiler detection (informational)
 # =============================================================================
 if(WIN32)
     set(PLATFORM_NAME "windows")
 else()
     set(PLATFORM_NAME "ubuntu")
 endif()
-
 if(MSVC)
     set(COMPILER_NAME "msvc")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -32,53 +38,26 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 else()
     set(COMPILER_NAME "gcc")
 endif()
-
-# Build directory naming hint (for user reference)
 message(STATUS "Platform: ${PLATFORM_NAME}, Compiler: ${COMPILER_NAME}")
-message(STATUS "Suggested build dir: ${CMAKE_SOURCE_DIR}/build_${PLATFORM_NAME}_${COMPILER_NAME}/")
 
-# =============================================================================
-# Module Path (for FindCryptoPP.cmake)
-# =============================================================================
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
 
-# =============================================================================
-# Find Dependencies
-# =============================================================================
+option(LAB2_STATIC_RUNTIME "Link the C++ runtime (and reference libraries) statically: release binaries need no extra DLL/.so" OFF)
+option(LAB2_BUILD_REFERENCE "Also build aestool_ref (OpenSSL / Crypto++ cross-validation + benchmark comparison) when available" ON)
+option(LAB2_WERROR "Treat warnings as errors (developer option; OFF so other compilers still build)" OFF)
+option(BUILD_TESTS "Build unit tests, KAT runner, and CLI tests" ON)
 
-# --- OpenSSL (reference implementation for cross-validation and benchmarking) ---
-# Lab 2 is a from-scratch AES-128 core. OpenSSL is linked strictly as a reference
-# implementation for cross-validation (xval) and benchmark comparisons.
-if(WIN32)
-    if(MSVC)
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/msvc" CACHE PATH "OpenSSL root dir")
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/clang" CACHE PATH "OpenSSL root dir")
-    else()
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/gcc" CACHE PATH "OpenSSL root dir")
-    endif()
-else()
-    if(NOT DEFINED OPENSSL_ROOT_DIR AND NOT DEFINED ENV{OPENSSL_ROOT_DIR})
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND EXISTS "$ENV{HOME}/Desktop/nt219lib/openssl/clang")
-            set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/clang" CACHE PATH "OpenSSL root dir")
-        elseif(EXISTS "$ENV{HOME}/Desktop/nt219lib/openssl/gcc")
-            set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/gcc" CACHE PATH "OpenSSL root dir")
-        endif()
-    endif()
-endif()
-
-find_package(OpenSSL REQUIRED)
-
-# Threads (needed for OpenSSL / benchmark)
 find_package(Threads REQUIRED)
 
 # =============================================================================
-# Compiler Warning Flags
+# Compiler warnings
 # =============================================================================
-option(LAB2_WERROR "Treat warnings as errors (GCC/Clang)" ON)
 if(MSVC)
     add_compile_options(/W4 /permissive- /utf-8)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+    if(LAB2_WERROR)
+        add_compile_options(/WX)
+    endif()
 else()
     add_compile_options(-Wall -Wextra -Wpedantic)
     if(LAB2_WERROR)
@@ -87,11 +66,38 @@ else()
 endif()
 
 # =============================================================================
-# Targets
+# Reference libraries (optional, cross-validation + comparison only)
 # =============================================================================
+set(LAB2_HAVE_OPENSSL FALSE)
+set(LAB2_HAVE_CRYPTOPP FALSE)
+if(LAB2_BUILD_REFERENCE)
+    # MSVC and Linux ignore PATH-derived prefixes, so an MSYS2/MinGW library on the Windows PATH
+    # (also appended automatically under WSL) is never picked up by mistake.
+    if(MSVC OR (UNIX AND NOT WIN32))
+        set(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH OFF)
+    endif()
+    # Static reference libraries only on Windows. On Linux, distro static libcrypto.a drags in extra static
+    # dependencies (jitterentropy, zstd, ...), so aestool_ref stays dynamic there (only `aestool` is fully static).
+    if(LAB2_STATIC_RUNTIME AND WIN32)
+        set(OPENSSL_USE_STATIC_LIBS ON)
+        set(CRYPTOPP_PREFER_STATIC ON)
+    endif()
+    find_package(OpenSSL QUIET)
+    find_package(CryptoPP QUIET)
+    unset(CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH)
+    if(OPENSSL_FOUND)
+        set(LAB2_HAVE_OPENSSL TRUE)
+    endif()
+    if(CryptoPP_FOUND)
+        set(LAB2_HAVE_CRYPTOPP TRUE)
+    endif()
+    message(STATUS "Reference libraries: OpenSSL=${LAB2_HAVE_OPENSSL} Crypto++=${LAB2_HAVE_CRYPTOPP}")
+endif()
 
-# --- Static library: aes_pure (Pure AES-128 core + CTR mode) ---
-add_library(aes_pure STATIC
+# =============================================================================
+# Sources
+# =============================================================================
+set(LAB2_SOURCES
     src/aes128.cpp
     src/aesni.cpp
     src/xts.cpp
@@ -103,57 +109,81 @@ add_library(aes_pure STATIC
     src/bench.cpp
     src/xval.cpp
 )
-target_include_directories(aes_pure PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<INSTALL_INTERFACE:include>
-)
-target_link_libraries(aes_pure PUBLIC
-    Threads::Threads
-)
-target_link_libraries(aes_pure PRIVATE
-    OpenSSL::Crypto
-    OpenSSL::SSL
-)
-target_compile_definitions(aes_pure PRIVATE AESP_HAVE_OPENSSL=1)
-
-if(WIN32)
-    target_link_libraries(aes_pure PUBLIC bcrypt)   # OS CSPRNG (BCryptGenRandom)
-endif()
 
 # Build info printed by `aestool bench` (hardware/compiler table in the report)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" _bt)
 set(AESP_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${_bt}}")
 string(STRIP "${AESP_FLAGS}" AESP_FLAGS)
-target_compile_definitions(aes_pure PRIVATE
-    AESP_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
-    AESP_BUILD_FLAGS="${AESP_FLAGS}"
-)
 
-# --- Executable: aestool ---
-if(TARGET aestool)
-    set(LAB2_EXE_TARGET aestool_lab2)
-    add_executable(${LAB2_EXE_TARGET} src/main.cpp)
-    set_target_properties(${LAB2_EXE_TARGET} PROPERTIES OUTPUT_NAME "aestool")
+function(lab2_configure_library target)
+    target_include_directories(${target} PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:include>
+    )
+    target_link_libraries(${target} PUBLIC Threads::Threads)
+    if(WIN32)
+        target_link_libraries(${target} PUBLIC bcrypt)   # OS CSPRNG (BCryptGenRandom)
+    endif()
+    target_compile_definitions(${target} PRIVATE
+        AESP_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
+        AESP_BUILD_FLAGS="${AESP_FLAGS}"
+    )
+endfunction()
+
+function(lab2_configure_executable target)
+    if(WIN32)
+        target_link_libraries(${target} PRIVATE shell32)   # CommandLineToArgvW (UTF-8 argv)
+    endif()
+    if(LAB2_STATIC_RUNTIME AND NOT MSVC AND (WIN32 OR NOT target STREQUAL "aestool_ref"))
+        target_link_options(${target} PRIVATE -static)     # MSVC: configure with /MT (see README)
+    endif()
+endfunction()
+
+# --- aes_pure + aestool : NO external cryptographic library ---------------------------------------
+add_library(aes_pure STATIC ${LAB2_SOURCES})
+lab2_configure_library(aes_pure)
+
+add_executable(aestool src/main.cpp)
+target_link_libraries(aestool PRIVATE aes_pure)
+lab2_configure_executable(aestool)
+
+# --- aestool_ref : same code + reference implementations (cross-validation / comparison only) ------
+set(LAB2_REF_TARGET "")
+if(LAB2_HAVE_OPENSSL OR LAB2_HAVE_CRYPTOPP)
+    add_library(aes_pure_ref STATIC ${LAB2_SOURCES})
+    lab2_configure_library(aes_pure_ref)
+    if(LAB2_HAVE_OPENSSL)
+        target_compile_definitions(aes_pure_ref PRIVATE AESP_HAVE_OPENSSL=1)
+        target_link_libraries(aes_pure_ref PRIVATE OpenSSL::Crypto)
+    endif()
+    if(LAB2_HAVE_CRYPTOPP)
+        target_compile_definitions(aes_pure_ref PRIVATE AESP_HAVE_CRYPTOPP=1)
+        target_link_libraries(aes_pure_ref PRIVATE CryptoPP::CryptoPP)
+    endif()
+    add_executable(aestool_ref src/main.cpp)
+    target_link_libraries(aestool_ref PRIVATE aes_pure_ref)
+    lab2_configure_executable(aestool_ref)
+    set(LAB2_REF_TARGET aestool_ref)
 else()
-    set(LAB2_EXE_TARGET aestool)
-    add_executable(${LAB2_EXE_TARGET} src/main.cpp)
-endif()
-target_link_libraries(${LAB2_EXE_TARGET} PRIVATE aes_pure)
-if(WIN32)
-    target_link_libraries(${LAB2_EXE_TARGET} PRIVATE shell32)   # CommandLineToArgvW (UTF-8 argv)
+    message(STATUS "No OpenSSL / Crypto++ found: aestool_ref (cross-validation, comparison) is not built. "
+                   "Install libssl-dev and/or libcrypto++-dev, or pass -DCMAKE_PREFIX_PATH / -DOPENSSL_ROOT_DIR / -DCRYPTOPP_ROOT_DIR.")
 endif()
 
 # =============================================================================
 # Tests
 # =============================================================================
-option(BUILD_TESTS "Build unit tests, KAT runner, and CLI tests" ON)
-
 if(BUILD_TESTS)
     enable_testing()
 
-    # Fetch Catch2 for unit tests (prefer installed v3 if available)
-    find_package(Catch2 3 QUIET)
+    # Catch2 v3: use an installed one (apt install catch2 / vcpkg install catch2 / pacman -S mingw-w64-x86_64-catch);
+    # otherwise download v3.5.3 at configure time (needs internet once).
+    set(_catch_noenv "")
+    if(MSVC OR (UNIX AND NOT WIN32))
+        set(_catch_noenv NO_SYSTEM_ENVIRONMENT_PATH)
+    endif()
+    find_package(Catch2 3 QUIET ${_catch_noenv})
     if(NOT Catch2_FOUND)
+        message(STATUS "Catch2 v3 not installed: fetching v3.5.3 (use -DBUILD_TESTS=OFF to skip the unit tests)")
         include(FetchContent)
         FetchContent_Declare(Catch2
             GIT_REPOSITORY https://github.com/catchorg/Catch2.git
@@ -162,47 +192,37 @@ if(BUILD_TESTS)
         FetchContent_MakeAvailable(Catch2)
     endif()
 
-    # On Windows Clang, skip unit tests due to ABI incompatibility with GCC-built libs
-    set(SKIP_TESTS_FOR_CLANG_WINDOWS FALSE)
-    if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(SKIP_TESTS_FOR_CLANG_WINDOWS TRUE)
-        message(WARNING "Windows Clang: Skipping unit tests due to ABI incompatibility with GCC-built Crypto++/OpenSSL")
-    endif()
-
-    # Unit tests (Catch2)
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_aes.cpp" AND NOT SKIP_TESTS_FOR_CLANG_WINDOWS)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_aes.cpp")
         add_executable(aes_tests tests/test_aes.cpp)
         target_link_libraries(aes_tests PRIVATE aes_pure Catch2::Catch2WithMain)
         target_compile_definitions(aes_tests PRIVATE
             AESP_KAT_FILE="${CMAKE_CURRENT_SOURCE_DIR}/kat/vectors.json"
         )
-        # Clang on Windows: __COUNTER__ is a Microsoft extension, disable C2y warning for tests
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-            target_compile_options(aes_tests PRIVATE -Wno-c2y-extensions)
-        endif()
         add_test(NAME lab2_unit_tests COMMAND aes_tests)
     endif()
 
-    # KAT runner
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/kat/vectors.json" AND NOT SKIP_TESTS_FOR_CLANG_WINDOWS)
-        add_test(NAME lab2_kat_runner COMMAND ${LAB2_EXE_TARGET} --kat ${CMAKE_CURRENT_SOURCE_DIR}/kat/vectors.json)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/kat/vectors.json")
+        add_test(NAME lab2_kat_runner COMMAND aestool --kat ${CMAKE_CURRENT_SOURCE_DIR}/kat/vectors.json)
     endif()
 
-    # CLI end-to-end regression tests
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_e2e.cmake" AND NOT SKIP_TESTS_FOR_CLANG_WINDOWS)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_e2e.cmake")
         add_test(NAME lab2_cli_end_to_end
             COMMAND ${CMAKE_COMMAND}
-                    -DTOOL=$<TARGET_FILE:${LAB2_EXE_TARGET}>
+                    -DTOOL=$<TARGET_FILE:aestool>
                     -DWORK=${CMAKE_CURRENT_BINARY_DIR}/e2e_work
                     -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli_e2e.cmake
         )
     endif()
+
+    if(LAB2_REF_TARGET)
+        add_test(NAME lab2_cross_validation COMMAND aestool_ref xval --ref all --cases 30)
+    endif()
 endif()
 
 # =============================================================================
-# Installation (Optional)
+# Installation (optional)
 # =============================================================================
-install(TARGETS aes_pure ${LAB2_EXE_TARGET}
+install(TARGETS aes_pure aestool ${LAB2_REF_TARGET}
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin

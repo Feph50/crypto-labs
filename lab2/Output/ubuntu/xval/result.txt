@@ -1,3 +1,0 @@
-PASS  pure AES-128-CTR == openssl  (1016/1016 cases, 3 backends)
-
-Summary: 1016 cross-validation cases, 0 failed

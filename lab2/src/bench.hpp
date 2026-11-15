@@ -1,7 +1,7 @@
 // Benchmark harness following the lab's performance protocol:
 //   warm-up (1-2 s, for every case) -> N = 30..100 independent timed runs, each a block of ~1000 operations
 //   -> mean / median / stddev / 95% CI of throughput (MB/s, 1 MB = 10^6 B) and latency (ms/op).
-// Payloads, keys and IVs all come from the CSPRNG (OpenSSL RAND_bytes).
+// Payloads, keys and IVs all come from the OS CSPRNG (BCryptGenRandom / getrandom).
 #pragma once
 #include <cstddef>
 #include <ostream>

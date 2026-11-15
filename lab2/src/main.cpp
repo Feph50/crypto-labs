@@ -40,10 +40,12 @@ const char* kUsage = R"(aestool - AES-128 (FIPS-197) in pure C++, CTR mode (NIST
 USAGE
   aestool encrypt --key FILE|--key-hex HEX (--in FILE | --text "...") [--mode ctr|xts] [options]
   aestool decrypt --key FILE|--key-hex HEX (--in FILE | --text ENCODED --in-encode hex|base64) [options]
-  aestool keygen  [--bits 128|192|256|xts256|xts512] [--out FILE]   random key (OpenSSL RAND_bytes)
+  aestool keygen  [--bits 128|192|256|xts256|xts512] [--out FILE]   random key (OS CSPRNG)
   aestool ivgen   [--out FILE]            random IV: 96-bit nonce || 32-bit zero counter
   aestool --kat vectors.json [--verbose]  Known Answer Tests (PASS/FAIL per case + summary)
-  aestool xval [--ref all|openssl|cryptopp] [--cases N]   cross-validate vs reference libs
+  aestool_ref xval [--ref all|openssl|cryptopp] [--cases N]   cross-validate vs reference libs
+        (aestool_ref is the SAME tool plus the OpenSSL / Crypto++ reference code; the submitted `aestool`
+         links no external cryptographic library, so `xval` and `bench --ref` need aestool_ref)
   aestool bench [--sizes 1MiB,100MiB] [--runs 30] [--backends table,ttable,computed]
                       [--ref all|openssl|cryptopp|none] [--dir enc|dec|both] [--ops N]
                       [--warmup SEC] [--bits 128|192|256] [--threads N] [--budget-mb MiB] [--target-sec SEC] [--csv FILE]
@@ -152,7 +154,17 @@ void set_binary_stdout() {
 // Loads the key and checks its length: CTR accepts 16/24/32 bytes (AES-128/192/256), XTS 32/64 bytes.
 Bytes load_key(const Args& a, bool xts) {
   if (a.has("key") == a.has("key-hex")) usage_error("provide exactly one of --key FILE or --key-hex HEX");
-  Bytes k = a.has("key") ? read_file(a.get("key"), 4096) : from_hex(a.get("key-hex"));
+  Bytes k;
+  if (a.has("key")) {
+    try {
+      k = read_file(a.get("key"), 4096);
+    } catch (const Error& e) {
+      if (e.code() == ExitCode::Io) throw Error(ExitCode::Io, "cannot read key file '" + a.get("key") + "'");
+      throw;
+    }
+  } else {
+    k = from_hex(a.get("key-hex"));
+  }
   const bool ok = xts ? (k.size() == 32 || k.size() == 64) : (k.size() == 16 || k.size() == 24 || k.size() == 32);
   if (!ok) {
     secure_zero(k.data(), k.size());
@@ -351,36 +363,22 @@ int cmd_crypt(const Args& a, bool encrypt) {
 
 int cmd_kat(const Args& a) {
   const std::string kat_path = resolve_input_path(a.get("kat")).string();
-  std::string out_path = a.get("out");
-  if (out_path.empty()) {
-    out_path = (get_os_output_dir() / "kat" / "result.txt").string();
-  }
   std::ostringstream ss;
   const KatSummary s = run_kat_file(kat_path, a.flag("verbose"), ss);
   const std::string out_str = ss.str();
   std::cout << out_str << std::flush;
-  try {
-    write_file(out_path, reinterpret_cast<const uint8_t*>(out_str.data()), out_str.size(), true);
-  } catch (const std::exception&) {
-    if (a.has("out")) throw;
-  }
+  if (a.has("out"))  // a file is written only when the user asks for it (redirect stdout otherwise)
+    write_file(a.get("out"), reinterpret_cast<const uint8_t*>(out_str.data()), out_str.size(), true);
   return s.ok() ? 0 : static_cast<int>(ExitCode::KatFailed);
 }
 
 int cmd_xval(const Args& a) {
-  std::string out_path = a.get("out");
-  if (out_path.empty()) {
-    out_path = (get_os_output_dir() / "xval" / "result.txt").string();
-  }
   std::ostringstream ss;
   const XvalSummary s = run_xval(a.get("ref", "all"), parse_count(a.get("cases", "50"), "--cases"), ss);
   const std::string out_str = ss.str();
   std::cout << out_str << std::flush;
-  try {
-    write_file(out_path, reinterpret_cast<const uint8_t*>(out_str.data()), out_str.size(), true);
-  } catch (const std::exception&) {
-    if (a.has("out")) throw;
-  }
+  if (a.has("out"))
+    write_file(a.get("out"), reinterpret_cast<const uint8_t*>(out_str.data()), out_str.size(), true);
   return s.failed == 0 ? 0 : static_cast<int>(ExitCode::KatFailed);
 }
 
@@ -418,15 +416,7 @@ int cmd_bench(const Args& a) {
     else if (d == "dec") o.do_encrypt = false;
     else if (d != "both") usage_error("--dir must be enc|dec|both");
   }
-  o.csv_path = a.get("csv");
-  if (o.csv_path.empty()) {
-    o.csv_path = (get_os_output_dir() / "bench" / "result.csv").string();
-  } else {
-    std::filesystem::path cp = to_path(o.csv_path);
-    if (!cp.is_absolute() && !cp.has_parent_path()) {
-      o.csv_path = (get_os_output_dir() / "bench" / cp).string();
-    }
-  }
+  o.csv_path = a.get("csv");  // empty = no CSV file (the table is printed to stdout)
   run_bench(o, std::cout);
   return 0;
 }

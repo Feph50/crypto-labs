@@ -24,8 +24,8 @@ struct WipeOnExit {
   ~WipeOnExit() { secure_zero(b.data(), b.size()); }
 };
 
-// CSPRNG: OpenSSL RAND_bytes when built with OpenSSL (the default); otherwise the OS CSPRNG: BCryptGenRandom (Windows), getrandom(2) (Linux), arc4random_buf (BSD/macOS).
-// Never rand()/std::mt19937. Throws Error(Failure) if the OS RNG is unavailable.
+// CSPRNG = the OS generator (no external crypto library, per the Lab 2 constraint): BCryptGenRandom (Windows),
+// getrandom(2) (Linux), arc4random_buf (BSD/macOS). Never rand()/std::mt19937. Throws Error(Failure) if the OS RNG is unavailable.
 void secure_random(uint8_t* out, std::size_t n);
 Bytes random_bytes(std::size_t n);
 
@@ -45,9 +45,6 @@ std::size_t parse_size(const std::string& s);
 // UTF-8 path -> std::filesystem::path (works for non-ASCII names on Windows).
 std::filesystem::path to_path(const std::string& utf8);
 bool file_exists(const std::string& path);
-std::filesystem::path get_executable_dir();
-std::filesystem::path get_project_root();
-std::filesystem::path get_os_output_dir();
 std::filesystem::path resolve_input_path(const std::string& path);
 Bytes read_file(const std::string& path, std::size_t max_bytes);
 // Reads a file that must contain exactly `expected` bytes (keys, IVs). `what` is used in errors.

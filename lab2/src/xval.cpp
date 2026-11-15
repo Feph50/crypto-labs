@@ -14,8 +14,13 @@
 #include <openssl/evp.h>
 #endif
 #ifdef AESP_HAVE_CRYPTOPP
+#if __has_include(<cryptopp/aes.h>)
+#include <cryptopp/aes.h>
+#include <cryptopp/modes.h>
+#else
 #include <aes.h>
 #include <modes.h>
+#endif
 #endif
 
 using namespace std;
@@ -74,6 +79,12 @@ static void cryptopp_ctr(const uint8_t* key, const uint8_t* iv, const uint8_t* i
   CryptoPP::CTR_Mode<CryptoPP::AES>::Encryption enc(key, 16, iv);
   if (n) enc.ProcessData(out, in, n);
 }
+// AES-128/192/256-CTR (bonus key sizes).
+static void cryptopp_ctr_any(const uint8_t* key, std::size_t key_len, const uint8_t* iv, const uint8_t* in, uint8_t* out,
+                             std::size_t n) {
+  CryptoPP::CTR_Mode<CryptoPP::AES>::Encryption enc(key, key_len, iv);
+  if (n) enc.ProcessData(out, in, n);
+}
 #endif
 
 std::vector<RefImpl> available_references(const std::string& which) {
@@ -85,7 +96,7 @@ std::vector<RefImpl> available_references(const std::string& which) {
   if (all || which == "openssl") refs.push_back({"openssl", openssl_ctr, openssl_ctr_any, openssl_xts});
 #endif
 #ifdef AESP_HAVE_CRYPTOPP
-  if (all || which == "cryptopp") refs.push_back({"cryptopp", cryptopp_ctr, nullptr, nullptr});
+  if (all || which == "cryptopp") refs.push_back({"cryptopp", cryptopp_ctr, cryptopp_ctr_any, nullptr});
 #endif
   if (!all && which != "none" && refs.empty())
     throw Error(ExitCode::Usage, "reference '" + which + "' was not compiled into this build");
@@ -94,7 +105,7 @@ std::vector<RefImpl> available_references(const std::string& which) {
 
 XvalSummary run_xval(const std::string& which, std::size_t random_cases, std::ostream& os) {
   const std::vector<RefImpl> refs = available_references(which);
-  if (refs.empty()) throw Error(ExitCode::Usage, "no reference implementation available in this build (need OpenSSL or Crypto++)");
+  if (refs.empty()) throw Error(ExitCode::Usage, "no reference implementation in this binary: use aestool_ref (built when OpenSSL or Crypto++ is installed)");
 
   static const std::size_t kLens[] = {0, 1, 15, 16, 17, 31, 32, 33, 63, 64, 65, 255, 256, 1000, 4096, 65537};
   std::vector<std::size_t> lens(std::begin(kLens), std::end(kLens));

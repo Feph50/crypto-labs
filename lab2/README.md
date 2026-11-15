@@ -1,9 +1,16 @@
 # Lab 2 — Tự cài đặt AES-128 và CTR bằng C++17
 
 `aestool` là chương trình dòng lệnh cài đặt **AES-128 từ đầu bằng C++** theo
-FIPS-197 và chế độ **CTR** theo NIST SP 800-38A. Phần lõi AES/CTR không dùng
-Crypto++, libsodium hay OpenSSL để mã hóa; OpenSSL chỉ được dùng làm
-implementation tham chiếu cho cross-validation và benchmark.
+FIPS-197 và chế độ **CTR** theo NIST SP 800-38A.
+
+**Ràng buộc của đề: không dùng thư viện mật mã ngoài.** Vì vậy dự án có hai chương trình:
+
+| Chương trình | Liên kết với | Dùng để |
+|---|---|---|
+| `aestool` (**bản nộp**) | Chỉ C++ STL và API hệ điều hành (`BCryptGenRandom` / `getrandom`) | Toàn bộ chức năng của Lab: mã hóa/giải mã, `keygen`, KAT, benchmark phần cài đặt tự viết |
+| `aestool_ref` | `aestool` + OpenSSL + Crypto++ | **Chỉ** cross-validation (`xval`) và so sánh hiệu năng (`bench --ref`). Chỉ được build khi máy có OpenSSL hoặc Crypto++ |
+
+Số ngẫu nhiên (key, IV, dữ liệu benchmark) lấy trực tiếp từ CSPRNG của hệ điều hành, không dùng `rand()`/`std::random`.
 
 > **Cảnh báo bảo mật:** CTR chỉ cung cấp tính bí mật, không cung cấp tính toàn
 > vẹn/xác thực. Không dùng Lab 2 như một giao thức bảo mật hoàn chỉnh trong
@@ -61,7 +68,7 @@ AES-192/256, XTS và AES-NI là các hạng mục bonus và **đã được tri�
 - Counter là **toàn bộ block 128 bit theo big-endian**; byte thứ 15 là byte
   ít quan trọng nhất và được tăng trước.
 - Không padding; block cuối được cắt theo đúng số byte plaintext.
-- IV tự sinh dùng CSPRNG của OpenSSL (`RAND_bytes`; bản build không có OpenSSL mới dùng CSPRNG của hệ điều hành): 12 byte nonce ngẫu nhiên và 4 byte
+- IV tự sinh dùng CSPRNG của hệ điều hành (`BCryptGenRandom` trên Windows, `getrandom(2)` trên Linux): 12 byte nonce ngẫu nhiên và 4 byte
   counter ban đầu bằng zero.
 - Khi bỏ `--iv` lúc encrypt, IV được lưu ở `<output>.iv`; khi decrypt, IV
   được đọc từ `<input>.iv`.
@@ -116,7 +123,7 @@ Các phần còn lại của chương trình (I/O, XOR, parsing) chưa được 
 
 ```text
 lab2/
-├── CMakeLists.txt              # Cấu hình CMake, OpenSSL và Catch2
+├── CMakeLists.txt              # CMake: aes_pure + aestool (không thư viện ngoài); aestool_ref (tùy chọn)
 ├── README.md                   # Tài liệu này
 ├── src/
 │   ├── aes128.hpp/.cpp         # AES-128 (lõi) + AES-192/256 (bonus), key schedule, các backend
@@ -127,7 +134,7 @@ lab2/
 │   ├── errors.hpp              # Error và exit code
 │   ├── json.hpp/.cpp           # Parser JSON tối thiểu cho KAT
 │   ├── kat.hpp/.cpp            # KAT runner
-│   ├── xval.hpp/.cpp           # Cross-validation với OpenSSL
+│   ├── xval.hpp/.cpp           # Cross-validation với OpenSSL / Crypto++ (chỉ có trong aestool_ref)
 │   ├── bench.hpp/.cpp          # Benchmark encrypt/decrypt
 │   ├── stats.hpp/.cpp          # Mean, median, stddev, confidence interval
 │   ├── util.hpp/.cpp           # File, encoding, CSPRNG và tiện ích
@@ -142,16 +149,18 @@ lab2/
 │   ├── build_windows.bat       # Build/test/KAT trên Windows
 │   ├── build.sh                # Wrapper build Linux
 │   ├── build.bat               # Wrapper build Windows
-│   ├── bench.sh/.bat           # Benchmark theo protocol của lab
-│   ├── demo.sh                 # Demo round-trip và negative tests
-│   ├── plot_bench.py           # Vẽ đồ thị từ CSV
-│   └── compare.py              # Tổng hợp benchmark nhiều CSV
+│   └── plot_bench.py           # Vẽ đồ thị (có error bar) từ các CSV của `bench`
+├── docs/
+│   ├── REQUIREMENTS_CHECKLIST.md   # Đối chiếu yêu cầu đề / rules chung
+│   ├── BENCHMARK_RUNBOOK.md        # Lệnh chạy benchmark Windows và Linux (cùng cấu hình)
+│   ├── LINUX_RUNBOOK.md            # Bản rút gọn: chỉ các lệnh cần chạy trên Linux
+│   └── TEST_EVIDENCE.md            # Lệnh sinh log KAT / ctest / negative / env
 ├── gui/
 │   └── aestool_gui.py          # GUI tùy chọn
 ├── release/
-│   ├── ubuntu/                 # Binary Linux có sẵn (nếu được build)
-│   └── windows/                # Binary Windows có sẵn (nếu được build)
-└── Output/                     # Log, CSV và kết quả theo từng hệ điều hành
+│   ├── ubuntu/                 # aestool_gcc, aestool_ref_gcc (static)
+│   └── windows/                # aestool_*.exe, aestool_ref_*.exe (static)
+└── output/                     # Log, CSV và biểu đồ theo từng hệ điều hành (output/windows, output/ubuntu)
 ```
 
 Tất cả lệnh bên dưới được chạy từ thư mục gốc `lab2/`, tức thư mục chứa
@@ -159,33 +168,27 @@ Tất cả lệnh bên dưới được chạy từ thư mục gốc `lab2/`, t�
 
 ## 4. Yêu cầu môi trường
 
-### Bắt buộc
+### Bắt buộc (để build `aestool`)
 
 - CMake **>= 3.20**.
 - Compiler hỗ trợ C++17: GCC, Clang, MSVC hoặc MinGW-w64.
-- OpenSSL **>= 1.1** để cross-validation/benchmark.
 - Catch2 v3 để chạy unit test. CMake ưu tiên bản đã cài; nếu không có,
-  `FetchContent` sẽ tải Catch2 v3.5.3 trong lúc configure.
+  `FetchContent` sẽ tải Catch2 v3.5.3 trong lúc configure (cần mạng một lần).
 - Python 3 và `matplotlib` nếu cần vẽ biểu đồ.
 
-### OpenSSL
+### Tùy chọn (chỉ để build `aestool_ref`: cross-validation và so sánh hiệu năng)
 
-CMake tự ưu tiên các thư mục theo compiler:
-
-| Nền tảng | MSVC | GCC/MinGW | Clang |
-|---|---|---|---|
-| Windows | `D:/UIT/NT219/libs/openssl/msvc` | `D:/UIT/NT219/libs/openssl/gcc` | `D:/UIT/NT219/libs/openssl/clang` |
-| Linux | `$HOME/Desktop/nt219lib/openssl/gcc` | `$HOME/Desktop/nt219lib/openssl/gcc` | `$HOME/Desktop/nt219lib/openssl/clang` |
-
-Có thể ghi đè bằng `-DOPENSSL_ROOT_DIR=...`. Nếu dùng OpenSSL hệ thống,
-đảm bảo `openssl`, header và thư viện tương ứng nằm trong PATH/include/library
-để `find_package(OpenSSL REQUIRED)` tìm được.
+- OpenSSL **>= 1.1** (`libssl-dev`) và/hoặc Crypto++ **>= 8.x** (`libcrypto++-dev`).
+- CMake tự tìm, **không phải sửa đường dẫn nào**. Nếu thư viện nằm ở chỗ khác: `-DOPENSSL_ROOT_DIR=<prefix>`,
+  `-DCRYPTOPP_ROOT_DIR=<prefix>`. Không tìm thấy thì CMake chỉ báo "aestool_ref is not built", `aestool` vẫn build bình thường.
+- `-DLAB2_BUILD_REFERENCE=OFF` tắt hẳn phần này.
 
 ### Ubuntu/Debian
 
 ```bash
 sudo apt update
-sudo apt install -y build-essential cmake git libssl-dev pkg-config catch2
+sudo apt install -y build-essential cmake git catch2 pkg-config
+sudo apt install -y libssl-dev libcrypto++-dev      # tùy chọn: aestool_ref
 # Chỉ cần nếu muốn vẽ biểu đồ:
 sudo apt install -y python3 python3-pip
 python3 -m pip install --user matplotlib
@@ -201,32 +204,36 @@ Cài CMake, Git và một trong các toolchain sau:
   `mingw32-make.exe` có trong PATH.
 - Clang: LLVM/Clang và generator phù hợp.
 
-Cài OpenSSL trên Windows (cả hai cách dưới đây đã được build và chạy `ctest` thật: 3/3 pass):
+Cài thư viện tham chiếu trên Windows (cả hai cách dưới đây đã được build và chạy `ctest` thật: 4/4 pass):
 
 ```bash
-# MinGW64: MSYS2 MINGW64 shell
-pacman -S --needed mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-openssl
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=C:/msys64/mingw64
-cmake --build build && cd build && ctest --output-on-failure
+# MinGW64: MSYS2 MINGW64 shell (không cần đường dẫn nào)
+pacman -S --needed mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja \
+      mingw-w64-x86_64-catch mingw-w64-x86_64-openssl mingw-w64-x86_64-crypto++
+mkdir build && cd build && cmake .. -G Ninja && cmake --build . && ctest --output-on-failure
 ```
 ```bat
 :: MSVC: cài vcpkg một lần (bản static, khớp /MT), rồi build trong "x64 Native Tools Command Prompt for VS"
 git clone https://github.com/microsoft/vcpkg.git D:\vcpkg
 D:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
 D:\vcpkg\vcpkg.exe install openssl:x64-windows-static cryptopp:x64-windows-static
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
-      -DOPENSSL_ROOT_DIR=D:/vcpkg/installed/x64-windows-static -DOPENSSL_USE_STATIC_LIBS=ON
-cmake --build build && cd build && ctest --output-on-failure
+mkdir build && cd build
+cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=cl ^
+      -DCMAKE_TOOLCHAIN_FILE=D:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
+      -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+cmake --build . && ctest --output-on-failure
 ```
-Cần `-DOPENSSL_ROOT_DIR=...` vì CMake mặc định trỏ tới `D:/UIT/NT219/libs/openssl/...` của máy tác giả.
+Với MSVC + Ninja luôn truyền `-DCMAKE_BUILD_TYPE=Release` (mặc định của môi trường Developer Prompt có thể là Debug, lúc đó link nhầm thư viện vcpkg bản debug).
+Đường dẫn `D:\vcpkg` chỉ là ví dụ nơi bạn đặt vcpkg, không nằm trong CMakeLists.
 
 ### Phiên bản đã kiểm chứng
 
 | Thành phần | Yêu cầu / đã dùng |
 |---|---|
-| CMake | >= 3.20 |
-| C++ | C++17 (không dùng Crypto++ cho AES; chỉ OpenSSL để đối chiếu) |
-| OpenSSL | >= 1.1 |
+| CMake | >= 3.20 (đã chạy: MinGW MSYS2, MSVC 19.51, Ubuntu 26.04 / CMake 4.2) |
+| C++ | C++17 (lõi AES/CTR chỉ dùng STL; OpenSSL và Crypto++ chỉ nằm trong `aestool_ref`) |
+| OpenSSL | >= 1.1 (đã chạy: 3.6.4 MinGW, vcpkg MSVC, 3.5.5 Ubuntu), tùy chọn |
+| Crypto++ | >= 8.x (đã chạy: 8.9.0), tùy chọn |
 | Catch2 | v3 (tự tải v3.5.3 nếu thiếu) |
 | Python / matplotlib | 3.x / tùy chọn, chỉ để vẽ biểu đồ |
 
@@ -274,19 +281,22 @@ cmake -S . -B build_ubuntu_gcc \
   -DLAB2_WERROR=OFF
 ```
 
-`LAB2_WERROR` mặc định bật trên GCC/Clang; chỉ tắt khi cần chẩn đoán warning
-do toolchain.
+`LAB2_WERROR` mặc định **tắt** (để compiler mới hơn vẫn build được); bật `-DLAB2_WERROR=ON` khi phát triển.
+`-DLAB2_STATIC_RUNTIME=ON` link tĩnh để binary phát hành không cần DLL/.so thêm (dùng cho `release/`).
 
 ### 5.3. Windows — script khuyến nghị
 
 Chạy từ **Command Prompt**, không phải PowerShell:
 
 ```bat
-cd /d D:\UIT\NT219\crypto-labs\lab2
+cd lab2
+set VCPKG_ROOT=D:\vcpkg
 scripts\build_windows.bat msvc
 scripts\build_windows.bat gcc
 scripts\build_windows.bat clang
 ```
+
+`VCPKG_ROOT` chỉ cần cho MSVC (script tự dùng toolchain vcpkg và `/MT`).
 
 Script tự chọn thư mục `build_windows_msvc`, `build_windows_gcc` hoặc
 `build_windows_clang`, chạy test và KAT. Xóa build:
@@ -300,19 +310,18 @@ scripts\build_windows.bat msvc clean
 MSVC (chạy trong x64 Native Tools Command Prompt):
 
 ```bat
-cd /d D:\UIT\NT219\crypto-labs\lab2
-cmake -S . -B build_windows_msvc -DCMAKE_BUILD_TYPE=Release ^
-  -DOPENSSL_ROOT_DIR=D:/UIT/NT219/libs/openssl/msvc
-cmake --build build_windows_msvc --config Release
-ctest --test-dir build_windows_msvc -C Release --output-on-failure
+cd lab2
+cmake -S . -B build_windows_msvc -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=cl ^
+  -DCMAKE_TOOLCHAIN_FILE=D:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static ^
+  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+cmake --build build_windows_msvc
+ctest --test-dir build_windows_msvc --output-on-failure
 ```
 
-MinGW-w64:
+MinGW-w64 (MSYS2, `C:\msys64\mingw64\bin` đứng đầu PATH, không cần cờ nào khác):
 
 ```bat
-cmake -S . -B build_windows_gcc -G "MinGW Makefiles" ^
-  -DCMAKE_BUILD_TYPE=Release ^
-  -DOPENSSL_ROOT_DIR=D:/UIT/NT219/libs/openssl/gcc
+cmake -S . -B build_windows_gcc -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build_windows_gcc
 ctest --test-dir build_windows_gcc --output-on-failure
 ```
@@ -320,9 +329,9 @@ ctest --test-dir build_windows_gcc --output-on-failure
 Binary thường nằm ở:
 
 ```text
-MSVC:  build_windows_msvc\Release\aestool.exe
-MinGW: build_windows_gcc\aestool.exe
-Clang: build_windows_clang\aestool.exe
+MSVC:  build_windows_msvc\aestool.exe        (và aestool_ref.exe)
+MinGW: build_windows_gcc\aestool.exe         (và aestool_ref.exe)
+Linux: build_ubuntu_gcc/aestool              (và aestool_ref)
 ```
 
 ### 5.5. Binary dựng sẵn
@@ -336,9 +345,9 @@ cd lab2
 ```
 
 ```powershell
-cd D:\UIT\NT219\crypto-labs\lab2
+cd lab2
 Get-ChildItem release\windows
-& .\release\windows\aestool_gcc.exe --help
+& .\release\windows\aestool_msvc.exe --help
 ```
 
 ## 6. Sử dụng nhanh
@@ -410,11 +419,11 @@ aestool --help
 | Lệnh | Mục đích |
 |---|---|
 | `encrypt` / `decrypt` | CTR transform; encrypt và decrypt dùng cùng phép XOR keystream |
-| `keygen` | Sinh key bằng OpenSSL `RAND_bytes`: `--bits 128\|192\|256` (mặc định 128) hoặc `xts256\|xts512` |
+| `keygen` | Sinh key bằng CSPRNG của hệ điều hành: `--bits 128\|192\|256` (mặc định 128) hoặc `xts256\|xts512` |
 | `ivgen` | Sinh IV 16 byte: 12 byte nonce + 4 byte counter zero |
 | `--kat FILE` | Chạy Known Answer Tests, in PASS/FAIL từng case và tổng kết |
-| `xval` | So sánh kết quả với OpenSSL |
-| `bench` | Benchmark backend và reference implementation |
+| `xval` | So sánh kết quả với OpenSSL / Crypto++ (**chỉ có ở `aestool_ref`**) |
+| `bench` | Benchmark các backend tự cài; thêm `--ref openssl\|cryptopp\|all` (chỉ `aestool_ref`) để so sánh với thư viện |
 
 ### Tùy chọn chính
 
@@ -451,8 +460,10 @@ aestool --help
 ```bash
 $AESTOOL --kat kat/vectors.json
 $AESTOOL --kat kat/vectors.json --verbose
-$AESTOOL xval --ref openssl --cases 200
-$AESTOOL xval --ref all --cases 200
+# cross-validation: dùng bản có thư viện tham chiếu
+AESREF=./build_ubuntu_gcc/aestool_ref
+$AESREF xval --ref openssl --cases 200
+$AESREF xval --ref all --cases 200            # OpenSSL và Crypto++
 ```
 
 `--kat` trả exit code `6` nếu có vector fail. `xval` dùng các input ngẫu
@@ -538,64 +549,46 @@ authentication, mọi 16-byte key đều là một keystream hợp lệ.
 
 ### 9.3. Log kết quả
 
-Tạo thư mục log theo hệ điều hành trước khi chạy:
-
-```bash
-mkdir -p Output/ubuntu/kat Output/ubuntu/xval Output/ubuntu/bench
-```
-
-Trên Windows:
-
-```bat
-mkdir Output\windows\kat Output\windows\xval Output\windows\bench
-```
-
-Các script build tự lưu KAT vào `Output/<OS>/kat/`. Có thể chuyển hướng
-stdout/stderr để lưu thêm log build, ctest và negative tests.
+Log bằng chứng được lưu ở `output/<os>/` (`kat_*`, `xval_*`, `ctest_*`, `negative_*`, `env_*`), lệnh sinh chúng nằm ở
+[docs/TEST_EVIDENCE.md](docs/TEST_EVIDENCE.md).
 
 ## 10. Benchmark và báo cáo
 
 ### 10.1. Chạy benchmark
 
-Benchmark mặc định đo encrypt/decrypt, warm-up, nhiều lần chạy và ghi CSV:
+Benchmark dùng `aestool_ref` để có cột so sánh với OpenSSL và Crypto++ (`aestool` cho kết quả của riêng phần tự cài).
+Chạy cùng các lệnh này, cùng tham số, trên Windows và Linux; mỗi lệnh ghi một CSV. Chạy **tuần tự**, không chạy song song hai benchmark.
 
 ```bash
-$AESTOOL bench --sizes 1MiB,100MiB \
-  --backends table,ttable --ref openssl \
-  --runs 30 --csv Output/ubuntu/bench/bench_gcc.csv
-```
+cd lab2
+AESREF=./build_ubuntu_gcc/aestool_ref        # Windows MinGW: build_windows_gcc\aestool_ref.exe ; MSVC: build_windows_msvc\aestool_ref.exe
+OUT=output/ubuntu/bench; mkdir -p $OUT
 
-Đo backend `computed` riêng vì chậm:
+# (1) Yêu cầu của đề: AES-128, 1 MiB / 100 MiB / 1 GiB, encrypt + decrypt, so với OpenSSL và Crypto++
+$AESREF bench --bits 128 --sizes 1MiB --backends table --ref all --runs 30 --csv $OUT/bench_aes128_1MiB.csv
+$AESREF bench --bits 128 --sizes 100MiB --backends table --ref all --runs 30 --csv $OUT/bench_aes128_100MiB.csv
+$AESREF bench --bits 128 --sizes 1GiB --backends table --ref all --runs 30 --csv $OUT/bench_aes128_1GiB.csv
 
-```bash
-$AESTOOL bench --sizes 64KiB,1MiB \
-  --backends computed --ref none --runs 30 \
-  --csv Output/ubuntu/bench/bench_computed.csv
+# (2) Table S-box so với computed S-box, cùng cấu hình: 4 KiB x 1000 thao tác (đúng protocol)
+$AESREF bench --bits 128 --sizes 4KiB --backends table,computed --ref none --runs 30 --csv $OUT/bench_sbox_4KiB.csv
+
+# (3) computed ở 1 MiB: chậm (~1 MB/s) nên chỉ 2 thao tác mỗi khối (sai lệch so với protocol, ghi trong báo cáo)
+$AESREF bench --bits 128 --sizes 1MiB --backends computed --ops 2 --ref none --runs 30 --csv $OUT/bench_computed_1MiB.csv
+$AESREF bench --bits 128 --sizes 100MiB --backends computed --ops 1 --ref none --runs 30 --csv $OUT/bench_computed_100MiB.csv   # ~1,7 giờ
+
+# (4) Bonus AES-192 / AES-256
+$AESREF bench --bits 192 --sizes 1MiB --backends table,ttable,aesni --ref all --runs 30 --csv $OUT/bench_aes192.csv
+$AESREF bench --bits 256 --sizes 1MiB --backends table,ttable,aesni --ref all --runs 30 --csv $OUT/bench_aes256.csv
 ```
 
 Protocol chuẩn (áp dụng cho mọi cấu hình): warm-up 1,5 s, rồi lặp N = 30-100 lần một khối ~1000 thao tác,
 sau đó tính mean/median/SD/CI 95%. Với payload lớn, số thao tác mỗi khối giảm theo ngân sách dữ liệu
 (`min(1000, 256 MiB / kích thước)`, đổi bằng `--budget-mb`; `--ops 1000` ép đúng 1000). Số thao tác thực tế ghi ở cột `ops_per_run`.
-Tool in cảnh báo nếu `--runs` nằm ngoài 30-100.
+Tool in cảnh báo nếu `--runs` nằm ngoài 30-100. Backend `computed` chạy khoảng 1 MB/s (chậm hơn `table` ~70 lần),
+nên 1000 thao tác chỉ khả thi ở payload nhỏ (lệnh 2); ở 1 MiB dùng `--ops 2` (lệnh 3).
 
-```bash
-scripts/bench.sh        # 1 MiB (100 lần), 100 MiB (50 lần), 1 GiB (30 lần)
-```
-
-Windows:
-
-```bat
-scripts\bench.bat
-```
-
-Cả ma trận AES-128/192/256 với `table`, `ttable`, `aesni` (và `computed` ở 1 MiB):
-
-```bash
-python3 scripts/run_bench_matrix.py [--threads 1] [--quick]   # --quick: smoke test 3 lần
-aestool bench --bits 256 --sizes 1MiB --backends ttable,aesni --threads 4   # từng phần, nhiều luồng
-```
-
-1 GiB có thể bỏ qua nếu không đủ RAM/thời gian.
+`--bits 192|256` chỉ đo AES-CTR của bonus; OpenSSL/Crypto++ cũng được so sánh cho các độ dài khóa này.
+1 GiB cần ~1 GiB RAM trống (một buffer, mã hóa tại chỗ); bỏ `1GiB` khỏi `--sizes` nếu không đủ (đề cho phép "nếu khả thi").
 
 ### 10.2. Thống kê và đồ thị
 
@@ -607,7 +600,7 @@ chọn quan trọng:
 | `--sizes` | Ví dụ `1MiB,100MiB,1GiB` |
 | `--runs` | Số lần chạy độc lập, chuẩn 30-100 (cảnh báo nếu ngoài khoảng) |
 | `--backends` | `table,ttable,computed,aesni` |
-| `--ref` | `all`, `openssl` hoặc `none` |
+| `--ref` | `all`, `openssl`, `cryptopp` hoặc `none` (chỉ `aestool_ref` có thư viện tham chiếu) |
 | `--dir` | `enc`, `dec` hoặc `both` |
 | `--ops` | Số operation mỗi run; mặc định tự chọn `min(1000, budget/size)`; `1000` để bám literal đề |
 | `--budget-mb` | Ngân sách dữ liệu mỗi khối (mặc định 256) |
@@ -620,15 +613,13 @@ chọn quan trọng:
 Vẽ đồ thị:
 
 ```bash
-python3 scripts/plot_bench.py Output/ubuntu/bench/bench_gcc.csv
-python3 scripts/compare.py Output/ubuntu/bench/bench_gcc.csv \
-  Output/windows/bench/bench_windows_1MiB.csv
+python3 scripts/plot_bench.py output/ubuntu/bench --out output/ubuntu/plots
 ```
 
 Bảng thống kê đầy đủ (Mean, Median, SD, ±CI95 cho thông lượng và độ trễ) để dán vào báo cáo, sinh thẳng từ CSV:
 
 ```bash
-python3 ../scripts/csv_to_stats_table.py Output/ubuntu/bench/bench_ubuntu_1MiB.csv --dir enc > stats_1MiB.md
+python3 ../scripts/csv_to_stats_table.py output/ubuntu/bench/bench_aes128.csv --dir enc > output/ubuntu/stats_aes128.md
 ```
 
 Trong báo cáo cần ghi:
@@ -639,7 +630,7 @@ Trong báo cáo cần ghi:
 - Bảng throughput MB/s, latency và error bar/95% CI.
 - Phân tích `table`/`ttable`/`computed`: bộ nhớ, cache, branch prediction,
   secret-dependent index và đánh đổi hiệu năng–rò rỉ thông tin.
-- So sánh implementation thuần với OpenSSL; key, IV và payload benchmark đều lấy từ CSPRNG (`RAND_bytes`), không có PRNG seed cố định.
+- So sánh implementation thuần với OpenSSL; key, IV và payload benchmark đều lấy từ CSPRNG của hệ điều hành, không có PRNG seed cố định.
 
 ## 11. Phân tích bảo mật
 
@@ -674,8 +665,8 @@ README/report phải nêu rõ các điểm sau:
 - Nếu decrypt không truyền `--iv`, file input phải có sidecar `<input>.iv`.
 - `--out` đã tồn tại cần `--force`; với encrypt tự sinh IV, sidecar cũng được
   kiểm tra để tránh trạng thái ciphertext/IV không nhất quán.
-- Build Windows Clang có thể bỏ qua unit test do ABI không tương thích với
-  thư viện OpenSSL/GCC dựng sẵn; đọc warning của CMake và ghi rõ trong report.
+- Windows Clang chưa được kiểm chứng; ma trận đã chạy là MSVC, MinGW-w64 GCC và Ubuntu GCC.
+- `xval` và `bench --ref` chỉ hoạt động trong `aestool_ref`; `aestool` (bản nộp) cố ý không chứa mã OpenSSL/Crypto++.
 - `Catch2` không tìm thấy có thể khiến configure tải dependency qua mạng; dùng
   bản Catch2 v3 cài sẵn nếu môi trường offline.
 

@@ -1,0 +1,27 @@
+== ctest: MinGW-w64 GCC on Windows (Release, static) ==
+date : 2026-11-15T12:37:48Z
+git  : a119e86
+g++  : g++.exe (Rev4, Built by MSYS2 project) 16.2.0
+cmake: cmake version 4.4.3
+openssl : mingw-w64-x86_64-openssl 3.6.4-1
+cryptopp: mingw-w64-x86_64-crypto++ 8.9.0-2
+catch2  : mingw-w64-x86_64-catch 3.16.0-1
+
+Test project C:/Users/ThinkPad/AppData/Local/Temp/claude/01a574b694523bd9/0d59724d-09e7-4edd-b480-494c9919cda6/scratchpad/l2_rel_mingw
+    Start 1: lab2_unit_tests
+1/4 Test #1: lab2_unit_tests ..................   Passed    0.11 sec
+    Start 2: lab2_kat_runner
+2/4 Test #2: lab2_kat_runner ..................   Passed    0.03 sec
+    Start 3: lab2_cli_end_to_end
+3/4 Test #3: lab2_cli_end_to_end ..............   Passed    0.57 sec
+    Start 4: lab2_cross_validation
+4/4 Test #4: lab2_cross_validation ............   Passed    1.18 sec
+
+100% tests passed out of 4
+
+Total Test time (real) =   1.90 sec
+
+-- unit tests (Catch2) summary:
+===============================================================================
+All tests passed (3276 assertions in 32 test cases)
+
