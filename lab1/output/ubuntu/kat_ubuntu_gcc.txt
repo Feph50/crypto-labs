@@ -1,0 +1,36 @@
+== NIST/IEEE Known Answer Tests: aestool_gcc (Ubuntu) ==
+date : 2026-11-15T08:29:51Z
+git  : 1dd8da2
+kat  : kat/vectors.json  sha256 0ecc5256a246459bd609790e0dcdf077ac5154bbc8318a5adbe3bd8248d4e9b3
+
+[PASS] SP800-38A F.1.1 ECB-AES128 (4 blocks)
+[PASS] SP800-38A F.2.1 CBC-AES128
+[PASS] SP800-38A F.3.13 CFB128-AES128
+[PASS] SP800-38A F.4.1 OFB-AES128
+[PASS] SP800-38A F.5.1 CTR-AES128
+[PASS] GCM Test Case 2 (AES-128, 1 block zero)
+[PASS] GCM Test Case 4 (AES-128, AAD)
+[PASS] SP800-38C Appendix C Example 1 (CCM, Tlen=4)
+[PASS] IEEE 1619 XTS-AES128 vector 1
+[PASS] SP800-38A F.1.3 ECB-AES192
+[PASS] SP800-38A F.1.5 ECB-AES256
+[PASS] SP800-38A F.2.3 CBC-AES192
+[PASS] SP800-38A F.2.5 CBC-AES256
+[PASS] SP800-38A F.3.15 CFB128-AES192
+[PASS] SP800-38A F.3.17 CFB128-AES256
+[PASS] SP800-38A F.4.3 OFB-AES192
+[PASS] SP800-38A F.4.5 OFB-AES256
+[PASS] SP800-38A F.5.3 CTR-AES192
+[PASS] SP800-38A F.5.5 CTR-AES256
+[PASS] GCM Test Case 14 (AES-256, 1 block zero)
+[PASS] GCM Test Case 15 (AES-256, 64-byte plaintext)
+[PASS] GCM Test Case 16 (AES-256, AAD)
+[PASS] GCM Test Case 10 (AES-192, AAD)
+[PASS] SP800-38C Appendix C Example 3 (CCM, Tlen=8)
+[PASS] CCM cross-check (AES-256, Tlen=16) vs pyca/cryptography
+[PASS] IEEE 1619 XTS-AES128 vector 2
+[PASS] IEEE 1619 XTS-AES128 vector 3
+[PASS] IEEE 1619 XTS-AES128 vector 15 (17 bytes, ciphertext stealing)
+[PASS] XTS-AES256 cross-check (64-byte key) vs pyca/cryptography
+---- KAT summary: 29 passed, 0 failed, 29 total
+[exit code: 0]
