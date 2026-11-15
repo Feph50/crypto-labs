@@ -1,5 +1,5 @@
 {
-  "description": "Known Answer Tests (KAT) for Lab 2: AES-128 CTR. Sources: NIST FIPS 197 Update 1 (May 9, 2023), NIST SP 800-38A, and NIST AESAVS.",
+  "description": "Known Answer Tests (KAT) for Lab 2: AES-128 CTR. Sources: NIST FIPS 197 Update 1 (May 9, 2023), NIST SP 800-38A, and NIST AESAVS. Bonus sections: AES-192/256 (FIPS-197 C.2/C.3, SP 800-38A F.1/F.5) and XTS-AES (IEEE 1619-2007).",
   "aes128_block": [
     {
       "id": "fips197-appendix-b",
@@ -180,6 +180,102 @@
       "iv": "ffffffffffffffffffffffffffffffff",
       "length": 33,
       "expect": "counter_overflow"
+    }
+  ],
+  "aes192_block": [
+    {
+      "id": "fips197-appendix-c2",
+      "source": "FIPS-197 Appendix C.2 (AES-192)",
+      "key": "000102030405060708090a0b0c0d0e0f1011121314151617",
+      "plaintext": "00112233445566778899aabbccddeeff",
+      "ciphertext": "dda97ca4864cdfe06eaf70a0ec0d7191",
+      "name": "FIPS-197 Appendix C.2 (AES-192)"
+    },
+    {
+      "id": "sp800-38a-f13-block1",
+      "source": "SP 800-38A F.1.3 (ECB-AES192) block 1",
+      "key": "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b",
+      "plaintext": "6bc1bee22e409f96e93d7e117393172a",
+      "ciphertext": "bd334f1d6e45f25ff712a214571fa5cc",
+      "name": "SP 800-38A F.1.3 (ECB-AES192) block 1"
+    }
+  ],
+  "aes256_block": [
+    {
+      "id": "fips197-appendix-c3",
+      "source": "FIPS-197 Appendix C.3 (AES-256)",
+      "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "plaintext": "00112233445566778899aabbccddeeff",
+      "ciphertext": "8ea2b7ca516745bfeafc49904b496089",
+      "name": "FIPS-197 Appendix C.3 (AES-256)"
+    },
+    {
+      "id": "sp800-38a-f15-block1",
+      "source": "SP 800-38A F.1.5 (ECB-AES256) block 1",
+      "key": "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+      "plaintext": "6bc1bee22e409f96e93d7e117393172a",
+      "ciphertext": "f3eed1bdb5d2a03c064b5a7e3db181f8",
+      "name": "SP 800-38A F.1.5 (ECB-AES256) block 1"
+    }
+  ],
+  "aes192_ctr": [
+    {
+      "id": "sp800-38a-f53",
+      "source": "SP 800-38A F.5.3 CTR-AES192 (4 blocks)",
+      "key": "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b",
+      "iv": "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+      "plaintext": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+      "ciphertext": "1abc932417521ca24f2b0459fe7e6e0b090339ec0aa6faefd5ccc2c6f4ce8e941e36b26bd1ebc670d1bd1d665620abf74f78a7f6d29809585a97daec58c6b050",
+      "name": "SP 800-38A F.5.3 CTR-AES192 (4 blocks)"
+    }
+  ],
+  "aes256_ctr": [
+    {
+      "id": "sp800-38a-f55",
+      "source": "SP 800-38A F.5.5 CTR-AES256 (4 blocks)",
+      "key": "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4",
+      "iv": "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff",
+      "plaintext": "6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710",
+      "ciphertext": "601ec313775789a5b7a7f504bbf3d228f443e3ca4d62b59aca84e990cacaf5c52b0930daa23de94ce87017ba2d84988ddfc9c58db67aada613c2dd08457941a6",
+      "name": "SP 800-38A F.5.5 CTR-AES256 (4 blocks)"
+    }
+  ],
+  "aes_xts": [
+    {
+      "id": "ieee1619-v1",
+      "source": "IEEE 1619-2007 vector 1 (XTS-AES-128, K1=K2=0)",
+      "key": "0000000000000000000000000000000000000000000000000000000000000000",
+      "tweak": "00000000000000000000000000000000",
+      "plaintext": "0000000000000000000000000000000000000000000000000000000000000000",
+      "ciphertext": "917cf69ebd68b2ec9b9fe9a3eadda692cd43d2f59598ed858c02c2652fbf922e",
+      "name": "IEEE 1619-2007 vector 1 (XTS-AES-128, K1=K2=0)"
+    },
+    {
+      "id": "ieee1619-v2",
+      "source": "IEEE 1619-2007 vector 2 (XTS-AES-128)",
+      "key": "1111111111111111111111111111111122222222222222222222222222222222",
+      "tweak": "33333333330000000000000000000000",
+      "plaintext": "4444444444444444444444444444444444444444444444444444444444444444",
+      "ciphertext": "c454185e6a16936e39334038acef838bfb186fff7480adc4289382ecd6d394f0",
+      "name": "IEEE 1619-2007 vector 2 (XTS-AES-128)"
+    },
+    {
+      "id": "ieee1619-v3",
+      "source": "IEEE 1619-2007 vector 3 (XTS-AES-128)",
+      "key": "fffefdfcfbfaf9f8f7f6f5f4f3f2f1f022222222222222222222222222222222",
+      "tweak": "33333333330000000000000000000000",
+      "plaintext": "4444444444444444444444444444444444444444444444444444444444444444",
+      "ciphertext": "af85336b597afc1a900b2eb21ec949d292df4c047e0b21532186a5971a227a89",
+      "name": "IEEE 1619-2007 vector 3 (XTS-AES-128)"
+    },
+    {
+      "id": "ieee1619-v15-stealing",
+      "source": "IEEE 1619-2007 vector 15 (17 bytes, ciphertext stealing)",
+      "key": "fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0bfbebdbcbbbab9b8b7b6b5b4b3b2b1b0",
+      "tweak": "9a785634120000000000000000000000",
+      "plaintext": "000102030405060708090a0b0c0d0e0f10",
+      "ciphertext": "6c1625db4671522d3d7599601de7ca09ed",
+      "name": "IEEE 1619-2007 vector 15 (17 bytes, ciphertext stealing)"
     }
   ]
 }

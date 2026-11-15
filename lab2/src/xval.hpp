@@ -16,6 +16,10 @@ struct RefImpl {
   std::string name;  // "openssl" | "cryptopp"
   // AES-128-CTR: out = in XOR keystream(key, iv). in == out allowed.
   std::function<void(const uint8_t* key, const uint8_t* iv, const uint8_t* in, uint8_t* out, std::size_t n)> ctr;
+  // BONUS: AES-CTR with a 16/24/32-byte key (empty if the reference does not provide it).
+  std::function<void(const uint8_t* key, std::size_t key_len, const uint8_t* iv, const uint8_t* in, uint8_t* out, std::size_t n)> ctr_any;
+  // BONUS: XTS-AES with a 32/64-byte key = K1||K2 and a 16-byte tweak; n >= 16 (empty if unavailable).
+  std::function<void(const uint8_t* key, std::size_t key_len, const uint8_t* tweak, const uint8_t* in, uint8_t* out, std::size_t n, bool encrypt)> xts;
 };
 
 // which: all | openssl | cryptopp | none. Throws Usage error if a requested reference was not

@@ -144,9 +144,10 @@ python lab2/gui/aestool_gui.py
 - **Ảnh hưởng độ dài khóa:** AES-128 ($27.36\text{ MB/s}$) $\to$ AES-192 ($21.66\text{ MB/s}$) $\to$ AES-256 ($18.68\text{ MB/s}$), phản ánh chính xác quy luật tỷ lệ nghịch với số vòng biến đổi (10 : 12 : 14).
 - Biểu đồ phân tích lưu tại: `lab2/Output/windows/plots/`.
 
-### ✅ Tính năng Thưởng (Bonus Features — +15 điểm)
+### ✅ Tính năng Thưởng (Bonus Features — +20 điểm)
 - **Bonus A (+10 điểm):** Hỗ trợ đầy đủ AES-192 (12 vòng) và AES-256 (14 vòng) với lịch khóa mở rộng chuẩn FIPS-197.
-- **Bonus C (+5 điểm):** Nhận diện thời gian thực tập lệnh tăng tốc phần cứng AES-NI qua CPUID Leaf 1 (ECX bit 25).
+- **Bonus B (+5 điểm):** XTS-AES-128/256 (IEEE 1619, ciphertext stealing).
+- **Bonus C (+5 điểm):** Backend AES-NI với phát hiện CPU lúc chạy (CPUID Leaf 1, ECX bit 25).
 - Báo cáo học thuật 8 phần toàn diện: [`lab2/docs/lab2-main-report.md`](file:///D:/MMH_Final_Labs/Final_Lab%20Tasks/NT219-Crypto-Labs/lab2/docs/lab2-main-report.md).
 
 ---

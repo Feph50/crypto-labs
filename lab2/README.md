@@ -42,8 +42,7 @@ Lab này hiện thực các yêu cầu chính của Lab 2:
 - Đo throughput, latency và thống kê mean/median/stddev/95% CI.
 - Kiểm tra input lỗi theo nguyên tắc **fail closed**.
 
-AES-192/256, XTS và AES-NI/bit-sliced là các hạng mục bonus; bản hiện tại
-chưa triển khai các bonus này.
+AES-192/256, XTS và AES-NI là các hạng mục bonus và **đã được triển khai** (xem mục 2.4).
 
 ## 2. Tính năng
 
@@ -53,6 +52,7 @@ chưa triển khai các bonus này.
 |---|---:|---|
 | `table` (mặc định) | S-box 256 B và inverse S-box 256 B | Byte-oriented, dễ đối chiếu FIPS-197; có truy cập bộ nhớ phụ thuộc dữ liệu |
 | `ttable` | 4 bảng, mỗi bảng 1 KiB | Nhanh hơn trong một số máy; là mục tiêu kinh điển của cache-timing attack |
+| `aesni` | Không có bảng | Bonus: tập lệnh AES-NI, phát hiện CPU lúc chạy, không rò cache-timing |
 | `computed` | Không lưu S-box | Tính `S(x) = affine(x^254)` trong GF(2^8), giảm secret-indexed lookup nhưng chậm hơn đáng kể |
 
 ### 2.2. CTR
@@ -61,7 +61,7 @@ chưa triển khai các bonus này.
 - Counter là **toàn bộ block 128 bit theo big-endian**; byte thứ 15 là byte
   ít quan trọng nhất và được tăng trước.
 - Không padding; block cuối được cắt theo đúng số byte plaintext.
-- IV tự sinh dùng CSPRNG của hệ điều hành: 12 byte nonce ngẫu nhiên và 4 byte
+- IV tự sinh dùng CSPRNG của OpenSSL (`RAND_bytes`; bản build không có OpenSSL mới dùng CSPRNG của hệ điều hành): 12 byte nonce ngẫu nhiên và 4 byte
   counter ban đầu bằng zero.
 - Khi bỏ `--iv` lúc encrypt, IV được lưu ở `<output>.iv`; khi decrypt, IV
   được đọc từ `<input>.iv`.
@@ -80,6 +80,38 @@ chưa triển khai các bonus này.
 - Windows nhận đối số UTF-16 rồi chuyển sang UTF-8; dữ liệu `--text` có thể
   chứa Unicode.
 
+### 2.4. Bonus (đã triển khai)
+
+| Bonus | Điểm | Triển khai | Kiểm chứng |
+|---|---|---|---|
+| **AES-192/256** | +10 | `Aes` trong `src/aes128.*`: key 16/24/32 byte chọn Nk = 4/6/8 và Nr = 10/12/14; lịch khóa FIPS-197 §5.2 đầy đủ, gồm `SubWord` phụ cho AES-256 khi `i mod 8 == 4`. Mọi backend (table, computed, ttable, aesni) dùng chung. | KAT FIPS-197 C.2/C.3, SP 800-38A F.1.3/F.1.5/F.5.3/F.5.5; round key A.2/A.3 trong unit test; cross-validation với OpenSSL |
+| **AES-XTS** | +5 | `src/xts.*`: XTS-AES-128 (khóa 32 B) và XTS-AES-256 (khóa 64 B), hai khóa K1/K2, nhân tweak trong GF(2^128) bằng đa thức `x^128+x^7+x^2+x+1` (little-endian, không rẽ nhánh), ciphertext stealing cho độ dài không chia hết 16. | Vector IEEE 1619-2007 số 1, 2, 3 và 15 (ciphertext stealing); cross-validation với OpenSSL XTS cho mọi độ dài; unit test round-trip độ dài 16..130 |
+| **AES-NI** | +5 | `src/aesni.*`: `AESENC/AESDEC` (+ `AESIMC` cho khóa giải mã), phát hiện CPU lúc chạy (CPUID.01H:ECX bit 25; `__cpuid` trên MSVC, `__builtin_cpu_supports` trên GCC/Clang). Lịch khóa vẫn là mã tự cài; AES-NI chỉ chạy các vòng. | So khớp với backend phần mềm trên khóa/khối ngẫu nhiên (128/192/256); KAT chạy trên cả backend `aesni` khi CPU hỗ trợ; CPU không hỗ trợ thì báo lỗi rõ (exit 3) |
+
+Cách dùng:
+
+```bash
+aestool keygen --bits 256 --out k256.bin                 # AES-256 (cũng có 128, 192)
+aestool encrypt --key k256.bin --in msg.bin --out ct.bin # key 16/24/32 byte -> AES-128/192/256-CTR
+aestool keygen --bits xts512 --out kx.bin                # 64 byte = XTS-AES-256 (xts256 = XTS-AES-128)
+aestool encrypt --mode xts --key kx.bin --in sector.bin --out sector.enc   # tweak ngẫu nhiên -> sector.enc.iv
+aestool decrypt --mode xts --key kx.bin --in sector.enc --out sector.dec
+aestool encrypt --key k256.bin --in msg.bin --out ct.bin --sbox aesni      # dùng AES-NI
+aestool bench --backends table,ttable,aesni --sizes 1MiB
+```
+
+Quy tắc XTS của công cụ: `--iv`/`--iv-hex` là tweak 16 byte (số hiệu data unit); không có thì sinh ngẫu nhiên và lưu `<out>.iv`.
+Input 16 byte đến 16 MiB (giới hạn 2^20 block của một data unit); K1 phải khác K2; không có `--nonce` và không có `--aead`.
+
+**Mã hóa ổ đĩa và rủi ro của XTS:** tweak gắn mỗi block với vị trí (sector, chỉ số block), nên cùng nội dung ở hai vị trí cho hai ciphertext
+khác nhau và ghi lại đúng chỗ cũ vẫn giải mã được. Nhưng XTS **không có tính toàn vẹn**: kẻ ghi được vào đĩa có thể làm hỏng một block
+16 byte thành rác khó đoán, hoán đổi hoặc phát lại cả sector, và cùng plaintext tại cùng vị trí dưới cùng khóa luôn cho cùng ciphertext
+(rò rỉ việc có thay đổi hay không). Chỉ dùng cho lưu trữ; không dùng cho thông điệp mạng, hãy dùng AEAD.
+
+**AES-NI và constant-time:** `AESENC/AESDEC` thực hiện SubBytes trong phần cứng, không có truy cập bộ nhớ hay nhánh phụ thuộc dữ liệu bí mật,
+nên không bị tấn công cache-timing như S-box bảng tra hoặc T-table. Backend `computed` cũng không có bảng tra nhưng chậm hơn nhiều.
+Các phần còn lại của chương trình (I/O, XOR, parsing) chưa được chứng minh constant-time.
+
 ## 3. Cấu trúc dự án
 
 ```text
@@ -87,7 +119,9 @@ lab2/
 ├── CMakeLists.txt              # Cấu hình CMake, OpenSSL và Catch2
 ├── README.md                   # Tài liệu này
 ├── src/
-│   ├── aes128.hpp/.cpp         # AES-128, key schedule, các backend S-box
+│   ├── aes128.hpp/.cpp         # AES-128 (lõi) + AES-192/256 (bonus), key schedule, các backend
+│   ├── aesni.hpp/.cpp          # Bonus: backend AES-NI
+│   ├── xts.hpp/.cpp            # Bonus: XTS-AES (IEEE 1619)
 │   ├── aes_tables.hpp          # S-box và inverse S-box
 │   ├── ctr.hpp/.cpp            # CTR memory API và streaming file API
 │   ├── errors.hpp              # Error và exit code
@@ -166,6 +200,35 @@ Cài CMake, Git và một trong các toolchain sau:
 - MinGW-w64: dùng MSYS2 MinGW64/UCRT64, bảo đảm `g++.exe` và
   `mingw32-make.exe` có trong PATH.
 - Clang: LLVM/Clang và generator phù hợp.
+
+Cài OpenSSL trên Windows (cả hai cách dưới đây đã được build và chạy `ctest` thật: 3/3 pass):
+
+```bash
+# MinGW64: MSYS2 MINGW64 shell
+pacman -S --needed mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-openssl
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=C:/msys64/mingw64
+cmake --build build && cd build && ctest --output-on-failure
+```
+```bat
+:: MSVC: cài vcpkg một lần (bản static, khớp /MT), rồi build trong "x64 Native Tools Command Prompt for VS"
+git clone https://github.com/microsoft/vcpkg.git D:\vcpkg
+D:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+D:\vcpkg\vcpkg.exe install openssl:x64-windows-static cryptopp:x64-windows-static
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+      -DOPENSSL_ROOT_DIR=D:/vcpkg/installed/x64-windows-static -DOPENSSL_USE_STATIC_LIBS=ON
+cmake --build build && cd build && ctest --output-on-failure
+```
+Cần `-DOPENSSL_ROOT_DIR=...` vì CMake mặc định trỏ tới `D:/UIT/NT219/libs/openssl/...` của máy tác giả.
+
+### Phiên bản đã kiểm chứng
+
+| Thành phần | Yêu cầu / đã dùng |
+|---|---|
+| CMake | >= 3.20 |
+| C++ | C++17 (không dùng Crypto++ cho AES; chỉ OpenSSL để đối chiếu) |
+| OpenSSL | >= 1.1 |
+| Catch2 | v3 (tự tải v3.5.3 nếu thiếu) |
+| Python / matplotlib | 3.x / tùy chọn, chỉ để vẽ biểu đồ |
 
 ## 5. Biên dịch
 
@@ -347,7 +410,7 @@ aestool --help
 | Lệnh | Mục đích |
 |---|---|
 | `encrypt` / `decrypt` | CTR transform; encrypt và decrypt dùng cùng phép XOR keystream |
-| `keygen` | Sinh key AES-128 16 byte bằng OS CSPRNG |
+| `keygen` | Sinh key bằng OpenSSL `RAND_bytes`: `--bits 128\|192\|256` (mặc định 128) hoặc `xts256\|xts512` |
 | `ivgen` | Sinh IV 16 byte: 12 byte nonce + 4 byte counter zero |
 | `--kat FILE` | Chạy Known Answer Tests, in PASS/FAIL từng case và tổng kết |
 | `xval` | So sánh kết quả với OpenSSL |
@@ -357,14 +420,17 @@ aestool --help
 
 | Tùy chọn | Quy tắc |
 |---|---|
-| `--mode ctr` | Chỉ `ctr` được hỗ trợ |
-| `--key FILE` / `--key-hex HEX` | Chọn đúng một; key đúng 16 byte/32 hex |
-| `--iv FILE` / `--iv-hex HEX` | IV đúng 16 byte/32 hex |
+| `--mode ctr\|xts` | `ctr` (mặc định) hoặc `xts` (bonus) |
+| `--key FILE` / `--key-hex HEX` | Chọn đúng một. CTR: 16/24/32 byte (AES-128/192/256); XTS: 32/64 byte |
+| `--iv FILE\|HEX` / `--iv-hex HEX` | IV đúng 16 byte: file raw hoặc 32 ký tự hex (`--iv` tự nhận file nếu tồn tại, ngược lại coi là hex) |
+| `--nonce HEX` | Nonce 96-bit (24 hex); IV = nonce ‖ counter 32-bit bằng 0. Không dùng cùng `--iv`/`--iv-hex` (exit 2); sai độ dài: exit 3 |
+| `--aead` | Bị từ chối (exit 2): CTR không có thẻ xác thực |
+| `--threads N` | Chỉ cho `bench`: N worker chạy đồng thời (mỗi worker một buffer riêng), MB/s là tổng của mọi worker; mặc định 1, hợp lệ 1..256 |
 | `--in FILE` / `--text STR` | Chọn đúng một input |
 | `--in-encode raw\|hex\|base64` | Encoding của input |
 | `--out FILE` | File output; mặc định raw binary |
 | `--encode raw\|hex\|base64` | Encoding output |
-| `--sbox table\|ttable\|computed` | Chọn backend AES |
+| `--sbox table\|ttable\|computed\|aesni` | Chọn backend AES (`aesni` chỉ khi CPU hỗ trợ) |
 | `--force` | Cho phép ghi đè output |
 | `--quiet` / `--verbose` | Giảm/tăng thông tin chẩn đoán |
 
@@ -507,10 +573,13 @@ $AESTOOL bench --sizes 64KiB,1MiB \
   --csv Output/ubuntu/bench/bench_computed.csv
 ```
 
-Theo protocol đầy đủ của lab:
+Protocol chuẩn (áp dụng cho mọi cấu hình): warm-up 1,5 s, rồi lặp N = 30-100 lần một khối ~1000 thao tác,
+sau đó tính mean/median/SD/CI 95%. Với payload lớn, số thao tác mỗi khối giảm theo ngân sách dữ liệu
+(`min(1000, 256 MiB / kích thước)`, đổi bằng `--budget-mb`; `--ops 1000` ép đúng 1000). Số thao tác thực tế ghi ở cột `ops_per_run`.
+Tool in cảnh báo nếu `--runs` nằm ngoài 30-100.
 
 ```bash
-scripts/bench.sh
+scripts/bench.sh        # 1 MiB (100 lần), 100 MiB (50 lần), 1 GiB (30 lần)
 ```
 
 Windows:
@@ -519,8 +588,14 @@ Windows:
 scripts\bench.bat
 ```
 
-Các script tạo benchmark cho 1 MiB, 100 MiB và 1 GiB (30 lần cho 1 GiB;
-1 GiB có thể bỏ qua nếu không đủ RAM/thời gian).
+Cả ma trận AES-128/192/256 với `table`, `ttable`, `aesni` (và `computed` ở 1 MiB):
+
+```bash
+python3 scripts/run_bench_matrix.py [--threads 1] [--quick]   # --quick: smoke test 3 lần
+aestool bench --bits 256 --sizes 1MiB --backends ttable,aesni --threads 4   # từng phần, nhiều luồng
+```
+
+1 GiB có thể bỏ qua nếu không đủ RAM/thời gian.
 
 ### 10.2. Thống kê và đồ thị
 
@@ -530,13 +605,16 @@ chọn quan trọng:
 | Tùy chọn | Ý nghĩa |
 |---|---|
 | `--sizes` | Ví dụ `1MiB,100MiB,1GiB` |
-| `--runs` | Số lần chạy độc lập, nên `>= 30` |
-| `--backends` | `table,ttable,computed` |
+| `--runs` | Số lần chạy độc lập, chuẩn 30-100 (cảnh báo nếu ngoài khoảng) |
+| `--backends` | `table,ttable,computed,aesni` |
 | `--ref` | `all`, `openssl` hoặc `none` |
 | `--dir` | `enc`, `dec` hoặc `both` |
-| `--ops` | Số operation mỗi run; dùng `1000` khi cần bám literal đề |
+| `--ops` | Số operation mỗi run; mặc định tự chọn `min(1000, budget/size)`; `1000` để bám literal đề |
+| `--budget-mb` | Ngân sách dữ liệu mỗi khối (mặc định 256) |
+| `--bits` | `128`, `192` hoặc `256`: độ dài khóa AES-CTR được đo |
+| `--threads` | Số worker song song, MB/s là tổng |
 | `--warmup` | Thời gian warm-up |
-| `--target-sec` | Thời lượng mục tiêu mỗi run |
+| `--target-sec` | Tùy chọn: chọn số thao tác để mỗi run dài xấp xỉ giá trị này (mặc định tắt) |
 | `--csv` | Đường dẫn CSV |
 
 Vẽ đồ thị:
@@ -547,6 +625,12 @@ python3 scripts/compare.py Output/ubuntu/bench/bench_gcc.csv \
   Output/windows/bench/bench_windows_1MiB.csv
 ```
 
+Bảng thống kê đầy đủ (Mean, Median, SD, ±CI95 cho thông lượng và độ trễ) để dán vào báo cáo, sinh thẳng từ CSV:
+
+```bash
+python3 ../scripts/csv_to_stats_table.py Output/ubuntu/bench/bench_ubuntu_1MiB.csv --dir enc > stats_1MiB.md
+```
+
 Trong báo cáo cần ghi:
 
 - CPU, số core/thread, RAM, OS, compiler, CMake, OpenSSL và compile flags.
@@ -555,8 +639,7 @@ Trong báo cáo cần ghi:
 - Bảng throughput MB/s, latency và error bar/95% CI.
 - Phân tích `table`/`ttable`/`computed`: bộ nhớ, cache, branch prediction,
   secret-dependent index và đánh đổi hiệu năng–rò rỉ thông tin.
-- So sánh implementation thuần với OpenSSL; không dùng PRNG seeded cho
-  key/IV. Seed cố định chỉ được dùng để tạo dữ liệu benchmark giả.
+- So sánh implementation thuần với OpenSSL; key, IV và payload benchmark đều lấy từ CSPRNG (`RAND_bytes`), không có PRNG seed cố định.
 
 ## 11. Phân tích bảo mật
 
@@ -580,7 +663,9 @@ README/report phải nêu rõ các điểm sau:
 
 ## 12. Giới hạn và lỗi thường gặp
 
-- Chỉ hỗ trợ AES-128 và CTR; không phải AES-192/256, XTS hay AEAD.
+- Hỗ trợ CTR (AES-128/192/256) và XTS; không có AEAD. XTS không có tính toàn vẹn, một data unit tối đa 16 MiB và được xử lý trong bộ nhớ.
+- Lõi `Aes128` chỉ nhận khóa 16 byte; AES-192/256 đi qua lớp `Aes` (bonus). Khóa 128/192/256 được chọn theo độ dài khóa.
+- Backend `aesni` chỉ có trên CPU x86/x86-64 có AES-NI; nơi khác báo lỗi rõ và dùng backend phần mềm.
 - `table` và `ttable` có secret-dependent memory access theo chủ ý để phục vụ
   phân tích lab; không coi đây là implementation chống side-channel.
 - Không có nonce database giữa các lần chạy; chương trình chỉ cảnh báo khi

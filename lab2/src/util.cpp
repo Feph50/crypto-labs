@@ -9,9 +9,15 @@
 
 #include "errors.hpp"
 
+#ifdef AESP_HAVE_OPENSSL
+#include <openssl/rand.h>
+#endif
+
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #include <bcrypt.h>
 #elif defined(__linux__)
@@ -33,7 +39,15 @@ void secure_zero(void* p, std::size_t n) noexcept {
 
 void secure_random(uint8_t* out, std::size_t n) {
   if (n == 0) return;
-#if defined(_WIN32)
+#if defined(AESP_HAVE_OPENSSL)
+  // OpenSSL CSPRNG (RAND_bytes). Fail closed: never fall back to a weaker source.
+  while (n > 0) {
+    const int chunk = n > (1u << 30) ? (1 << 30) : static_cast<int>(n);
+    if (RAND_bytes(out, chunk) != 1) throw Error(ExitCode::Failure, "random number generator failed");
+    out += chunk;
+    n -= static_cast<std::size_t>(chunk);
+  }
+#elif defined(_WIN32)
   while (n > 0) {
     const ULONG chunk = n > 0x40000000u ? 0x40000000u : static_cast<ULONG>(n);
     if (BCryptGenRandom(nullptr, out, chunk, BCRYPT_USE_SYSTEM_PREFERRED_RNG) < 0)

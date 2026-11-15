@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <set>
 #include <sstream>
 #include <string>
@@ -15,11 +16,14 @@
 #include "errors.hpp"
 #include "kat.hpp"
 #include "util.hpp"
+#include "xts.hpp"
 #include "xval.hpp"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #include <shellapi.h>
 #include <fcntl.h>
@@ -34,26 +38,33 @@ namespace {
 const char* kUsage = R"(aestool - AES-128 (FIPS-197) in pure C++, CTR mode (NIST SP 800-38A)
 
 USAGE
-  aestool encrypt --key FILE|--key-hex HEX (--in FILE | --text "...") [options]
+  aestool encrypt --key FILE|--key-hex HEX (--in FILE | --text "...") [--mode ctr|xts] [options]
   aestool decrypt --key FILE|--key-hex HEX (--in FILE | --text ENCODED --in-encode hex|base64) [options]
-  aestool keygen  [--out FILE]            random 16-byte key (OS CSPRNG)
+  aestool keygen  [--bits 128|192|256|xts256|xts512] [--out FILE]   random key (OpenSSL RAND_bytes)
   aestool ivgen   [--out FILE]            random IV: 96-bit nonce || 32-bit zero counter
   aestool --kat vectors.json [--verbose]  Known Answer Tests (PASS/FAIL per case + summary)
   aestool xval [--ref all|openssl|cryptopp] [--cases N]   cross-validate vs reference libs
   aestool bench [--sizes 1MiB,100MiB] [--runs 30] [--backends table,ttable,computed]
                       [--ref all|openssl|cryptopp|none] [--dir enc|dec|both] [--ops N]
-                      [--warmup SEC] [--target-sec SEC] [--csv FILE]
+                      [--warmup SEC] [--bits 128|192|256] [--threads N] [--budget-mb MiB] [--target-sec SEC] [--csv FILE]
+                      protocol: warm-up per case, block of ~1000 ops (min(1000, budget/size); --ops N to force), 30-100 runs
 
 OPTIONS
-  --mode ctr            only CTR is implemented (default)
-  --key FILE            raw key file, exactly 16 bytes        --key-hex HEX   32 hex chars
-  --iv FILE             raw IV file, exactly 16 bytes         --iv-hex HEX    32 hex chars
+  --mode ctr|xts        ctr (default): AES-CTR; the key length picks AES-128 (16 B), AES-192 (24 B) or AES-256 (32 B)
+                        xts: XTS-AES (IEEE 1619), key = K1||K2 of 32 B (XTS-AES-128) or 64 B (XTS-AES-256),
+                             IV = 16-byte tweak (data-unit number), input 16 B .. 16 MiB, ciphertext stealing
+  --key FILE            raw key file                          --key-hex HEX   hex key (see --mode for the lengths)
+  --iv FILE|HEX         IV: raw 16-byte file, or 32 hex chars  --iv-hex HEX    32 hex chars (same as --iv HEX)
+  --nonce HEX           CTR only: 96-bit nonce (24 hex chars); IV = nonce || 32-bit zero counter
                         (encrypt: omitted -> random IV, saved to <out>.iv;
                          decrypt: omitted -> read <in>.iv)
   --in FILE | --text S  input (UTF-8 text via --text)         --out FILE      output file (raw)
   --encode hex|base64|raw      output encoding (default: hex on screen when no --out; raw in files)
   --in-encode hex|base64|raw   input encoding (default raw)
-  --sbox table|computed|ttable AES backend (default table = FIPS-197 byte-oriented S-box lookup)
+  --sbox table|computed|ttable|aesni  AES backend (default table = FIPS-197 byte-oriented S-box lookup;
+                        aesni = hardware AES-NI, bonus, only if the CPU has it)
+  --aead                rejected: CTR has no authentication (fail closed)
+  --threads N           bench only: N concurrent workers, aggregate throughput (default 1)
   --force               overwrite existing output files       --quiet / --verbose
 Exit codes: 0 ok, 2 usage, 3 invalid input, 4 I/O, 5 counter overflow, 6 KAT/xval failure, 1 internal.
 CTR gives confidentiality ONLY: it does not detect tampering. Never reuse a (key, IV) pair.
@@ -73,8 +84,8 @@ struct Args {
 
 const std::set<std::string> kValueOpts = {"mode", "key", "key-hex", "iv", "iv-hex", "in", "text", "out", "encode",
                                           "in-encode", "kat", "sbox", "sizes", "runs", "warmup", "target-sec", "ops",
-                                          "csv", "backends", "dir", "ref", "cases"};
-const std::set<std::string> kFlagOpts = {"verbose", "quiet", "force", "help"};
+                                          "csv", "backends", "dir", "ref", "cases", "nonce", "threads", "bits", "budget-mb"};
+const std::set<std::string> kFlagOpts = {"verbose", "quiet", "force", "help", "aead"};
 
 std::vector<std::string> get_args(int argc, char** argv) {
   std::vector<std::string> v;
@@ -138,13 +149,16 @@ void set_binary_stdout() {
 #endif
 }
 
-Bytes load_key(const Args& a) {
+// Loads the key and checks its length: CTR accepts 16/24/32 bytes (AES-128/192/256), XTS 32/64 bytes.
+Bytes load_key(const Args& a, bool xts) {
   if (a.has("key") == a.has("key-hex")) usage_error("provide exactly one of --key FILE or --key-hex HEX");
-  if (a.has("key")) return read_file_exact(a.get("key"), 16, "key");
-  Bytes k = from_hex(a.get("key-hex"));
-  if (k.size() != 16) {
+  Bytes k = a.has("key") ? read_file(a.get("key"), 4096) : from_hex(a.get("key-hex"));
+  const bool ok = xts ? (k.size() == 32 || k.size() == 64) : (k.size() == 16 || k.size() == 24 || k.size() == 32);
+  if (!ok) {
     secure_zero(k.data(), k.size());
-    throw Error(ExitCode::InvalidInput, "invalid key length: AES-128 requires exactly 16 bytes (32 hex chars)");
+    throw Error(ExitCode::InvalidInput,
+                xts ? "invalid key length: XTS requires 32 bytes (XTS-AES-128) or 64 bytes (XTS-AES-256)"
+                    : "invalid key length: AES requires 16, 24 or 32 bytes (32, 48 or 64 hex chars)");
   }
   return k;
 }
@@ -180,8 +194,18 @@ Bytes make_iv_default() {  // 96-bit random nonce || 32-bit zero block counter
   return iv;
 }
 
+std::size_t keygen_bytes(const std::string& bits) {
+  if (bits == "128") return 16;
+  if (bits == "192") return 24;
+  if (bits == "256") return 32;
+  if (bits == "xts256") return 32;  // XTS-AES-128: two 128-bit keys
+  if (bits == "xts512") return 64;  // XTS-AES-256: two 256-bit keys
+  usage_error("--bits must be 128|192|256|xts256|xts512");
+}
+
 int cmd_rand(const Args& a, bool is_iv) {
-  Bytes b = is_iv ? make_iv_default() : random_bytes(16);
+  if (is_iv && a.has("bits")) usage_error("--bits is only valid for keygen");
+  Bytes b = is_iv ? make_iv_default() : random_bytes(keygen_bytes(a.get("bits", "128")));
   WipeOnExit w(b);
   if (a.has("out")) {
     write_file(a.get("out"), b.data(), b.size(), a.flag("force"));
@@ -193,13 +217,20 @@ int cmd_rand(const Args& a, bool is_iv) {
 }
 
 int cmd_crypt(const Args& a, bool encrypt) {
-  if (a.get("mode", "ctr") != "ctr") usage_error("unsupported mode '" + a.get("mode") + "': this lab implements CTR only");
+  const std::string mode = a.get("mode", "ctr");
+  if (mode != "ctr" && mode != "xts") usage_error("unsupported mode '" + mode + "': this tool implements ctr and xts");
+  const bool xts_mode = mode == "xts";
   const bool quiet = a.flag("quiet"), verbose = a.flag("verbose"), force = a.flag("force");
 
-  Bytes key = load_key(a);
+  Bytes key = load_key(a, xts_mode);
   WipeOnExit wipe(key);
   const Backend be = parse_backend(a.get("sbox", "table"));
-  const Aes128 aes(key.data(), key.size(), be);
+  std::unique_ptr<Aes> aes_ctr;
+  std::unique_ptr<Xts> aes_xts;
+  if (xts_mode)
+    aes_xts.reset(new Xts(key.data(), key.size(), be));  // rejects K1 == K2
+  else
+    aes_ctr.reset(new Aes(key.data(), key.size(), be));
 
   if (a.has("in") == a.has("text")) usage_error("provide exactly one of --in FILE or --text STRING");
   const Encoding in_enc = parse_encoding(a.get("in-encode", "raw"));
@@ -212,26 +243,41 @@ int cmd_crypt(const Args& a, bool encrypt) {
     usage_error("raw ciphertext cannot be printed to the screen; use --out FILE or --encode hex|base64");
 
   // ---- IV / nonce
-  if (a.has("iv") && a.has("iv-hex")) usage_error("provide only one of --iv / --iv-hex");
+  if (a.flag("aead")) usage_error("--aead is not supported: CTR/XTS provide confidentiality only, no authentication tag");
+  if (int(a.has("iv")) + int(a.has("iv-hex")) + int(a.has("nonce")) > 1)
+    usage_error("provide only one of --iv / --iv-hex / --nonce");
   Bytes iv;
   bool generated = false;
-  if (a.has("iv")) {
-    iv = read_file_exact(a.get("iv"), 16, "IV");
+  if (a.has("nonce") && xts_mode) usage_error("--nonce is for CTR; XTS takes a 16-byte tweak via --iv / --iv-hex");
+  if (a.has("nonce")) {
+    Bytes n = from_hex(a.get("nonce"));
+    if (n.size() != 12) throw Error(ExitCode::InvalidInput, "invalid nonce length: expected exactly 12 bytes (24 hex chars)");
+    iv = n;
+    iv.resize(16, 0);  // 96-bit nonce || 32-bit zero block counter (big-endian)
+  } else if (a.has("iv")) {
+    const std::string v = a.get("iv");
+    if (file_exists(v)) {
+      iv = read_file_exact(v, 16, "IV");
+    } else {
+      iv = from_hex(v);  // not a file: must be hex (throws InvalidInput otherwise)
+      if (iv.size() != 16) throw Error(ExitCode::InvalidInput, "invalid IV length: expected a 16-byte file or exactly 32 hex chars");
+    }
   } else if (a.has("iv-hex")) {
     iv = from_hex(a.get("iv-hex"));
     if (iv.size() != 16) throw Error(ExitCode::InvalidInput, "invalid IV length: expected exactly 16 bytes (32 hex chars)");
   } else if (encrypt) {
-    iv = make_iv_default();
+    iv = xts_mode ? random_bytes(16) : make_iv_default();  // XTS: random 16-byte tweak
     generated = true;
   } else {
     const std::string side = a.has("in") ? a.get("in") + ".iv" : "";
-    if (side.empty() || !file_exists(side)) usage_error("decrypt requires --iv/--iv-hex (or an <in>.iv sidecar file)");
+    if (side.empty() || !file_exists(side)) usage_error("decrypt requires --iv/--iv-hex/--nonce (or an <in>.iv sidecar file)");
     iv = read_file_exact(side, 16, "IV sidecar");
   }
   if (encrypt && !generated && !quiet)
     std::fprintf(stderr, "WARNING: IV supplied manually. Reusing a (key, IV) pair destroys confidentiality (two-time pad).\n");
   if (!encrypt && !quiet)
-    std::fprintf(stderr, "NOTE: CTR is unauthenticated - tampering with the ciphertext cannot be detected.\n");
+    std::fprintf(stderr, "NOTE: %s is unauthenticated - tampering with the ciphertext cannot be detected.\n",
+                 xts_mode ? "XTS" : "CTR");
 
   // ---- pre-flight overwrite checks (so we never end up with ciphertext but no IV sidecar)
   const std::string sidecar = has_out ? a.get("out") + ".iv" : "";
@@ -242,15 +288,18 @@ int cmd_crypt(const Args& a, bool encrypt) {
   }
 
   if (verbose)
-    std::fprintf(stderr, "backend=%s mode=ctr iv=%s\n", backend_name(be), to_hex(iv).c_str());
+    std::fprintf(stderr, "backend=%s mode=%s cipher=%s iv=%s\n", backend_name(be), mode.c_str(),
+                 xts_mode ? (key.size() == 32 ? "XTS-AES-128" : "XTS-AES-256")
+                          : (key.size() == 16 ? "AES-128" : key.size() == 24 ? "AES-192" : "AES-256"),
+                 to_hex(iv).c_str());
 
   std::size_t processed = 0;
-  const bool streaming = a.has("in") && in_enc == Encoding::Raw && has_out && out_enc == Encoding::Raw;
+  const bool streaming = !xts_mode && a.has("in") && in_enc == Encoding::Raw && has_out && out_enc == Encoding::Raw;
   if (streaming) {
-    ctr_crypt_file(aes, iv.data(), a.get("in"), a.get("out"), force);
+    ctr_crypt_file(*aes_ctr, iv.data(), a.get("in"), a.get("out"), force);
     processed = static_cast<std::size_t>(std::filesystem::file_size(to_path(a.get("out"))));
   } else {
-    constexpr std::size_t kMaxMem = static_cast<std::size_t>(1) << 31;
+    const std::size_t kMaxMem = xts_mode ? kXtsMaxDataUnit : (static_cast<std::size_t>(1) << 31);
     Bytes data;
     if (a.has("text")) {
       data = decode_text(a.get("text"), in_enc);
@@ -258,7 +307,16 @@ int cmd_crypt(const Args& a, bool encrypt) {
       Bytes file = read_file(a.get("in"), kMaxMem);
       data = (in_enc == Encoding::Raw) ? file : decode_text(std::string(file.begin(), file.end()), in_enc);
     }
-    Bytes result = ctr_crypt(aes, iv.data(), data);
+    Bytes result;
+    if (xts_mode) {  // one data unit: ciphertext stealing handles lengths that are not a multiple of 16
+      result.resize(data.size());
+      if (encrypt)
+        aes_xts->encrypt(iv.data(), data.data(), result.data(), data.size());
+      else
+        aes_xts->decrypt(iv.data(), data.data(), result.data(), data.size());
+    } else {
+      result = ctr_crypt(*aes_ctr, iv.data(), data);
+    }
     processed = result.size();
     if (has_out) {
       if (out_enc == Encoding::Raw) {
@@ -341,6 +399,15 @@ int cmd_bench(const Args& a) {
     for (const auto& s : split_csv(a.get("backends"))) o.backends.push_back(parse_backend(s));
   }
   o.ref = a.get("ref", "all");
+  if (a.has("threads")) o.threads = parse_count(a.get("threads"), "--threads");
+  if (a.has("budget-mb")) o.budget_bytes = parse_count(a.get("budget-mb"), "--budget-mb") << 20;
+  if (a.has("bits")) {
+    const std::string b = a.get("bits");
+    if (b == "128") o.key_bytes = 16;
+    else if (b == "192") o.key_bytes = 24;
+    else if (b == "256") o.key_bytes = 32;
+    else usage_error("--bits must be 128|192|256");
+  }
   if (a.has("runs")) o.runs = parse_count(a.get("runs"), "--runs");
   if (a.has("ops")) o.ops = parse_count(a.get("ops"), "--ops");
   if (a.has("warmup")) o.warmup_sec = parse_seconds(a.get("warmup"), "--warmup");

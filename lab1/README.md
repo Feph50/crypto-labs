@@ -37,7 +37,7 @@ lab1/
 ├── require.md                  # Lab 1 formal specification and requirements
 ├── README.md                   # Unified project documentation and run guide
 ├── kat/
-│   └── vectors.json            # 9 NIST / IEEE Known Answer Test vectors
+│   └── vectors.json            # 29 NIST / IEEE Known Answer Test vectors
 ├── lab-guide/
 │   ├── windows_guide.md        # Dedicated Windows execution instructions
 │   └── ubuntu_guide.md         # Dedicated Ubuntu execution instructions
@@ -71,186 +71,121 @@ lab1/
 
 ## 4. Dependencies & Prerequisites
 
-### Windows Environment
-- **Crypto++**: `D:\UIT\NT219\libs\cryptopp\`
-  - Headers: `include/`
-  - Compiler libraries: `library/{msvc,gcc,clang}/`
-- **OpenSSL**: `D:\UIT\NT219\libs\openssl\`
-  - Compiler libraries: `{msvc,gcc,clang}/{include,lib,lib64}/`
-- **Tools**:
-  - MSYS2 (UCRT64 or MINGW64) with GCC/G++ (`pacman -S --needed base-devel mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake`)
-  - Microsoft Visual C++ (MSVC x64) with VS 2022/2026
-  - CMake 3.20+
-  - Python 3.10+ (with `matplotlib`, `pandas`, `numpy`) for benchmark graph generation
+### Dependency list (with versions)
 
-### Linux (Ubuntu / Debian) Environment
-- **Crypto++**: `~/Desktop/nt219lib/cryptopp/`
-  - Compiler libraries: `{gcc,clang}/include/` and `{gcc,clang}/lib/libcryptopp.a`
-- **OpenSSL**: `~/Desktop/nt219lib/openssl/`
-  - Per compiler: `{gcc,clang}/`
-- **System Packages**:
-  ```bash
-  sudo apt update
-  sudo apt install -y build-essential cmake g++ clang libssl-dev python3 python3-pip
-  pip3 install matplotlib pandas numpy
-  ```
+| Dependency | Required / tested version | Purpose |
+| :--- | :--- | :--- |
+| CMake | >= 3.20 (tested 4.2 - 4.4) | Build system (out-of-source builds) |
+| C++ compiler | C++17. Tested: MSVC 19.51 (Visual Studio 2026), MinGW-w64 GCC 16.2 (MSYS2), GCC 15.2 (Ubuntu 26.04), Clang | Compilation |
+| **Crypto++** | **8.9.0** (>= 8.9 recommended) | **The only cryptographic library used** (AES modes, `AutoSeededRandomPool`, SHA-256) |
+| Catch2 | v3 (tested 3.5.3 and distro 3.x) | Unit tests. Used if installed, otherwise CMake downloads v3.5.3 once |
+| Python | 3.10+ with `matplotlib`, `pandas`, `numpy` | Optional: benchmark plots |
+| PyQt6 | 6.x | Optional: GUI (`gui/aestool_gui.py`) |
+
+**No OpenSSL, libsodium or any other cryptographic library is used or linked** (Lab 1 rule).
+
+### Installation
+
+CMake finds Crypto++ automatically (CMake package config -> pkg-config -> standard prefixes -> `CRYPTOPP_ROOT_DIR`);
+**no file has to be edited**.
+
+#### Ubuntu / Debian (LTS)
+```bash
+sudo apt update
+sudo apt install -y build-essential cmake libcrypto++-dev catch2 pkg-config
+# optional (plots / GUI):  sudo apt install -y python3 python3-pip && pip3 install matplotlib pandas numpy PyQt6
+```
+
+#### Windows - MinGW64 (MSYS2 "MINGW64" shell)
+```bash
+pacman -S --needed mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja \
+                   mingw-w64-x86_64-crypto++ mingw-w64-x86_64-catch
+```
+Put `C:\msys64\mingw64\bin` first in `PATH`.
+
+#### Windows - MSVC (Visual Studio 2022/2026 or Build Tools, workload "Desktop development with C++")
+```bat
+git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+C:\vcpkg\vcpkg.exe install cryptopp:x64-windows-static
+```
+Then build from the "x64 Native Tools Command Prompt for VS" with the vcpkg toolchain (see section 5).
+
+#### Any OS - self-built Crypto++
+Install Crypto++ to a prefix and pass it: `cmake .. -DCRYPTOPP_ROOT_DIR=/path/to/prefix` (headers in `include/`, library in `lib/`),
+or pass the files directly: `-DCryptoPP_LIBRARY=<file> -DCryptoPP_INCLUDE_DIR=<dir>`.
 
 ---
 
 ## 5. Building the Project
 
-### Prebuilt binaries
-
-Prebuilt CLI binaries are stored under `release/<OS_name>/`, where
-`<OS_name>` is `ubuntu` or `windows`. Building from source is optional when
-using one of these binaries. The compiler suffix identifies the build:
-
-| OS | Example binary |
-| :--- | :--- |
-| Ubuntu | `release/ubuntu/aestool_gcc` |
-| Windows (MinGW/GCC) | `release/windows/aestool_gcc.exe` |
-| Windows (MSVC) | `release/windows/aestool_msvc.exe` |
-
-Only binaries that have been released for the current platform are present.
-List the directory before running a command:
+### Standard build (all platforms) - out-of-source
 
 ```bash
-# Ubuntu
 cd lab1
-ls -l release/ubuntu
-./release/ubuntu/aestool_gcc --help
-./release/ubuntu/aestool_gcc --kat kat/vectors.json
+mkdir build && cd build
+cmake ..
+cmake --build .
+ctest --output-on-failure       # unit tests + NIST KAT + CLI negative tests
+./aestool --kat ../kat/vectors.json
 ```
+This works unchanged on **Ubuntu LTS** (system packages above) and on **Windows MinGW64** (MSYS2 shell; add `-G Ninja` if
+`mingw32-make` is not installed). On Windows **MSVC** pass the vcpkg toolchain and the static runtime:
 
-```powershell
-# Windows PowerShell
-cd lab1
-Get-ChildItem release\windows
-.\release\windows\aestool_gcc.exe --help
+```bat
+cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+         -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static
+cmake --build .
+ctest -C Release --output-on-failure
 ```
+(Omit `-G Ninja` to use the Visual Studio generator; then run `ctest -C Release`.)
 
-Run these commands from the `lab1` root so that relative paths such as
-`kat/vectors.json` resolve correctly. The build instructions below remain
-available for rebuilding or running unit tests.
+### Helper scripts (same steps, nothing to edit)
 
-### Option 1: Using Automated Build Scripts (Recommended)
-
-#### Windows (MSYS2 / CMD)
 ```bash
-# Navigate to lab1/ directory
-cd lab1
-
-# MSVC (requires x64 Native Tools Command Prompt for VS)
-scripts\build_windows.bat msvc
-
-# GCC (MinGW-w64 / MSYS2)
-scripts\build_windows.bat gcc
-
-# Clang (MSYS2)
-scripts\build_windows.bat clang
-
-# Clean all build directories
+scripts/build_linux.sh gcc [--clean] [--install-deps]        # Ubuntu / Debian: configure, build, ctest, KAT
+```
+```bat
+scripts\build_windows.bat msvc                                 REM set VCPKG_ROOT=C:\vcpkg first (MSVC route)
+scripts\build_windows.bat gcc                                  REM MinGW64, PATH must contain C:\msys64\mingw64\bin
 scripts\build_windows.bat clean
 ```
+Environment overrides: `CRYPTOPP_ROOT_DIR` (self-built Crypto++), `VCPKG_ROOT`, `CMAKE_ARGS` (extra CMake arguments).
 
-#### Linux (Ubuntu/Debian)
+### Build options
+
+| CMake option | Default | Meaning |
+| :--- | :---: | :--- |
+| `BUILD_TESTS` | ON | Build the Catch2 unit tests and register `ctest` tests |
+| `AESTOOL_STATIC_RUNTIME` | OFF | Link statically (`-static`, static Crypto++) so the binary needs no DLL/.so. Used for the release binaries |
+| `AESTOOL_WARNINGS_AS_ERRORS` | OFF | Developer option: `-Werror` / `/WX` |
+| `CRYPTOPP_ROOT_DIR` | - | Install prefix of a self-built Crypto++ |
+
+### Prebuilt binaries
+
+Release binaries (built from this source with `-DAESTOOL_STATIC_RUNTIME=ON`, or `/MT` for MSVC) are in `release/`:
+
+| OS | Binary | Built with |
+| :--- | :--- | :--- |
+| Ubuntu / Linux x86-64 | `release/ubuntu/aestool_gcc` | GCC 15.2, fully static |
+| Windows (MSVC) | `release/windows/aestool_msvc.exe` | MSVC 19.51, `/MT`, vcpkg `x64-windows-static` |
+| Windows (MinGW64) | `release/windows/aestool_mingw.exe` | GCC 16.2 (MSYS2), `-static` |
+
 ```bash
-# Navigate to lab1/ directory
-cd lab1
-
-# Build with GCC
-scripts/build_linux.sh gcc
-
-# Build with Clang
-scripts/build_linux.sh clang
-
-# Clean build directory
-scripts/build_linux.sh gcc --clean
+chmod +x release/ubuntu/aestool_gcc          # (if the executable bit was lost when unpacking the archive)
+./release/ubuntu/aestool_gcc --kat kat/vectors.json
 ```
-
----
-
-### Option 2: Manual CMake Commands
-
-#### Windows - MSVC (x64 Native Tools Command Prompt)
-```bash
-cd lab1
-mkdir build_windows_msvc && cd build_windows_msvc
-cmake .. -G "Visual Studio 18 2026" -A x64 \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCRYPTOPP_ROOT_DIR="D:/UIT/NT219/libs/cryptopp" \
-  -DOPENSSL_ROOT_DIR="D:/UIT/NT219/libs/openssl/msvc" \
-  -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
-cmake --build . --config Release
-```
-
-#### Windows - GCC (MSYS2 mingw64 shell)
-```bash
-cd lab1
-mkdir build_windows_gcc && cd build_windows_gcc
-cmake .. -G "MinGW Makefiles" \
-  -DCMAKE_CXX_COMPILER=g++.exe \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCRYPTOPP_ROOT_DIR="D:/UIT/NT219/libs/cryptopp" \
-  -DOPENSSL_ROOT_DIR="D:/UIT/NT219/libs/openssl/gcc"
-cmake --build .
-```
-
-#### Windows - Clang (MSYS2 mingw64 shell)
-```bash
-cd lab1
-mkdir build_windows_clang && cd build_windows_clang
-cmake .. -G "MinGW Makefiles" \
-  -DCMAKE_CXX_COMPILER=clang++.exe \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCRYPTOPP_ROOT_DIR="D:/UIT/NT219/libs/cryptopp" \
-  -DOPENSSL_ROOT_DIR="D:/UIT/NT219/libs/openssl/clang"
-cmake --build .
-```
-
-#### Linux - GCC
-```bash
-cd lab1
-mkdir build_ubuntu_gcc && cd build_ubuntu_gcc
-cmake .. \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCryptoPP_INCLUDE_DIR="$HOME/Desktop/nt219lib/cryptopp/gcc/include" \
-  -DCryptoPP_LIBRARY="$HOME/Desktop/nt219lib/cryptopp/gcc/lib/libcryptopp.a" \
-  -DOPENSSL_ROOT_DIR="$HOME/Desktop/nt219lib/openssl/gcc"
-cmake --build .
-```
-
-#### Linux - Clang
-```bash
-cd lab1
-mkdir build_ubuntu_clang && cd build_ubuntu_clang
-cmake .. \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCryptoPP_INCLUDE_DIR="$HOME/Desktop/nt219lib/cryptopp/clang/include" \
-  -DCryptoPP_LIBRARY="$HOME/Desktop/nt219lib/cryptopp/clang/lib/libcryptopp.a" \
-  -DOPENSSL_ROOT_DIR="$HOME/Desktop/nt219lib/openssl/clang"
-cmake --build .
-```
-
----
-
-### Option 3: Export Shared Library (Optional Extension)
-
-#### Windows
 ```powershell
-cd lab1
-cmake -S . -B build_windows_gcc_shared -G "MinGW Makefiles" `
-      -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ `
-      -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release
-cmake --build build_windows_gcc_shared -j
+.\release\windows\aestool_msvc.exe --kat kat\vectors.json
 ```
+Run these from the `lab1` root so that relative paths such as `kat/vectors.json` resolve.
 
-#### Linux
-```bash
-cd lab1
-cmake -S . -B build_ubuntu_gcc_shared -DBUILD_SHARED_LIBS=ON
-cmake --build build_ubuntu_gcc_shared
-```
+### Crypto core as a library (optional bonus, partial)
+
+The cryptographic core is built as a **static library** (`libaescore.a` / `aescore.lib`, target `aescore`; installed with
+`cmake --install`) and is separate from the CLI (`src/main.cpp`). A shared library (`.dll` / `.so`) with a C API is **not**
+provided, and the PyQt6 GUI (`gui/aestool_gui.py`) drives the compiled `aestool` executable (it contains no cryptographic code)
+instead of loading the library.
 
 ---
 
@@ -267,9 +202,9 @@ mkdir -Force output\windows\benchmarks
 ```
 
 ### Step 1: Known Answer Tests (NIST KAT)
-Execute the official 9 test vectors and save logs:
+Execute the 29 KAT vectors (NIST SP 800-38A/C, GCM, IEEE 1619) and save logs:
 ```powershell
-.\release\windows\aestool_gcc.exe --kat kat\vectors.json > output\windows\kat_windows_release.txt 2>&1
+.\release\windows\aestool_mingw.exe --kat kat\vectors.json > output\windows\kat_windows_release.txt 2>&1
 ```
 
 ### Step 2: Automated Unit Tests (Catch2 via CTest)
@@ -300,43 +235,53 @@ New-RandomFile "output\windows\key_bin\short_iv.bin"  8
 "Hello World plaintext for testing negative cases" | Out-File -Encoding ascii output\windows\key_bin\plain.txt
 
 # Encrypt to create valid reference ciphertexts (CBC & GCM)
-.\release\windows\aestool_gcc.exe encrypt --mode cbc --key output\windows\key_bin\key.bin --in output\windows\key_bin\plain.txt --out output\windows\key_bin\ct.bin
-.\release\windows\aestool_gcc.exe encrypt --mode gcm --aead --key output\windows\key_bin\key.bin --in output\windows\key_bin\plain.txt --out output\windows\key_bin\ct_gcm.bin
+.\release\windows\aestool_mingw.exe encrypt --mode cbc --key output\windows\key_bin\key.bin --in output\windows\key_bin\plain.txt --out output\windows\key_bin\ct.bin
+.\release\windows\aestool_mingw.exe encrypt --mode gcm --aead --key output\windows\key_bin\key.bin --in output\windows\key_bin\plain.txt --out output\windows\key_bin\ct_gcm.bin
 ```
 
 ### Step 4: Negative Testing (Fail-Closed Validations)
 Execute negative test cases and record outputs into `output\windows\neg_results\`:
 ```powershell
 # 1. Test wrong key (decryption failure)
-.\release\windows\aestool_gcc.exe decrypt --mode cbc --key output\windows\key_bin\key_wrong.bin --in output\windows\key_bin\ct.bin --out output\windows\key_bin\out.txt 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_key.txt
+.\release\windows\aestool_mingw.exe decrypt --mode cbc --key output\windows\key_bin\key_wrong.bin --in output\windows\key_bin\ct.bin --out output\windows\key_bin\out.txt 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_key.txt
 
 # 2. Test wrong IV
-.\release\windows\aestool_gcc.exe decrypt --mode cbc --key output\windows\key_bin\key.bin --iv output\windows\key_bin\iv_wrong.bin --in output\windows\key_bin\ct.bin --out output\windows\key_bin\out.txt 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_iv.txt
+.\release\windows\aestool_mingw.exe decrypt --mode cbc --key output\windows\key_bin\key.bin --iv output\windows\key_bin\iv_wrong.bin --in output\windows\key_bin\ct.bin --out output\windows\key_bin\out.txt 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_iv.txt
 
 # 3. Test wrong AEAD Tag (GCM authentication failure)
-.\release\windows\aestool_gcc.exe decrypt --mode gcm --aead --key output\windows\key_bin\key.bin --in output\windows\key_bin\ct_gcm.bin --out output\windows\key_bin\out.txt 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_tag.txt
+.\release\windows\aestool_mingw.exe decrypt --mode gcm --aead --key output\windows\key_bin\key.bin --in output\windows\key_bin\ct_gcm.bin --out output\windows\key_bin\out.txt 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_tag.txt
 
 # 4. Test invalid IV length (rejection on entry)
-.\release\windows\aestool_gcc.exe encrypt --mode cbc --key output\windows\key_bin\key.bin --iv output\windows\key_bin\short_iv.bin --in output\windows\key_bin\plain.txt --out output\windows\key_bin\ct.bin 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_ivlen.txt
+.\release\windows\aestool_mingw.exe encrypt --mode cbc --key output\windows\key_bin\key.bin --iv output\windows\key_bin\short_iv.bin --in output\windows\key_bin\plain.txt --out output\windows\key_bin\ct.bin 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_ivlen.txt
 
 # 5. Test ECB policy restriction on large payload without --allow-ecb
 fsutil file createnew output\windows\key_bin\large.bin 32768
-.\release\windows\aestool_gcc.exe encrypt --mode ecb --key output\windows\key_bin\key.bin --in output\windows\key_bin\large.bin --out output\windows\key_bin\ct.bin 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_ecb.txt
+.\release\windows\aestool_mingw.exe encrypt --mode ecb --key output\windows\key_bin\key.bin --in output\windows\key_bin\large.bin --out output\windows\key_bin\ct.bin 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_ecb.txt
 ```
 
 ### Step 5: Performance Benchmarking & Graph Generation
+Protocol (built into `aestool bench`): warm-up 1.5 s for every mode and direction, blocks of ~1000 operations (fewer for big payloads, see
+`--budget-mb`), N = 30 runs per case (30-100 allowed), mean / median / SD / 95% CI. Takes about 6 minutes on one core.
+
 ```powershell
-# Set Windows power plan to High Performance for stable measurement
+# Hardware table for the report
+Get-CimInstance Win32_Processor | Select-Object Name,NumberOfCores,NumberOfLogicalProcessors
+Get-CimInstance Win32_ComputerSystem | Select-Object @{n='RAM_GB';e={[math]::Round($_.TotalPhysicalMemory/1GB,1)}}
+Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version
+Get-PhysicalDisk | Select-Object FriendlyName,MediaType
+
+# Fairness: High performance power plan, close other programs
 powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
-# Run benchmark (sweeps all 8 modes, Enc/Dec, and 6 payload sizes)
-.\release\windows\aestool_gcc.exe bench --key output\windows\key_bin\key.bin --runs 1000 --out output\windows\benchmarks\bench_windows_release.csv
+# Benchmark (all 8 modes x Enc/Dec x 6 payload sizes). The file name must contain "gcc" or "msvc" (see --prefer below)
+mkdir -Force output\windows\benchmarks
+.\release\windows\aestool_mingw.exe bench --runs 30 --out output\windows\benchmarks\bench_windows_gcc.csv
+.\release\windows\aestool_msvc.exe  bench --runs 30 --out output\windows\benchmarks\bench_windows_msvc.csv
 
-# Generate plots
-mkdir -Force output\windows\benchmarks\graph
-Get-ChildItem output\windows\benchmarks\*.csv | ForEach-Object {
-    python scripts\plot_bench.py $_.FullName --out-dir output\windows\benchmarks\graph --platform windows
-}
+# Plots, analyses and the Windows-vs-Ubuntu comparison (needs the Ubuntu CSV in output\ubuntu\benchmarks\, see Linux Step 5)
+pip install pandas matplotlib numpy
+python scripts\plot_bench.py --auto --prefer gcc
+python ..\scripts\csv_to_stats_table.py output\windows\benchmarks\bench_windows_gcc.csv --size 1048576 > output\windows\stats_1MiB.md
 ```
 
 ---
@@ -409,19 +354,25 @@ dd if=/dev/zero of=output/ubuntu/key_bin/large.bin bs=1K count=32
 ```
 
 ### Step 5: Performance Benchmarking & Graph Generation
+Same protocol as on Windows (about 6 minutes).
+
 ```bash
-# Set CPU frequency governor to performance
+# Hardware table for the report
+lscpu | grep -E "Model name|^CPU\(s\)|Thread|Core|MHz"; free -h; lsblk -d -o NAME,ROTA,SIZE,MODEL; uname -a; lsb_release -d; g++ --version | head -1
+
+# Fairness: performance governor (needs a real Linux machine; inside WSL there is no cpufreq)
 echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
 
-# Run full benchmark suite (sweeps all modes and payload sizes)
-./release/ubuntu/aestool_gcc bench --key output/ubuntu/key_bin/key.bin --runs 1000 --out output/ubuntu/benchmarks/bench_ubuntu_release.csv
+# Benchmark (all 8 modes x Enc/Dec x 6 payload sizes)
+mkdir -p output/ubuntu/benchmarks
+./release/ubuntu/aestool_gcc bench --runs 30 --out output/ubuntu/benchmarks/bench_ubuntu_gcc.csv
 
-# Generate plots
-mkdir -p output/ubuntu/benchmarks/graph
-for csv_file in output/ubuntu/benchmarks/*.csv; do
-    python3 scripts/plot_bench.py "$csv_file" --out-dir output/ubuntu/benchmarks/graph --platform linux
-done
+# Plots and analyses (needs: pip3 install pandas matplotlib numpy)
+python3 scripts/plot_bench.py --auto --prefer gcc
+python3 ../scripts/csv_to_stats_table.py output/ubuntu/benchmarks/bench_ubuntu_gcc.csv --size 1048576 > output/ubuntu/stats_1MiB.md
 ```
+Copy `output/ubuntu/benchmarks/bench_ubuntu_gcc.csv` next to the Windows CSV (same relative path) and run
+`python scripts/plot_bench.py --auto --prefer gcc` on one machine to produce `output/compare/`.
 
 ---
 
@@ -505,6 +456,21 @@ do người dùng chọn; nên dùng `output/ubuntu/benchmarks/` hoặc
 ### Performance Benchmark Runner
 ```bash
 ./aestool bench --runs 1000 --out bench_results.csv
+
+# Protocol (default): warm-up 1.5 s per mode/direction, blocks of ~1000 operations
+# (min(1000, budget/size), budget 256 MiB; --ops N forces N), N = 30 runs (30..100 recommended), mean/median/SD/95% CI.
+# Extra options: [--runs 30..100] [--warmup SEC] [--ops N] [--budget-mb MiB] [--quick] (smoke test)
+
+# Multi-threaded: N concurrent workers, MB/s is the aggregate (default 1, valid 1..256)
+./aestool bench --runs 30 --threads 4 --out bench_mt.csv
+```
+
+Command-line arguments are read as UTF-8 on Windows as well (`--text "xin chào"` round-trips correctly).
+
+Statistics table for the report (mean, median, SD and 95% CI of throughput and latency), generated straight from the CSV:
+
+```bash
+python ../scripts/csv_to_stats_table.py bench_mt.csv --size 1048576 > stats_1MiB.md
 ```
 
 ### Standard Exit Codes
@@ -517,13 +483,19 @@ do người dùng chọn; nên dùng `output/ubuntu/benchmarks/` hoặc
 
 ## 9. Verified Build Matrix & Test Results
 
-| Platform | Compiler | Build Config | Build Status | CTest Status | KAT Verification |
-| :--- | :--- | :---: | :---: | :---: | :---: |
-| **Windows 10** | MSVC 19.38 (VS 2022/2026) | Release x64 | Pass | 3/3 Passed (0.31s) | 9/9 Passed (100%) |
-| **Windows 10** | MinGW-w64 GCC 13.1.0 | Release x64 | Pass | 3/3 Passed (0.28s) | 9/9 Passed (100%) |
-| **Windows 10** | Clang 16.0 / 22.1 (MSYS2) | Release x64 | Pass | 3/3 Passed | 9/9 Passed (100%) |
-| **Ubuntu 22.04 LTS** | GCC 11.4.0 | Release x86_64 | Pass | 3/3 Passed (0.07s) | 9/9 Passed (100%) |
-| **Ubuntu 22.04 LTS** | Clang 14.0.0 | Release x86_64 | Pass | 3/3 Passed (0.08s) | 9/9 Passed (100%) |
+Clean builds with the standard commands of section 5 (latest run):
+
+| Platform | Compiler | Crypto++ source | Build | CTest | KAT |
+| :--- | :--- | :--- | :---: | :---: | :---: |
+| Windows 11 | MSVC 19.51 (VS 2026), `/MT` | vcpkg `x64-windows-static` 8.9.0 | Pass | 3/3 | 29/29 |
+| Windows 11 | MinGW-w64 GCC 16.2 (MSYS2) | `pacman` mingw-w64-crypto++ 8.9.0 | Pass | 3/3 | 29/29 |
+| Ubuntu 26.04 (WSL2) | GCC 15.2 | `apt` libcrypto++-dev 8.9.0 | Pass | 3/3 | 29/29 |
+
+Older logs from earlier runs (Ubuntu 22.04 GCC/Clang, Windows Clang) are kept under `output/`; they predate the extended KAT file.
+The KAT file has **29 vectors**: SP 800-38A ECB/CBC/CFB128/OFB/CTR for AES-128/192/256, GCM test cases (AES-128/192/256, with AAD),
+SP 800-38C CCM examples (tag 4, 8, 16), IEEE 1619 XTS vectors 1, 2, 3 and 15 (ciphertext stealing) plus an XTS-AES-256 case.
+Entries labelled "cross-check" were recomputed with pyca/cryptography and are not literal NIST vectors.
+
 
 ---
 
@@ -536,9 +508,45 @@ do người dùng chọn; nên dùng `output/ubuntu/benchmarks/` hoặc
 5. **Constant-Time Verification:** AEAD tags are checked using constant-time comparison inside Crypto++'s `AuthenticatedDecryptionFilter` to mitigate timing side channels.
 6. **Binary Stream Safety:** All file operations open streams with `std::ios::binary` to ensure multi-byte UTF-8 character strings and raw binary blocks remain untruncated across Windows and Linux.
 
+### Secure defaults (summary)
+
+| Default | Behaviour |
+| :--- | :--- |
+| Mode selection | No default mode: `--mode` is mandatory, so a weak mode is never chosen silently |
+| AEAD | `ccm`/`gcm` refuse to run without `--aead` |
+| IV / nonce | Generated with `AutoSeededRandomPool` when omitted, stored in the sidecar JSON next to the output (`<out>.json`) |
+| ECB | Prints a `WARNING`, blocks inputs above 16 KiB unless `--allow-ecb` |
+| Nonce reuse (CTR, CCM, GCM) | Rejected using `.aestool_nonces` (override the location with `--nonce-db`) |
+| Output | A plaintext file is written only after successful decryption/authentication |
+| Overwriting / key files | Keys are never printed; `keygen` warns to protect the file; `--key-hex` is accepted but discouraged (visible in shell history/process list) |
+| Encoding | Screen output is hex; file output is raw binary; override with `--encode` |
+| Exit codes | `0` ok, `1` input/usage error, `2` decryption/authentication failure, `3` KAT failure |
+
 ---
 
-## 11. References
+## 11. Known Limitations
+
+- **Crypto++ lookup:** found automatically from system packages / vcpkg / `CMAKE_PREFIX_PATH`; for MSVC the directories derived from
+  `PATH` are deliberately ignored (and for Linux too, so WSL's Windows `PATH` is not picked up). A Crypto++ in an unusual
+  place needs `-DCRYPTOPP_ROOT_DIR=<prefix>`. MSVC needs the vcpkg toolchain (or `CRYPTOPP_ROOT_DIR`), it does not search `PATH`.
+- **ECB:** inputs larger than 16 KiB are refused unless `--allow-ecb` is given. ECB is for demonstration only.
+- **XTS:** confidentiality for storage only, no integrity; needs a 256- or 512-bit (double) key.
+- **Nonce-reuse detection is local:** it relies on the `.aestool_nonces` file (or `--nonce-db`) in the
+  working directory. Deleting it, using another directory, or another machine bypasses the check.
+  Only hashes of (key, mode, IV) are stored, not the keys.
+- **`--key-hex` exposes the key** in shell history and process listings; prefer `--key <file>`.
+- **CCM:** nonce length must be 7-13 bytes and tag 4, 8 or 16 bytes.
+- **No key management:** no secure key storage, and no side-channel hardening beyond what Crypto++ provides.
+- **Benchmark numbers are machine-dependent** (results in `output/` come from the author's hardware).
+- **Build matrix:** only the combinations in section 9 were run; Clang on Windows is untested with the latest sources.
+- **Whole-file processing:** `--in` is read completely into memory (no streaming), so very large files (GiB) need that much RAM.
+- **Nonce registry races:** `.aestool_nonces` has no inter-process locking; two simultaneous runs could both pass the check.
+- **Library export:** only a static library (`aescore`) is built; no `.dll`/`.so` with a C API; the GUI calls the CLI executable.
+- **Release binaries are x86-64 only** (Linux binary is fully static; MSVC build uses `/MT`).
+
+---
+
+## 12. References
 
 - **NIST FIPS 197**: [Advanced Encryption Standard (AES)](https://csrc.nist.gov/publications/detail/fips/197/final)
 - **NIST SP 800-38A**: [Recommendation for Block Cipher Modes of Operation](https://csrc.nist.gov/publications/detail/sp/800-38a/final)

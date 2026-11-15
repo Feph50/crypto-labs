@@ -1,4 +1,4 @@
-// AES-128-CTR per NIST SP 800-38A §6.5, built on the from-scratch Aes128.
+// AES-CTR (AES-128 core; AES-192/256 as bonus) per NIST SP 800-38A §6.5, built on the from-scratch Aes.
 //
 // Counter format (documented as required by the lab):
 //   * The 16-byte IV is the *initial counter block* T_1 (nonce || counter, 128 bits total).
@@ -28,7 +28,7 @@ namespace aesp {
 class CtrStream {
  public:
   // `aes` must outlive the stream.
-  CtrStream(const Aes128& aes, const uint8_t iv[16]);
+  CtrStream(const Aes& aes, const uint8_t iv[16]);
   ~CtrStream();
   CtrStream(const CtrStream&) = delete;
   CtrStream& operator=(const CtrStream&) = delete;
@@ -40,7 +40,7 @@ class CtrStream {
 
  private:
   void refill();
-  const Aes128* aes_;
+  const Aes* aes_;
   uint8_t ctr_[16];
   uint8_t ks_[16];
   std::size_t pos_;
@@ -48,11 +48,11 @@ class CtrStream {
 };
 
 // One-shot helper (encrypt == decrypt).
-Bytes ctr_crypt(const Aes128& aes, const uint8_t iv[16], const Bytes& data);
+Bytes ctr_crypt(const Aes& aes, const uint8_t iv[16], const Bytes& data);
 
 // Streaming file transform (1 MiB chunks, multi-GiB safe). Writes to "<out>.tmp" and renames on
 // success; on any error the partial output is deleted. Refuses in == out.
-void ctr_crypt_file(const Aes128& aes, const uint8_t iv[16], const std::string& in_path,
+void ctr_crypt_file(const Aes& aes, const uint8_t iv[16], const std::string& in_path,
                     const std::string& out_path, bool overwrite);
 
 // Increments a 16-byte big-endian counter; returns true if it wrapped (carry out of byte 0).

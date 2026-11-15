@@ -24,7 +24,7 @@ struct WipeOnExit {
   ~WipeOnExit() { secure_zero(b.data(), b.size()); }
 };
 
-// OS CSPRNG: BCryptGenRandom (Windows), getrandom(2) (Linux), arc4random_buf (BSD/macOS).
+// CSPRNG: OpenSSL RAND_bytes when built with OpenSSL (the default); otherwise the OS CSPRNG: BCryptGenRandom (Windows), getrandom(2) (Linux), arc4random_buf (BSD/macOS).
 // Never rand()/std::mt19937. Throws Error(Failure) if the OS RNG is unavailable.
 void secure_random(uint8_t* out, std::size_t n);
 Bytes random_bytes(std::size_t n);

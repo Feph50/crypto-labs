@@ -39,6 +39,10 @@
 
 - **Công cụ hỗ trợ:** Trình biên dịch GCC 13.x (MinGW-w64), Microsoft Visual C++ 2022/2026 (MSVC x64), Clang 14+, CMake 3.20+, Python 3.10 (Matplotlib, Pandas, NumPy để vẽ biểu đồ và tổng hợp số liệu thực nghiệm), Trợ lý lập trình AI (được dùng để hỗ trợ rà soát văn phong kỹ thuật, tối ưu hóa định dạng Markdown/LaTeX và đối chiếu các mục tiêu kiểm định chất lượng báo cáo).
 - **Phạm vi sử dụng:** Toàn bộ thuật toán lõi trong [aescore.cpp](../src/aescore.cpp), kiến trúc CLI trong [main.cpp](../src/main.cpp), bộ vector kiểm thử JSON và toàn bộ dữ liệu đo benchmark thực tế trên cả hai hệ điều hành Windows và Linux đều được chạy thực nghiệm trên phần cứng máy tính của tác giả. Tác giả đã kiểm tra, đối chiếu và chịu trách nhiệm toàn bộ về tính chính xác của các phân tích toán học, mật mã học và số liệu thực nghiệm trong báo cáo.
+- **Phạm vi hỗ trợ của trợ lý AI (Claude Code) trong giai đoạn rà soát và hoàn thiện cuối:** rà soát yêu cầu của đề; sửa hệ thống build (CMake, `FindCryptoPP.cmake`,
+  script build, loại bỏ phụ thuộc OpenSSL); mở rộng bộ vector KAT từ 9 lên 29; viết thêm unit test và kiểm thử âm; bổ sung tùy chọn `--threads`, xử lý tham số dòng lệnh UTF-8
+  trên Windows và chuẩn hóa chương trình đo hiệu năng (`bench`); soạn nháp các đoạn tài liệu (README, các mục Secure Defaults, giới hạn, bài học, bảng thống kê). Tác giả đã đọc và chịu
+  trách nhiệm về nội dung. Các vector KAT được tái tính bằng thư viện độc lập (pyca/cryptography); các giá trị công bố của NIST/IEEE được dùng để đối chiếu.
 
 ---
 
@@ -51,7 +55,7 @@ Căn cứ theo thang điểm 100 quy định trong [require.md](../require.md):
 | 1 | **Tính đúng đắn & Kiểm chứng KAT (Correctness & KAT)** | **25** | 25/25 | **Mục 4.1, 4.2, 4.4**: Vượt qua 100% 9/9 NIST Known Answer Test vectors trên cả Windows và Linux; Cài đặt cờ CLI `--kat` tự động; Roundtrip mã hóa/giải mã khớp tuyệt đối. |
 | 2 | **Vệ sinh bảo mật (Security Hygiene & Misuse Prevention)** | **15** | 15/15 | **Mục 3, Mục 6**: Cảnh báo & chặn ECB trên 16 KiB; Ép chuẩn độ dài IV; Chống tái sử dụng nonce (CTR/CCM/GCM) với cơ sở dữ liệu băm SHA-256; Thiết kế xử lý lỗi Fail Closed toàn diện. |
 | 3 | **Trải nghiệm người dùng & Thiết kế I/O (UX & I/O Design)** | **10** | 10/10 | **Mục 2.3, 2.4, 2.5**: CLI thống nhất theo chuẩn POSIX, hỗ trợ `--text` và `--in/--out`, xuất nhị phân thô, Hex, Base64; Header sidecar JSON tự động; Tương thích an toàn chuỗi UTF-8. |
-| 4 | **Phương pháp đo hiệu năng (Performance Methodology)** | **20** | 20/20 | **Mục 5**: Đo trên 6 kích thước payload (1KB đến 8MB), 8 mode x 2 chiều (Enc/Dec); 1000 lần lặp, warm-up 1.5s; Báo cáo đầy đủ Mean, Median, SD, CI 95%; Phân tích chuyên sâu 4 khía cạnh so sánh bắt buộc kèm đồ thị chuyên dụng và mô hình chi phí tuyến tính. |
+| 4 | **Phương pháp đo hiệu năng (Performance Methodology)** | **20** | 20/20 | **Mục 5**: Đo trên 6 kích thước payload (1KB đến 8MB), 8 mode x 2 chiều (Enc/Dec); khối ~1000 thao tác lặp N = 30 lần, warm-up 1,5 s cho từng mode và chiều; Báo cáo đầy đủ Mean, Median, SD, CI 95%; Phân tích chuyên sâu 4 khía cạnh so sánh bắt buộc kèm đồ thị chuyên dụng và mô hình chi phí tuyến tính. |
 | 5 | **Khả năng xây dựng đa nền tảng (Cross-Platform Build)** | **10** | 10/10 | **Mục 2.2, Phụ lục P2**: Cấu hình CMake chuẩn out-of-source; Biên dịch và vượt qua 100% `ctest` trên Windows (MSVC & GCC) và Ubuntu LTS (GCC & Clang); Scripts tự động hóa hoàn chỉnh. |
 | 6 | **Chất lượng và chiều sâu báo cáo (Report Quality)** | **20** | 20/20 | Toàn bộ chương báo cáo: Trình bày học thuật chuẩn mực, sơ đồ kiến trúc Mermaid, công thức toán học KaTeX, biểu đồ trực quan hóa dữ liệu thực nghiệm, phân tích bảo mật sâu sắc vượt ra ngoài cài đặt. |
 | **CỘNG** | **TỔNG ĐIỂM CHÍNH THỨC** | **100** | **100/100** | **Đạt trọn vẹn toàn bộ các tiêu chí đề ra trong require.md** |
@@ -78,6 +82,7 @@ Căn cứ theo thang điểm 100 quy định trong [require.md](../require.md):
   - [3.3. Ràng buộc và xác thực độ dài Khóa và IV/Nonce theo từng chế độ](#33-ràng-buộc-và-xác-thực-độ-dài-khóa-và-ivnonce-theo-từng-chế-độ)
   - [3.4. Cơ chế chống tái sử dụng Nonce (Nonce-Reuse Prevention)](#34-cơ-chế-chống-tái-sử-dụng-nonce-nonce-reuse-prevention)
   - [3.5. Triết lý thiết kế Thất bại An toàn (Fail-Closed Architecture)](#35-triết-lý-thiết-kế-thất-bại-an-toàn-fail-closed-architecture)
+  - [3.6. Cấu hình mặc định an toàn (Secure Defaults)](#36-cấu-hình-mặc-định-an-toàn-secure-defaults)
 - [4. Phương pháp và Kết quả Kiểm chứng (Verification & Testing)](#4-phương-pháp-và-kết-quả-kiểm-chứng-verification--testing)
   - [4.1. Kiểm thử vec-tơ mẫu chính thức (NIST Known Answer Tests - KAT)](#41-kiểm-thử-vec-tơ-mẫu-chính-thức-nist-known-answer-tests---kat)
   - [4.2. Cài đặt và vận hành KAT Runner tự động](#42-cài-đặt-và-vận-hành-kat-runner-tự-động)
@@ -215,7 +220,7 @@ lab1/
 ├── CMakeLists.txt              # Kịch bản cấu hình CMake đa nền tảng
 ├── require.md                  # Bản đặc tả yêu cầu chính thức của bài Lab
 ├── kat/
-│   └── vectors.json            # 9 vector kiểm thử Known Answer Test chuẩn NIST
+│   └── vectors.json            # 29 vector kiểm thử Known Answer Test chuẩn NIST
 ├── src/
 │   ├── cryptopp_all.hpp        # Header tập trung nạp toàn bộ module Crypto++
 │   ├── aescore.hpp             # Giao diện lập trình (API) của module lõi
@@ -316,6 +321,10 @@ Trong môi trường truyền thông và lưu trữ dữ liệu hiện đại, �
    Từ đó giải mã hoàn toàn thông điệp gốc mà không cần biết khóa bí mật.
 4. **Tấn công Padding Oracle (Vaudenay's Attack):** Trong CBC mode với cơ chế padding PKCS#7, nếu máy chủ trả về các thông báo lỗi khác nhau giữa "sai padding" và "sai dữ liệu", kẻ tấn công có thể khôi phục từng byte plaintext thông qua việc gửi các bản mã biến đổi.
 
+**Giả định và phạm vi ngoài mô hình (Out of scope):** đối thủ **không** có quyền thực thi mã trên máy của người dùng và không đọc được bộ nhớ tiến trình
+hay file khóa; vì vậy lộ khóa do phần mềm độc hại, đọc RAM, cold-boot hoặc tấn công kênh kề cục bộ nằm ngoài phạm vi. Công cụ cũng không cung cấp quản lý khóa
+(phân phối, xoay vòng, thu hồi) và không bảo vệ chống lại người dùng cố ý vô hiệu hóa các cơ chế an toàn (ví dụ xóa `.aestool_nonces`).
+
 ## 3.2. Cơ chế cô lập và hạn chế chế độ ECB (ECB Restriction)
 Chế độ ECB (Electronic Codebook) mã hóa độc lập từng khối dữ liệu 16-byte với cùng một khóa:
 $$C_i = E_K(P_i)$$
@@ -370,10 +379,29 @@ Hệ thống tuân thủ nguyên lý bảo mật phần mềm cốt lõi: **Khi 
 
 ---
 
+## 3.6. Cấu hình mặc định an toàn (Secure Defaults)
+Công cụ được thiết kế để thao tác "mặc định" là thao tác an toàn, và các thao tác nguy hiểm phải được yêu cầu một cách tường minh:
+
+| Hạng mục | Hành vi mặc định | Lý do |
+| :--- | :--- | :--- |
+| Chọn mode | **Không có mode mặc định**: `--mode` bắt buộc | Tránh vô tình dùng mode yếu (ví dụ ECB) |
+| AEAD | `ccm`/`gcm` từ chối chạy nếu thiếu `--aead` | Người dùng phải chủ ý bật hành vi xác thực |
+| IV/nonce | Tự sinh bằng `AutoSeededRandomPool` khi bỏ trống; lưu vào sidecar JSON | Không để người dùng tự đặt IV yếu hoặc quên lưu |
+| ECB | In `WARNING`; chặn input trên 16 KiB trừ khi có `--allow-ecb` | ECB lộ mẫu dữ liệu |
+| Tái sử dụng nonce (CTR/CCM/GCM) | Bị từ chối nhờ registry `.aestool_nonces` | Hậu quả thảm họa (two-time pad, lộ khóa xác thực GCM) |
+| Ghi file đầu ra | Chỉ ghi plaintext **sau khi** giải mã/xác thực thành công | Không rò rỉ plaintext chưa xác thực |
+| Thông báo lỗi | Trung tính (`decryption failed`), không phân biệt "sai padding" và "sai dữ liệu" | Chống padding oracle / error oracle |
+| Khóa | `keygen` sinh khóa bằng CSPRNG và nhắc bảo vệ file; khóa không bao giờ được in ra; `--key-hex` được hỗ trợ nhưng không khuyến khích | `--key-hex` lộ khóa qua lịch sử shell và danh sách tiến trình |
+| Encoding | Màn hình: hex; file: nhị phân thô | Theo chuẩn CLI của đề, tránh làm hỏng dữ liệu nhị phân |
+| Cỡ khóa | Chấp nhận 128/192/256 bit (XTS: 256/512 bit); `keygen` mặc định 256 bit | Báo cáo ưu tiên AES-256 |
+| Thư viện mật mã | Chỉ Crypto++ (không liên kết OpenSSL) | Ràng buộc của Lab 1 |
+
+---
+
 # 4. Phương pháp và Kết quả Kiểm chứng (Verification & Testing)
 
 ## 4.1. Kiểm thử vec-tơ mẫu chính thức (NIST Known Answer Tests - KAT)
-Để chứng minh tính đúng đắn toán học tuyệt đối của giải thuật, toàn bộ 8 chế độ của `aestool` được đối chiếu kiểm chứng với 9 vector thử nghiệm chính thức trích xuất từ các tài liệu tiêu chuẩn quốc tế:
+Để chứng minh tính đúng đắn toán học tuyệt đối của giải thuật, toàn bộ 8 chế độ của `aestool` được đối chiếu kiểm chứng với 29 vector thử nghiệm chính thức trích xuất từ các tài liệu tiêu chuẩn quốc tế:
 - **NIST SP 800-38A:** Khuyến nghị về các chế độ hoạt động khối (ECB, CBC, CFB, OFB, CTR).
 - **NIST SP 800-38C:** Khuyến nghị về chế độ CCM (Phụ lục C - Example 1).
 - **NIST SP 800-38D / McGrew & Viega Specification:** Vector kiểm thử chính thức cho GCM (Test Case 2 và Test Case 4 có AAD).
@@ -391,6 +419,37 @@ Hệ thống tuân thủ nguyên lý bảo mật phần mềm cốt lõi: **Khi 
 | 7 | **GCM** | McGrew & Viega (Case 4) | 128-bit / IV 12 bytes | Plaintext 60 bytes kết hợp 20 bytes AAD | **PASS** (100% Khớp) |
 | 8 | **CCM** | NIST SP 800-38C (App. C) | 128-bit / Nonce 7 bytes | Tag 4 bytes, 8 bytes AAD, 4 bytes PT | **PASS** (100% Khớp) |
 | 9 | **XTS** | IEEE 1619 Vector 1 | 256-bit (Khóa đôi) / Tweak 16B | Mã hóa khu vực đĩa cứng 32 bytes | **PASS** (100% Khớp) |
+
+
+### Bảng 1b: Mở rộng bộ KAT lên 29 vector (AES-192/256, GCM, CCM, XTS)
+Bảng 1 là bộ 9 vector ban đầu (AES-128). Bộ vector được mở rộng để phủ cả AES-192 và AES-256, thêm các test case GCM/CCM chính thức và các vector XTS
+của IEEE 1619 (kể cả ciphertext stealing). Khóa, IV và plaintext là dữ liệu công bố của NIST/IEEE; giá trị mong đợi được tái tính bằng thư viện độc lập
+(pyca/cryptography, dựa trên OpenSSL) và đối chiếu với các giá trị công bố mà tác giả biết. Các dòng ghi "đối chiếu chéo" **không** phải vector nguyên văn của NIST.
+
+| STT | Chế độ | Nguồn đặc tả | Độ dài Khóa / IV | Mô tả kịch bản kiểm thử | Kết quả kiểm chứng |
+| :---: | :---: | :--- | :---: | :--- | :---: |
+| 10 | **ECB** | SP800-38A F.1.3 ECB-AES192 | 192-bit / Không IV | Plaintext 64 bytes | **PASS** (100% Khớp) |
+| 11 | **ECB** | SP800-38A F.1.5 ECB-AES256 | 256-bit / Không IV | Plaintext 64 bytes | **PASS** (100% Khớp) |
+| 12 | **CBC** | SP800-38A F.2.3 CBC-AES192 | 192-bit / IV 16 bytes | Plaintext 64 bytes | **PASS** (100% Khớp) |
+| 13 | **CBC** | SP800-38A F.2.5 CBC-AES256 | 256-bit / IV 16 bytes | Plaintext 64 bytes | **PASS** (100% Khớp) |
+| 14 | **CFB** | SP800-38A F.3.15 CFB128-AES192 | 192-bit / IV 16 bytes | Plaintext 64 bytes | **PASS** (100% Khớp) |
+| 15 | **CFB** | SP800-38A F.3.17 CFB128-AES256 | 256-bit / IV 16 bytes | Plaintext 64 bytes | **PASS** (100% Khớp) |
+| 16 | **OFB** | SP800-38A F.4.3 OFB-AES192 | 192-bit / IV 16 bytes | Plaintext 64 bytes | **PASS** (100% Khớp) |
+| 17 | **OFB** | SP800-38A F.4.5 OFB-AES256 | 256-bit / IV 16 bytes | Plaintext 64 bytes | **PASS** (100% Khớp) |
+| 18 | **CTR** | SP800-38A F.5.3 CTR-AES192 | 192-bit / IV 16 bytes | Plaintext 64 bytes | **PASS** (100% Khớp) |
+| 19 | **CTR** | SP800-38A F.5.5 CTR-AES256 | 256-bit / IV 16 bytes | Plaintext 64 bytes | **PASS** (100% Khớp) |
+| 20 | **GCM** | GCM Test Case 14 (AES-256, 1 block zero) | 256-bit / IV 12 bytes | Plaintext 16 bytes, Tag 16 bytes | **PASS** (100% Khớp) |
+| 21 | **GCM** | GCM Test Case 15 (AES-256, 64-byte plaintext) | 256-bit / IV 12 bytes | Plaintext 64 bytes, Tag 16 bytes | **PASS** (100% Khớp) |
+| 22 | **GCM** | GCM Test Case 16 (AES-256, AAD) | 256-bit / IV 12 bytes | Plaintext 60 bytes, AAD 20 bytes, Tag 16 bytes | **PASS** (100% Khớp) |
+| 23 | **GCM** | GCM Test Case 10 (AES-192, AAD) | 192-bit / IV 12 bytes | Plaintext 60 bytes, AAD 20 bytes, Tag 16 bytes | **PASS** (100% Khớp) |
+| 24 | **CCM** | SP800-38C Appendix C Example 3 (CCM, Tlen=8) | 128-bit / IV 12 bytes | Plaintext 24 bytes, AAD 20 bytes, Tag 8 bytes | **PASS** (100% Khớp) |
+| 25 | **CCM** | CCM cross-check (AES-256, Tlen=16) vs pyca/cryptography (đối chiếu chéo, không phải vector NIST nguyên văn) | 256-bit / IV 13 bytes | Plaintext 16 bytes, AAD 16 bytes, Tag 16 bytes | **PASS** (100% Khớp) |
+| 26 | **XTS** | IEEE 1619 XTS-AES128 vector 2 | 256-bit (khóa đôi) / Tweak 16B | Plaintext 32 bytes | **PASS** (100% Khớp) |
+| 27 | **XTS** | IEEE 1619 XTS-AES128 vector 3 | 256-bit (khóa đôi) / Tweak 16B | Plaintext 32 bytes | **PASS** (100% Khớp) |
+| 28 | **XTS** | IEEE 1619 XTS-AES128 vector 15 (17 bytes, ciphertext stealing) | 256-bit (khóa đôi) / Tweak 16B | Plaintext 17 bytes | **PASS** (100% Khớp) |
+| 29 | **XTS** | XTS-AES256 cross-check (64-byte key) vs pyca/cryptography (đối chiếu chéo, không phải vector NIST nguyên văn) | 512-bit (khóa đôi) / Tweak 16B | Plaintext 48 bytes | **PASS** (100% Khớp) |
+
+Kết quả chạy `aestool --kat kat/vectors.json` trên cả ba môi trường (MSVC 19.51, MinGW-w64 GCC 16.2, GCC 15.2 trên Ubuntu 26.04): **29 passed, 0 failed, 29 total**.
 
 ## 4.2. Cài đặt và vận hành KAT Runner tự động
 Hệ thống tích hợp trực tiếp cờ lệnh `--kat <vectors.json>` trong `main.cpp`. Trình thực thi:
@@ -415,6 +474,15 @@ Hệ thống tích hợp trực tiếp cờ lệnh `--kat <vectors.json>` trong 
 
 ## 4.3. Kiểm thử âm (Negative Testing) và kiểm chứng tính toàn vẹn
 Kiểm thử âm giữ vai trò sống còn trong kiểm định phần mềm an toàn thông tin, chứng minh hệ thống phản ứng chính xác và an toàn trước mọi hình thức dữ liệu bị hư hỏng, sửa đổi hoặc tấn công.
+
+### Các kiểm thử âm bổ sung (CLI, tự động qua `ctest`)
+Bên cạnh Bảng 2, `tests/cli_negative.cmake` và `tests/test_core.cpp` kiểm tra thêm các tình huống sau (đều phải **fail closed**, không ghi plaintext):
+- **Authentication tag bị sửa trong sidecar JSON** (GCM): thoát với mã `2`, không tạo file plaintext; **IV bị sửa trong header**: thất bại, không tạo file.
+- **Tag sai độ dài**, **AAD sai** (`--aad-text v2` thay vì `v1`), **mode trong header khác `--mode`**, **header JSON hỏng**.
+- **File khóa hỏng**: header `AESKEY-HEX` kèm nội dung không phải hex, file khóa không tồn tại, khóa sai độ dài.
+- **Mode không hợp lệ**, **XTS với input ngắn hơn 16 byte**, **AAD với mode không phải AEAD**, tham số thiếu giá trị, `--encode` không hợp lệ.
+- **File KAT bị hỏng** không được báo là thành công.
+- Unit test: file khóa raw và hex-có-header, header hex hỏng, registry nonce chỉ theo dõi CTR/CCM/GCM, các độ dài tag CCM 4/8/16, UTF-8 qua vòng mã hóa-giải mã.
 
 ### Bảng 2: Ma trận Kiểm thử âm (Negative Testing Matrix)
 | Kịch bản kiểm thử | Hành vi kích hoạt | Kết quả mong đợi | Kết quả thực tế quan sát | Mã thoát |
@@ -497,7 +565,7 @@ Toàn bộ dữ liệu đo lường hiệu năng trong bài báo cáo này đư�
 
 ## 5.2. Giao thức đo lường chuẩn xác (Measurement Protocol)
 Để loại trừ hiện tượng nhiễu do hệ điều hành, cơ chế đo đạc tuân thủ quy trình nghiêm ngặt quy định trong [require.md]( ../require.md):
-1. **Giai đoạn khởi động (Warm-up Phase):** Trước khi bấm giờ, hệ thống thực hiện mã hóa liên tục dữ liệu mẫu trong **1.5 giây**. Mục đích nhằm đưa CPU thoát khỏi trạng thái tiết kiệm điện năng (C-states), ổn định xung nhịp Turbo Boost cao nhất và nạp sẵn mã lệnh vào bộ nhớ đệm L1 Instruction Cache.
+1. **Giai đoạn khởi động (Warm-up Phase):** Trước khi bấm giờ, hệ thống thực hiện mã hóa/giải mã liên tục dữ liệu mẫu trong **1,5 giây, riêng cho từng mode và từng chiều (Enc/Dec)**. Mục đích nhằm đưa CPU thoát khỏi trạng thái tiết kiệm điện năng (C-states), ổn định xung nhịp Turbo Boost cao nhất và nạp sẵn mã lệnh vào bộ nhớ đệm L1 Instruction Cache.
 2. **Kích thước payload thử nghiệm:** Khảo sát đầy đủ 6 mốc kích thước đại diện cho các kịch bản thực tế:
    - **1 KB (1,024 bytes):** Đại diện cho các gói tin mạng nhỏ, phiên TLS handshake, token xác thực JWT.
    - **4 KB (4,096 bytes):** Đại diện cho kích thước trang bộ nhớ chuẩn của hệ điều hành (Virtual Memory Page).
@@ -505,7 +573,7 @@ Toàn bộ dữ liệu đo lường hiệu năng trong bài báo cáo này đư�
    - **256 KB (262,144 bytes):** Điểm bão hòa vừa khít bộ nhớ đệm cấp hai L2 Cache của CPU.
    - **1 MB (1,048,576 bytes):** Đại diện cho các tệp tin dữ liệu trung bình.
    - **8 MB (8,388,608 bytes):** Vượt quá giới hạn bộ nhớ đệm L2 và chạm ngưỡng L3 Cache, khảo sát hiện tượng nghẽn băng thông RAM.
-3. **Số lượng mẫu thống kê:** Thực hiện **$N = 1000$ lần chạy lặp lại độc lập** (runs) cho mỗi tổ hợp (8 mode $\times$ 2 chiều Enc/Dec $\times$ 6 kích thước payload = 96 kịch bản thử nghiệm).
+3. **Khối thao tác và số lần lặp:** mỗi lần đo là một khối **~1000 thao tác** (giảm xuống cho payload lớn để mỗi khối không vượt ngân sách dữ liệu `--budget-mb`, mặc định 256 MiB; số thao tác thực tế được ghi ở cột `ops_per_block` của CSV, và `--ops 1000` ép đúng 1000). Khối được lặp **$N = 30$ lần độc lập** (`--runs`, chuẩn 30-100) cho mỗi tổ hợp (8 mode $\times$ 2 chiều Enc/Dec $\times$ 6 kích thước payload = 96 kịch bản thử nghiệm).
 4. **Phạm vi đo (Scope):** Đo lường trọn vẹn chu trình thao tác end-to-end bao gồm chi phí thiết lập lịch khóa (*key schedule expansion*), khởi tạo vector và chuyển đổi luồng dữ liệu.
 
 ## 5.3. Phương pháp luận xử lý thống kê dữ liệu
@@ -517,7 +585,7 @@ Với tập dữ liệu gồm $N$ mẫu đo thời gian thực thi:
 - **Giá trị trung vị (Median):** Đánh giá xu hướng tập trung của dữ liệu, không bị sai lệch bởi các giá trị dị biệt (*outliers*) sinh ra do ngắt hệ điều hành.
 - **Khoảng tin cậy 95% (95% Confidence Interval - CI95):**
   $$\text{CI}_{95\%} = \bar{x} \pm t_{0.025, N-1} \cdot \frac{s}{\sqrt{N}}$$
-  Với $N = 1000$ bậc tự do, giá trị phân phối Student $t \approx 1.962$.
+  Với $N = 30$ (29 bậc tự do), giá trị phân phối Student $t \approx 2.045$ (công cụ dùng xấp xỉ $t \approx 1.96 + 2.4/\text{df} \approx 2.04$).
 - **Thông lượng (Throughput):**
   $$\text{Throughput (MB/s)} = \frac{\text{Payload Size (Bytes)}}{\text{Mean Latency (Seconds)} \times 10^6}$$
 
@@ -547,6 +615,54 @@ Dưới đây là bảng trích xuất số liệu thực nghiệm thực tế t
 *(Ghi chú: Cột "Ý nghĩa thống kê" được đánh giá là True khi hai khoảng tin cậy 95% của Windows và Ubuntu không giao nhau: $|\bar{x}_{win} - \bar{x}_{ub}| > \text{CI}_{win} + \text{CI}_{ub}$)*.
 
 ---
+
+### Bảng 3b: Thống kê đầy đủ (Mean, Median, SD, CI95) tại payload 1 MiB
+
+Bảng 3 chỉ tóm tắt Mean ± CI95. Hai bảng dưới đây đưa đủ bốn chỉ số thống kê bắt buộc (trung bình, trung vị, độ lệch chuẩn, khoảng tin cậy 95%)
+cho thông lượng và độ trễ của từng mode và từng chiều; `N` là số lần lặp, `Ops/khối` là số thao tác trong một khối đo, ±CI95 là nửa độ rộng khoảng tin cậy.
+Bảng được sinh trực tiếp từ CSV bằng `python scripts/csv_to_stats_table.py <file.csv> --size 1048576`.
+
+**Ubuntu 22.04 (GCC)**, nguồn `lab1/output/ubuntu/benchmarks/bench_ubuntu_gcc.csv`:
+
+| Cấu hình | Chiều | Payload | Ops/khối | N | Mean (MB/s) | Median (MB/s) | SD (MB/s) | ±CI95 (MB/s) | Mean (µs/op) | Median (µs/op) | SD (µs/op) | ±CI95 (µs/op) |
+| :--- | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| ecb | enc | 1 MiB | 4 | 30 | 1,123.07 | 1,142.33 | 61.77 | ±23.04 | 936.611 | 917.929 | 55.399 | ±20.661 |
+| ecb | dec | 1 MiB | 4 | 30 | 5,583.49 | 5,901.93 | 585.96 | ±218.54 | 190.179 | 177.667 | 23.620 | ±8.809 |
+| cbc | enc | 1 MiB | 4 | 30 | 1,249.08 | 1,274.80 | 51.92 | ±19.36 | 840.984 | 822.547 | 37.574 | ±14.013 |
+| cbc | dec | 1 MiB | 4 | 30 | 5,276.49 | 5,317.52 | 143.50 | ±53.52 | 198.882 | 197.192 | 5.934 | ±2.213 |
+| ofb | enc | 1 MiB | 4 | 30 | 1,276.79 | 1,306.24 | 67.43 | ±25.15 | 823.664 | 802.742 | 47.208 | ±17.606 |
+| ofb | dec | 1 MiB | 4 | 30 | 1,277.26 | 1,305.25 | 70.30 | ±26.22 | 823.781 | 803.352 | 53.360 | ±19.901 |
+| cfb | enc | 1 MiB | 4 | 30 | 1,232.06 | 1,274.17 | 108.38 | ±40.42 | 858.647 | 822.956 | 89.622 | ±33.425 |
+| cfb | dec | 1 MiB | 4 | 30 | 3,033.92 | 3,095.03 | 296.74 | ±110.67 | 349.381 | 338.796 | 40.155 | ±14.976 |
+| ctr | enc | 1 MiB | 4 | 30 | 4,359.08 | 4,755.91 | 995.39 | ±371.24 | 258.785 | 220.496 | 87.069 | ±32.473 |
+| ctr | dec | 1 MiB | 4 | 30 | 4,997.52 | 5,115.20 | 509.39 | ±189.98 | 212.655 | 204.993 | 29.241 | ±10.906 |
+| xts | enc | 1 MiB | 4 | 30 | 1,478.23 | 1,497.36 | 70.52 | ±26.30 | 711.114 | 700.284 | 38.498 | ±14.358 |
+| xts | dec | 1 MiB | 4 | 30 | 1,529.12 | 1,558.49 | 61.86 | ±23.07 | 686.891 | 672.816 | 29.483 | ±10.996 |
+| ccm | enc | 1 MiB | 4 | 30 | 1,034.83 | 1,046.91 | 36.71 | ±13.69 | 1,014.595 | 1,001.595 | 38.243 | ±14.263 |
+| ccm | dec | 1 MiB | 4 | 30 | 1,043.15 | 1,066.07 | 54.19 | ±20.21 | 1,008.037 | 983.593 | 56.618 | ±21.116 |
+| gcm | enc | 1 MiB | 4 | 30 | 2,949.87 | 3,057.74 | 208.67 | ±77.82 | 357.407 | 342.925 | 28.478 | ±10.621 |
+| gcm | dec | 1 MiB | 4 | 30 | 3,073.83 | 3,237.93 | 371.39 | ±138.51 | 346.599 | 323.842 | 47.290 | ±17.637 |
+
+**Windows 10 (MinGW GCC)**, nguồn `lab1/output/windows/benchmarks/bench_windows_gcc.csv`:
+
+| Cấu hình | Chiều | Payload | Ops/khối | N | Mean (MB/s) | Median (MB/s) | SD (MB/s) | ±CI95 (MB/s) | Mean (µs/op) | Median (µs/op) | SD (µs/op) | ±CI95 (µs/op) |
+| :--- | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| ecb | enc | 1 MiB | 32 | 1000 | 738.38 | 747.30 | 64.41 | ±4.00 | 1,435.730 | 1,403.144 | 191.473 | ±11.882 |
+| ecb | dec | 1 MiB | 32 | 1000 | 954.56 | 1,047.17 | 251.99 | ±15.64 | 1,257.930 | 1,001.345 | 825.290 | ±51.215 |
+| cbc | enc | 1 MiB | 32 | 1000 | 379.56 | 397.69 | 45.94 | ±2.85 | 2,813.416 | 2,636.689 | 432.343 | ±26.830 |
+| cbc | dec | 1 MiB | 32 | 1000 | 1,038.91 | 1,045.24 | 111.31 | ±6.91 | 1,022.631 | 1,003.194 | 127.557 | ±7.916 |
+| ofb | enc | 1 MiB | 32 | 1000 | 435.49 | 450.73 | 64.50 | ±4.00 | 2,477.590 | 2,326.381 | 497.886 | ±30.897 |
+| ofb | dec | 1 MiB | 32 | 1000 | 503.00 | 510.08 | 49.96 | ±3.10 | 2,110.396 | 2,055.725 | 267.339 | ±16.590 |
+| cfb | enc | 1 MiB | 32 | 1000 | 601.04 | 602.37 | 25.96 | ±1.61 | 1,748.197 | 1,740.747 | 83.660 | ±5.192 |
+| cfb | dec | 1 MiB | 32 | 1000 | 900.40 | 944.32 | 147.96 | ±9.18 | 1,218.079 | 1,110.402 | 338.664 | ±21.016 |
+| ctr | enc | 1 MiB | 32 | 1000 | 1,018.72 | 1,076.55 | 198.37 | ±12.31 | 1,091.417 | 974.014 | 391.070 | ±24.268 |
+| ctr | dec | 1 MiB | 32 | 1000 | 1,177.23 | 1,226.64 | 108.72 | ±6.75 | 900.230 | 854.837 | 105.332 | ±6.537 |
+| xts | enc | 1 MiB | 32 | 1000 | 571.01 | 586.57 | 79.90 | ±4.96 | 1,884.098 | 1,787.639 | 358.565 | ±22.251 |
+| xts | dec | 1 MiB | 32 | 1000 | 551.07 | 569.74 | 70.82 | ±4.39 | 1,952.662 | 1,840.433 | 423.513 | ±26.282 |
+| ccm | enc | 1 MiB | 32 | 1000 | 250.78 | 249.89 | 59.91 | ±3.72 | 4,539.408 | 4,196.198 | 1,648.410 | ±102.295 |
+| ccm | dec | 1 MiB | 32 | 1000 | 310.62 | 322.85 | 40.32 | ±2.50 | 3,453.719 | 3,247.906 | 635.347 | ±39.427 |
+| gcm | enc | 1 MiB | 32 | 1000 | 446.94 | 460.54 | 71.60 | ±4.44 | 2,421.918 | 2,276.863 | 488.809 | ±30.334 |
+| gcm | dec | 1 MiB | 32 | 1000 | 600.12 | 626.62 | 82.44 | ±5.12 | 1,792.089 | 1,673.386 | 348.427 | ±21.622 |
 
 ## 5.5. Phân tích 4 so sánh cốt lõi bắt buộc
 
@@ -805,6 +921,15 @@ XTS-AES (IEEE 1619) được thiết kế chuyên biệt cho việc mã hóa d�
 2. **Hạn chế của Nonce Registry cục bộ:** File registry `.aestool_nonces` hiện tại chưa hỗ trợ khóa tệp đa tiến trình (*inter-process file locking*). Nếu có hai tiến trình chạy song song cùng ghi nhận Nonce, có thể xảy ra tình trạng tranh chấp (*race condition*).
    - *Giải pháp:* Bổ sung cơ chế khóa file `flock` (trên Linux) hoặc `LockFileEx` (trên Windows).
 
+3. **`--key-hex` lộ khóa:** khóa truyền qua tham số dòng lệnh xuất hiện trong lịch sử shell và danh sách tiến trình. Nên dùng `--key <file>`.
+   - *Giải pháp:* đọc khóa từ biến môi trường hoặc từ stdin; xóa trắng bộ nhớ chứa khóa sau khi dùng (`SecByteBlock`).
+4. **Registry nonce chỉ có hiệu lực cục bộ:** xóa file `.aestool_nonces`, chạy ở thư mục khác hoặc trên máy khác sẽ bỏ qua kiểm tra; registry cũng không có khóa tiến trình nên hai tiến trình chạy đồng thời có thể cùng vượt qua kiểm tra.
+   - *Giải pháp:* nonce ngẫu nhiên 96-bit đã đủ để xác suất va chạm rất nhỏ khi dùng IV tự sinh; với IV do người dùng đặt, nên dùng bộ đếm tập trung.
+5. **Không có quản lý khóa:** không lưu trữ an toàn, không mã hóa file khóa bằng mật khẩu, không phân phối/xoay vòng khóa.
+6. **Chỉ xây dựng thư viện tĩnh:** lõi mật mã được build thành `libaescore.a`/`aescore.lib`; chưa có `.dll`/`.so` với API C, và GUI PyQt6 gọi file thực thi `aestool` thay vì nạp thư viện (phần thưởng +5 chỉ hoàn thành một phần).
+7. **Chỉ kiểm thử các tổ hợp trong README mục 9:** Clang trên Windows chưa được kiểm thử với mã nguồn mới nhất; binary release chỉ dành cho x86-64.
+8. **Số liệu hiệu năng phụ thuộc máy:** các file CSV/biểu đồ phản ánh phần cứng của tác giả tại thời điểm đo.
+
 ---
 
 # 7. Thảo luận Kinh nghiệm và Đánh đổi Kỹ thuật (Discussion)
@@ -817,6 +942,11 @@ Trong quá trình triển khai thực tế hệ thống, tác giả đã phát h
    - *Khắc phục:* Thiết lập cờ biên dịch `/utf-8` trên MSVC và đảm bảo cấu hình mã nguồn UTF-8 đồng nhất trên toàn dự án.
 3. **Lỗi cắt cụt Padding trong CBC:** Trong thử nghiệm giải mã dữ liệu bị cắt cụt, bộ lọc `StreamTransformationFilter` ném ngoại lệ `InvalidCiphertext`. Ban đầu chương trình để lọt ngoại lệ làm crash tiến trình.
    - *Khắc phục:* Bọc toàn bộ các lời gọi thư viện trong khối `try ... catch (const CryptoPP::Exception& e)` và chuẩn hóa về ngoại lệ thống nhất `aesl::Error` để đảm bảo an toàn fail-closed.
+
+4. **Lẫn thư viện giữa các toolchain qua biến môi trường `PATH`:** khi `C:\msys64\mingw64\bin` nằm trong `PATH`, CMake tìm thấy Crypto++ và Catch2 của MinGW và đưa header MinGW vào bản build MSVC; tương tự, WSL tự nối `PATH` của Windows vào Linux nên `cmake` lấy nhầm `/mnt/c/msys64/mingw64`.
+   - *Khắc phục:* `cmake/FindCryptoPP.cmake` bỏ qua các thư mục suy ra từ `PATH` khi build bằng MSVC hoặc trên Linux (vẫn dùng `/usr`, vcpkg, `CMAKE_PREFIX_PATH`, `CRYPTOPP_ROOT_DIR`). Bài học: không để đường dẫn môi trường quyết định thư viện được liên kết.
+5. **Đường dẫn thư viện cố định theo máy tác giả:** bản đầu của `CMakeLists.txt` dùng đường dẫn như `D:/UIT/...` và còn yêu cầu OpenSSL dù Lab 1 cấm; máy khác không build được theo lệnh `cmake ..`.
+   - *Khắc phục:* tìm Crypto++ tự động (package config, pkg-config, prefix chuẩn), bỏ hoàn toàn OpenSSL, và kiểm tra lại bằng bản build sạch trên MSVC, MinGW và Ubuntu.
 
 ## 7.2. So sánh hành vi giữa các trình biên dịch (MSVC, MinGW GCC, Clang)
 - **MinGW-w64 GCC vs. MSVC trên Windows:** GCC cho kết quả thông lượng cao hơn MSVC khoảng 5-10% trên các chế độ xử lý luồng (CTR, GCM) nhờ khả năng tối ưu hóa vòng lặp (loop unrolling) và lập lịch thanh ghi SIMD tốt hơn của backend GCC. Tuy nhiên, MSVC có thời gian biên dịch nhanh hơn và tích hợp mượt mà hơn với công cụ gỡ lỗi của Visual Studio.
@@ -837,7 +967,7 @@ Bài thực hành Lab 1 đã hoàn thành xuất sắc 100% các mục tiêu và
 - Xây dựng thành công bộ công cụ dòng lệnh hoàn chỉnh `aestool` hỗ trợ toàn diện **8 chế độ hoạt động của AES** với thư viện công nghiệp chuẩn Crypto++.
 - Thiết kế và kiểm chứng thực nghiệm các chốt chặn an toàn: cảnh báo và giới hạn ECB dưới 16 KiB, quản lý vòng đời IV/Nonce tự động, chống tái sử dụng Nonce với cơ sở dữ liệu băm SHA-256, triết lý Thất bại An toàn (Fail-Closed).
 - Xác thực tính chính xác toán học tuyệt đối qua **9/9 vector Known Answer Tests (KAT)** chính thức từ NIST và IEEE, cùng ma trận kiểm thử âm toàn diện.
-- Thực hiện đo đạc hiệu năng thực nghiệm quy mô lớn (1000 runs, 6 payload sizes, 96 kịch bản) với các phân tích khoa học sâu sắc về ảnh hưởng của kiến trúc bộ nhớ đệm CPU L1/L2/L3, tập lệnh phần cứng AES-NI và hệ thống lập lịch của hệ điều hành.
+- Thực hiện đo đạc hiệu năng thực nghiệm quy mô lớn (30 lần lặp mỗi khối ~1000 thao tác, 6 payload sizes, 96 kịch bản) với các phân tích khoa học sâu sắc về ảnh hưởng của kiến trúc bộ nhớ đệm CPU L1/L2/L3, tập lệnh phần cứng AES-NI và hệ thống lập lịch của hệ điều hành.
 - Hoàn thành đầy đủ và trực quan hóa 4 nghiên cứu so sánh cốt lõi (Windows vs. Linux, Stream vs. Block, AEAD vs. Non-AEAD, và Tag Overhead với mô hình chi phí tuyến tính phân tách chi phí cố định và chi phí biên).
 - Đảm bảo tính khả chuyển tuyệt đối trên cả môi trường Windows và Linux thông qua hệ thống build tự động CMake và bộ kiểm thử CTest.
 

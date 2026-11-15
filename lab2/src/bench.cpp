@@ -32,7 +32,7 @@ namespace {
 
 using Clock = std::chrono::steady_clock;
 
-std::string read_first_match(const char* path, const char* key) {
+[[maybe_unused]] std::string read_first_match(const char* path, const char* key) {
   std::ifstream f(path);
   std::string line;
   const std::string k(key);
@@ -84,7 +84,7 @@ void print_hardware(std::ostream& os) {
      << "#   Compiler  : " << compiler << "\n"
      << "#   Build     : " << AESP_BUILD_TYPE << "  flags: " << AESP_BUILD_FLAGS << "\n"
      << "#   Reminder  : set CPU governor to 'performance' (Linux) / 'High performance' (Windows) for fair runs\n"
-     << "#   MB/s      : 1 MB = 10^6 bytes; single thread; in-place CTR on one buffer\n";
+     << "#   MB/s      : 1 MB = 10^6 bytes; aggregate over --threads workers (default 1); in-place CTR, one private buffer per worker\n";
 }
 
 using Op = std::function<void(uint8_t*, std::size_t)>;
@@ -101,33 +101,52 @@ double seconds_since(Clock::time_point t0) {
 
 volatile uint8_t g_sink = 0;  // keeps the optimiser from discarding the work
 
-Row measure(const std::string& impl, const std::string& dir, const Op& op, uint8_t* buf, std::size_t size,
+// Runs `n_ops` operations on every worker's private buffer; with T > 1 the workers run concurrently.
+void run_ops(const Op& op, std::vector<Bytes>& bufs, std::size_t size, std::size_t n_ops) {
+  if (bufs.size() == 1) {
+    for (std::size_t i = 0; i < n_ops; ++i) op(bufs[0].data(), size);
+    return;
+  }
+  std::vector<std::thread> ts;
+  ts.reserve(bufs.size());
+  for (auto& b : bufs)
+    ts.emplace_back([&op, &b, size, n_ops] {
+      for (std::size_t i = 0; i < n_ops; ++i) op(b.data(), size);
+    });
+  for (auto& t : ts) t.join();
+}
+
+Row measure(const std::string& impl, const std::string& dir, const Op& op, const Bytes& payload, std::size_t size,
             const BenchOptions& opt) {
+  const std::size_t T = std::max<std::size_t>(1, opt.threads);
+  std::vector<Bytes> bufs(T, payload);  // private buffer per worker
   // Warm-up: stabilises caches, frequency scaling and allocator state; also estimates throughput.
   std::size_t wops = 0;
   const auto w0 = Clock::now();
   do {
-    op(buf, size);
+    run_ops(op, bufs, size, 1);
     ++wops;
   } while (seconds_since(w0) < opt.warmup_sec);
   const double wsec = seconds_since(w0);
   const double est_ops_per_sec = static_cast<double>(wops) / wsec;
 
   std::size_t ops = opt.ops;
-  if (ops == 0) {
+  if (ops == 0 && opt.target_sec > 0.0) {  // time based (optional)
     const double want = est_ops_per_sec * opt.target_sec;
     ops = static_cast<std::size_t>(std::min(1000.0, std::max(1.0, std::floor(want))));
+  } else if (ops == 0) {  // protocol: a block of ~1000 operations, fewer only if the data budget would be exceeded
+    ops = std::min<std::size_t>(1000, std::max<std::size_t>(1, opt.budget_bytes / std::max<std::size_t>(1, size)));
   }
 
   std::vector<double> mbps, ms;
   for (std::size_t r = 0; r < opt.runs; ++r) {
     const auto t0 = Clock::now();
-    for (std::size_t i = 0; i < ops; ++i) op(buf, size);
+    run_ops(op, bufs, size, ops);
     const double sec = seconds_since(t0);
-    g_sink = static_cast<uint8_t>(g_sink ^ buf[0]);
-    const double per_op = sec / static_cast<double>(ops);
+    g_sink = static_cast<uint8_t>(g_sink ^ bufs[0][0]);
+    const double per_op = sec / static_cast<double>(ops);  // wall time of one round (all workers)
     ms.push_back(per_op * 1e3);
-    mbps.push_back(static_cast<double>(size) / per_op / 1e6);
+    mbps.push_back(static_cast<double>(size) * static_cast<double>(T) / per_op / 1e6);  // aggregate
   }
   Row row;
   row.impl = impl;
@@ -151,14 +170,24 @@ std::string fmt_size(std::size_t n) {
 }  // namespace
 
 void run_bench(const BenchOptions& opt, std::ostream& os) {
-  if (opt.runs < 2) throw Error(ExitCode::Usage, "--runs must be >= 2 (>= 30 recommended)");
+  if (opt.threads < 1 || opt.threads > 256) throw Error(ExitCode::Usage, "--threads must be 1..256");
+  if (opt.runs < 2) throw Error(ExitCode::Usage, "--runs must be >= 2 (30..100 recommended)");
+  if (opt.key_bytes != 16 && opt.key_bytes != 24 && opt.key_bytes != 32)
+    throw Error(ExitCode::Usage, "--bits must be 128, 192 or 256");
+  if (opt.budget_bytes == 0) throw Error(ExitCode::Usage, "--budget-mb must be >= 1");
   if (opt.sizes.empty() || opt.sizes.size() > 16) throw Error(ExitCode::Usage, "invalid --sizes list");
   if (!opt.do_encrypt && !opt.do_decrypt) throw Error(ExitCode::Usage, "nothing to benchmark (--dir)");
   const std::vector<RefImpl> refs = available_references(opt.ref);
 
   print_hardware(os);
+  if (opt.runs < 30 || opt.runs > 100)
+    os << "# WARNING   : the standard protocol uses 30-100 runs per case (got " << opt.runs << ")\n";
+  os << "# Cipher    : AES-" << opt.key_bytes * 8 << "-CTR\n";
+  os << "# Workers   : " << opt.threads << " thread(s); MB/s is the aggregate of all workers\n";
   os << "# Protocol  : warm-up " << opt.warmup_sec << " s, " << opt.runs << " runs/case, ops/run "
-     << (opt.ops ? std::to_string(opt.ops) : "auto(~" + std::to_string(opt.target_sec) + " s)") << ", 95% CI = Student t\n";
+     << (opt.ops ? std::to_string(opt.ops)
+                 : (opt.target_sec > 0.0 ? "auto(~" + std::to_string(opt.target_sec) + " s)"
+                                         : "min(1000, " + std::to_string(opt.budget_bytes >> 20) + " MiB / size)")) << ", 95% CI = Student t\n";
   os << "# Note      : CTR decryption is the same operation as encryption; both are timed separately.\n\n";
 
   os << std::left << std::setw(20) << "implementation" << std::setw(9) << "dir" << std::setw(10) << "size"
@@ -175,31 +204,36 @@ void run_bench(const BenchOptions& opt, std::ostream& os) {
     rows.push_back(r);
   };
 
+  const std::string suffix = opt.key_bytes == 16 ? "" : "-" + std::to_string(opt.key_bytes * 8);  // e.g. pure/ttable-256
   for (std::size_t size : opt.sizes) {
-    // Synthetic payload: fixed-seed xorshift64 (NOT used for keys/IVs).
-    Bytes buf(size);
-    uint64_t x = 0x9E3779B97F4A7C15ull;
-    for (std::size_t i = 0; i < size; ++i) {
-      x ^= x << 13; x ^= x >> 7; x ^= x << 17;
-      buf[i] = static_cast<uint8_t>(x);
-    }
+    // Payload from the CSPRNG (RAND_bytes); no non-cryptographic PRNG anywhere.
+    const Bytes buf = random_bytes(size);
     for (const char* dir : {"encrypt", "decrypt"}) {
       if ((dir[0] == 'e' && !opt.do_encrypt) || (dir[0] == 'd' && !opt.do_decrypt)) continue;
       for (Backend be : opt.backends) {
-        const Bytes key = random_bytes(16), iv = random_bytes(16);
-        auto aes = std::make_shared<Aes128>(key.data(), key.size(), be);
+        const Bytes key = random_bytes(opt.key_bytes), iv = random_bytes(16);
+        auto aes = std::make_shared<Aes>(key.data(), key.size(), be);
         Bytes ivc = iv;
         Op op = [aes, ivc](uint8_t* b, std::size_t n) {
           CtrStream s(*aes, ivc.data());
           s.process(b, b, n);
         };
-        emit(measure(std::string("pure/") + backend_name(be), dir, op, buf.data(), size, opt));
+        emit(measure(std::string("pure/") + backend_name(be) + suffix, dir, op, buf, size, opt));
       }
       for (const RefImpl& ref : refs) {
-        const Bytes key = random_bytes(16), iv = random_bytes(16);
-        auto fn = ref.ctr;
-        Op op = [fn, key, iv](uint8_t* b, std::size_t n) { fn(key.data(), iv.data(), b, b, n); };
-        emit(measure(ref.name, dir, op, buf.data(), size, opt));
+        const Bytes key = random_bytes(opt.key_bytes), iv = random_bytes(16);
+        Op op;
+        if (opt.key_bytes == 16) {
+          auto fn = ref.ctr;
+          op = [fn, key, iv](uint8_t* b, std::size_t n) { fn(key.data(), iv.data(), b, b, n); };
+        } else if (ref.ctr_any) {
+          auto fn = ref.ctr_any;
+          const std::size_t kl = opt.key_bytes;
+          op = [fn, key, kl, iv](uint8_t* b, std::size_t n) { fn(key.data(), kl, iv.data(), b, b, n); };
+        } else {
+          continue;  // this reference has no AES-192/256 CTR
+        }
+        emit(measure(ref.name + suffix, dir, op, buf, size, opt));
       }
     }
   }
@@ -210,7 +244,7 @@ void run_bench(const BenchOptions& opt, std::ostream& os) {
     for (const Row& r : rows) {
       if (r.dir != "encrypt" || r.impl.rfind("pure/", 0) != 0) continue;
       for (const Row& q : rows)
-        if (q.dir == "encrypt" && q.size == r.size && q.impl == refs.front().name)
+        if (q.dir == "encrypt" && q.size == r.size && q.impl == refs.front().name + suffix)
           os << "#   " << std::left << std::setw(20) << r.impl << std::setw(10) << fmt_size(r.size) << std::fixed
              << std::setprecision(3) << r.mbps.mean / q.mbps.mean << "x\n";
     }

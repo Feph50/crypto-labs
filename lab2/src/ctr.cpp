@@ -19,7 +19,7 @@ bool ctr_increment(uint8_t ctr[16]) {
   return true;  // all bytes were 0xFF -> wrapped to 0
 }
 
-CtrStream::CtrStream(const Aes128& aes, const uint8_t iv[16])
+CtrStream::CtrStream(const Aes& aes, const uint8_t iv[16])
     : aes_(&aes), pos_(16), exhausted_(false) {
   std::memcpy(ctr_, iv, 16);
   std::memset(ks_, 0, sizeof ks_);
@@ -51,14 +51,14 @@ void CtrStream::process(const uint8_t* in, uint8_t* out, std::size_t n) {
   }
 }
 
-Bytes ctr_crypt(const Aes128& aes, const uint8_t iv[16], const Bytes& data) {
+Bytes ctr_crypt(const Aes& aes, const uint8_t iv[16], const Bytes& data) {
   Bytes out(data.size());
   CtrStream s(aes, iv);
   s.process(data.data(), out.data(), data.size());
   return out;
 }
 
-void ctr_crypt_file(const Aes128& aes, const uint8_t iv[16], const std::string& in_path,
+void ctr_crypt_file(const Aes& aes, const uint8_t iv[16], const std::string& in_path,
                     const std::string& out_path, bool overwrite) {
   namespace fs = std::filesystem;
   const fs::path in = resolve_input_path(in_path), out = to_path(out_path);

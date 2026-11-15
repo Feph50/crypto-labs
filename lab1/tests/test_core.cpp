@@ -92,3 +92,59 @@ TEST_CASE("nonce registry detects reuse") {
     REQUIRE_FALSE(nonceUsed(db, o3));
     std::remove(db.c_str());
 }
+
+TEST_CASE("key file: raw binary and hex-with-header are both accepted") {
+    const std::string raw = randomBytes(32);
+    const std::string pRaw = "test_key_raw.tmp", pHex = "test_key_hex.tmp";
+    writeFile(pRaw, raw);
+    writeFile(pHex, makeHexKeyFile(raw));
+    REQUIRE(loadKeyFile(pRaw) == raw);
+    REQUIRE(loadKeyFile(pHex) == raw);
+    std::remove(pRaw.c_str());
+    std::remove(pHex.c_str());
+}
+TEST_CASE("key file: corrupted hex header fails closed") {
+    const std::string p = "test_key_bad.tmp";
+    writeFile(p, "AESKEY-HEX\nzz11\n");           // not hex
+    REQUIRE_THROWS_AS(loadKeyFile(p), Error);
+    writeFile(p, "AESKEY-HEX\nabc\n");            // odd number of digits
+    REQUIRE_THROWS_AS(loadKeyFile(p), Error);
+    std::remove(p.c_str());
+    REQUIRE_THROWS_AS(loadKeyFile("no_such_key_file.tmp"), Error);   // missing file
+}
+TEST_CASE("nonce registry only tracks CTR / CCM / GCM (the modes where reuse is catastrophic)") {
+    const std::string db = "test_nonce_db2.tmp";
+    std::remove(db.c_str());
+    for (std::string m : {"ctr", "ccm", "gcm"}) {
+        Opts o = mk(m);
+        nonceRecord(db, o);
+        REQUIRE(nonceUsed(db, o));
+    }
+    Opts cbc = mk("cbc");
+    nonceRecord(db, cbc);
+    REQUIRE_FALSE(nonceUsed(db, cbc));            // CBC is not tracked
+    std::remove(db.c_str());
+}
+TEST_CASE("CCM: tag lengths 4, 8 and 16 round-trip; other lengths are rejected") {
+    for (size_t t : {4u, 8u, 16u}) {
+        Opts o = mk("ccm"); o.tagLen = t; o.aad = "aad";
+        Out r = encrypt(o, MSG);
+        REQUIRE(r.tag.size() == t);
+        REQUIRE(decrypt(o, r.data, r.tag) == MSG);
+    }
+    Opts bad = mk("ccm"); bad.tagLen = 5;
+    REQUIRE_THROWS_AS(encrypt(bad, MSG), Error);
+}
+TEST_CASE("XTS: input shorter than one block is rejected; key must be 256 or 512 bit") {
+    Opts o = mk("xts");
+    REQUIRE_THROWS_AS(encrypt(o, "short"), Error);
+    REQUIRE_NOTHROW(encrypt(o, std::string(16, 'x')));
+}
+TEST_CASE("UTF-8 text survives a round trip byte for byte") {
+    const std::string utf8 = "Xin ch\xc3\xa0o \xe2\x80\x94 \xe4\xbd\xa0\xe5\xa5\xbd \xf0\x9f\x94\x90";
+    for (std::string m : {"cbc", "ctr", "gcm"}) {
+        Opts o = mk(m);
+        Out r = encrypt(o, utf8);
+        REQUIRE(decrypt(o, r.data, r.tag) == utf8);
+    }
+}

@@ -4,6 +4,19 @@
 #include <cmath>
 #include <iostream>
 #include <set>
+#include <thread>
+#include <vector>
+
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <shellapi.h>
+#endif
 
 #include "aescore.hpp"
 
@@ -27,10 +40,33 @@ struct Args {
 
 static const set<string> BOOL_FLAGS = {"aead", "allow-ecb", "verbose", "hex", "quick", "help"};
 
-static Args parseArgs(int argc, char** argv) {
+// Argument vector as UTF-8. On Windows argv[] uses the ANSI code page, so re-read the real UTF-16 command line.
+static vector<string> getArgs(int argc, char** argv) {
+    vector<string> v;
+#if defined(_WIN32)
+    (void)argc; (void)argv;
+    int n = 0;
+    LPWSTR* w = CommandLineToArgvW(GetCommandLineW(), &n);
+    if (w) {
+        for (int i = 0; i < n; ++i) {
+            int len = WideCharToMultiByte(CP_UTF8, 0, w[i], -1, nullptr, 0, nullptr, nullptr);
+            string s((size_t)(len > 0 ? len - 1 : 0), '\0');
+            if (len > 1) WideCharToMultiByte(CP_UTF8, 0, w[i], -1, &s[0], len, nullptr, nullptr);
+            v.push_back(s);
+        }
+        LocalFree(w);
+        return v;
+    }
+#endif
+    for (int i = 0; i < argc; ++i) v.emplace_back(argv[i]);
+    return v;
+}
+
+static Args parseArgs(const vector<string>& argv) {
     Args a;
+    const int argc = (int)argv.size();
     int i = 1;
-    if (i < argc && string(argv[i]).rfind("--", 0) != 0) a.cmd = argv[i++];
+    if (i < argc && argv[i].rfind("--", 0) != 0) a.cmd = argv[i++];
     for (; i < argc; ++i) {
         string t = argv[i];
         if (t.rfind("--", 0) != 0) throw Error("unexpected argument: " + t);
@@ -55,7 +91,7 @@ R"(aestool - AES (Crypto++) Lab 1
   aestool decrypt --mode .. (--in F | --text ENCODED_CT) (--key..) [--iv ..]
                   [--tag-hex H] [--aad..] [--meta F.json] [--out F]
   aestool --kat vectors.json        (hoac: aestool kat --kat vectors.json)
-  aestool bench   [--runs 30] [--out bench.csv] [--quick]
+  aestool bench   [--runs 30..100] [--threads N] [--warmup SEC] [--ops N] [--budget-mb MiB] [--out bench.csv] [--quick]
 Exit code: 0 ok, 1 input error, 2 decrypt/auth failure, 3 KAT failure
 )";
 }
@@ -191,6 +227,9 @@ static int cmdDecrypt(const Args& a) {
     if (!validMode(o.mode)) throw Error("--mode must be ecb|cbc|ofb|cfb|ctr|xts|ccm|gcm");
     if (meta.count("mode") && meta["mode"] != o.mode) throw Error("header mode does not match --mode");
     if (isAead(o.mode) && !a.flag("aead")) throw Error("mode " + o.mode + " is AEAD: pass --aead");
+    if (!isAead(o.mode) && a.flag("aead")) throw Error("--aead only valid with ccm|gcm");
+    if (o.mode == "ecb")
+        cerr << "WARNING: ECB leaks plaintext patterns and is NOT semantically secure. Do not use for real data.\n";
     o.key = loadKey(a);
     if (a.has("aad") || a.has("aad-text")) o.aad = loadAad(a);
     else if (meta.count("aad")) o.aad = fromHex(meta["aad"]);
@@ -267,49 +306,97 @@ static Stats stats(vector<double> x) {
     double t = 1.96 + 2.4 / df;      // xap xi gia tri t (chinh xac ~1% voi df>=9)
     return {m, med, sd, t * sd / std::sqrt((double)n)};
 }
+// Performance protocol (standardised for all labs):
+//   1. warm-up 1-2 s  (here 1.5 s, run separately for EVERY mode and direction),
+//   2. one block = ~1000 operations (fewer only for big payloads so that a block stays within --budget-mb of data;
+//      --ops N forces N operations per block),
+//   3. repeat the block N times (--runs, 30..100 recommended, default 30),
+//   4. report mean / median / SD / 95% CI of throughput and latency; ops_per_block is recorded in the CSV.
 static int cmdBench(const Args& a) {
     using clk = std::chrono::steady_clock;
     const int runs = std::stoi(a.get("runs", "30"));
     const bool quick = a.flag("quick");
     if (runs < 2) throw Error("--runs must be >= 2");
+    if (!quick && (runs < 30 || runs > 100))
+        cerr << "WARNING: the standard protocol uses 30-100 runs per case (got " << runs << ")\n";
+    const int threads = std::stoi(a.get("threads", "1"));
+    if (threads < 1 || threads > 256) throw Error("--threads must be 1..256");
+    const double warmup = std::stod(a.get("warmup", quick ? "0.2" : "1.5"));
+    if (!(warmup >= 0.0 && warmup <= 60.0)) throw Error("--warmup must be 0..60 seconds");
+    const int fixedOps = std::stoi(a.get("ops", "0"));
+    if (fixedOps < 0 || fixedOps > 1000000) throw Error("--ops must be 0 (auto) .. 1000000");
+    const size_t budgetMb = std::stoul(a.get("budget-mb", quick ? "4" : "256"));
+    if (budgetMb < 1 || budgetMb > 65536) throw Error("--budget-mb must be 1..65536");
+    const size_t budget = budgetMb << 20;
     vector<size_t> sizes = {1 << 10, 4 << 10, 16 << 10, 256 << 10, 1 << 20, 8 << 20};
     vector<string> modes = {"ecb", "cbc", "ofb", "cfb", "ctr", "xts", "ccm", "gcm"};
 
-    // Warm-up 1.5s
-    {
-        Opts w; w.mode = "ctr"; w.key = randomBytes(32); w.iv = randomBytes(16);
-        string buf(1 << 20, 'x');
-        auto t0 = clk::now();
-        while (std::chrono::duration<double>(clk::now() - t0).count() < (quick ? 0.2 : 1.5)) encrypt(w, buf);
-    }
     string csv = "mode,dir,size_bytes,ops_per_block,runs,thr_mean_MBps,thr_median_MBps,thr_sd,thr_ci95,lat_mean_us,lat_median_us,lat_sd,lat_ci95\n";
-    cout << "mode dir  size      MB/s(mean ±CI95)      latency us/op (mean)\n";
-    for (auto& m : modes) for (int dir = 0; dir < 2; ++dir) for (size_t sz : sizes) {
+    cout << "# protocol: warm-up " << warmup << " s per mode/direction, ~1000 ops per block (budget " << budgetMb
+         << " MiB, --ops to force), " << runs << " runs per case, " << threads << " thread(s)\n";
+    cout << "mode dir  size      ops    MB/s(mean ±CI95)      latency us/op (mean)\n";
+
+    auto makeOpts = [](const string& m) {
         Opts o; o.mode = m; o.key = randomBytes(m == "xts" ? 64 : 32);
         o.iv = randomBytes(defaultIvLen(m));
         if (m == "ccm") o.tagLen = 16;
+        return o;
+    };
+    auto makePayload = [](size_t sz) {
         string pt(sz, '\0');
-        { string tmp = randomBytes(1024); for (size_t i = 0; i < sz; ++i) pt[i] = tmp[i % 1024]; }
-        Out ref = encrypt(o, pt);
-        // block ~1000 thao tac voi payload nho; giam dan voi payload lon de khong qua lau
-        int ops = (int)std::max<size_t>(1, std::min<size_t>(1000, (quick ? 4u : 32u) * (1u << 20) / sz));
-        vector<double> thr, lat;
-        for (int r = 0; r < runs; ++r) {
+        string tmp = randomBytes(1024);
+        for (size_t i = 0; i < sz; ++i) pt[i] = tmp[i % 1024];
+        return pt;
+    };
+
+    for (auto& m : modes) for (int dir = 0; dir < 2; ++dir) {
+        // 1. warm-up for THIS algorithm and direction (CPU frequency, caches, allocator)
+        {
+            Opts w = makeOpts(m);
+            string wpt = makePayload(256 << 10);
+            Out wref = encrypt(w, wpt);
             auto t0 = clk::now();
-            for (int i = 0; i < ops; ++i) {
-                if (dir == 0) { volatile size_t s = encrypt(o, pt).data.size(); (void)s; }
-                else { volatile size_t s = decrypt(o, ref.data, ref.tag).size(); (void)s; }
-            }
-            double sec = std::chrono::duration<double>(clk::now() - t0).count();
-            lat.push_back(sec / ops * 1e6);
-            thr.push_back((double)sz * ops / sec / 1e6);
+            do {
+                if (dir == 0) { volatile size_t s = encrypt(w, wpt).data.size(); (void)s; }
+                else { volatile size_t s = decrypt(w, wref.data, wref.tag).size(); (void)s; }
+            } while (std::chrono::duration<double>(clk::now() - t0).count() < warmup);
         }
-        Stats T = stats(thr), L = stats(lat);
-        csv += m + "," + (dir ? "dec" : "enc") + "," + std::to_string(sz) + "," + std::to_string(ops) + "," + std::to_string(runs) + "," +
-               std::to_string(T.mean) + "," + std::to_string(T.median) + "," + std::to_string(T.sd) + "," + std::to_string(T.ci95) + "," +
-               std::to_string(L.mean) + "," + std::to_string(L.median) + "," + std::to_string(L.sd) + "," + std::to_string(L.ci95) + "\n";
-        printf("%-4s %-4s %-9zu %9.1f ± %-7.1f      %10.2f\n", m.c_str(), dir ? "dec" : "enc", sz, T.mean, T.ci95, L.mean);
-        fflush(stdout);
+        for (size_t sz : sizes) {
+            Opts o = makeOpts(m);
+            string pt = makePayload(sz);
+            Out ref = encrypt(o, pt);
+            // 2. block of ~1000 operations (reduced only for large payloads, see header comment)
+            int ops = fixedOps > 0 ? fixedOps : (int)std::max<size_t>(1, std::min<size_t>(1000, budget / sz));
+            vector<double> thr, lat;
+            // Each worker runs `ops` operations; encrypt()/decrypt() keep all state local, inputs are read-only.
+            auto work = [&]() {
+                for (int i = 0; i < ops; ++i) {
+                    if (dir == 0) { volatile size_t s = encrypt(o, pt).data.size(); (void)s; }
+                    else { volatile size_t s = decrypt(o, ref.data, ref.tag).size(); (void)s; }
+                }
+            };
+            // 3. N independent runs of the block
+            for (int r = 0; r < runs; ++r) {
+                auto t0 = clk::now();
+                if (threads == 1) {
+                    work();
+                } else {
+                    vector<std::thread> ts;
+                    for (int t = 0; t < threads; ++t) ts.emplace_back(work);
+                    for (auto& t : ts) t.join();
+                }
+                double sec = std::chrono::duration<double>(clk::now() - t0).count();
+                lat.push_back(sec / ops * 1e6);                              // wall time of one round
+                thr.push_back((double)sz * ops * threads / sec / 1e6);      // aggregate over all workers
+            }
+            // 4. statistics
+            Stats T = stats(thr), L = stats(lat);
+            csv += m + "," + (dir ? "dec" : "enc") + "," + std::to_string(sz) + "," + std::to_string(ops) + "," + std::to_string(runs) + "," +
+                   std::to_string(T.mean) + "," + std::to_string(T.median) + "," + std::to_string(T.sd) + "," + std::to_string(T.ci95) + "," +
+                   std::to_string(L.mean) + "," + std::to_string(L.median) + "," + std::to_string(L.sd) + "," + std::to_string(L.ci95) + "\n";
+            printf("%-4s %-4s %-9zu %-6d %9.1f ± %-7.1f      %10.2f\n", m.c_str(), dir ? "dec" : "enc", sz, ops, T.mean, T.ci95, L.mean);
+            fflush(stdout);
+        }
     }
     if (a.has("out")) { writeFile(a.get("out"), csv); cout << "CSV -> " << a.get("out") << "\n"; }
     return EXIT_OK;
@@ -318,7 +405,7 @@ static int cmdBench(const Args& a) {
 // ---------------------------------------------------------------- main
 int main(int argc, char** argv) {
     try {
-        Args a = parseArgs(argc, argv);
+        Args a = parseArgs(getArgs(argc, argv));
         if (a.flag("help") || (a.cmd.empty() && !a.has("kat"))) { usage(); return a.flag("help") ? 0 : EXIT_USAGE; }
         if (a.has("kat")) return cmdKat(a.get("kat"));
         if (a.cmd == "keygen") return cmdKeygen(a);

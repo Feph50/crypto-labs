@@ -93,6 +93,8 @@ endif()
 # --- Static library: aes_pure (Pure AES-128 core + CTR mode) ---
 add_library(aes_pure STATIC
     src/aes128.cpp
+    src/aesni.cpp
+    src/xts.cpp
     src/ctr.cpp
     src/util.cpp
     src/json.cpp

@@ -19,9 +19,9 @@ if defined AESTOOL (
     exit /b 1
 )
 
-call :run_bench 1MiB 500
+call :run_bench 1MiB 100
 if errorlevel 1 exit /b 1
-call :run_bench 100MiB 100
+call :run_bench 100MiB 50
 if errorlevel 1 exit /b 1
 call :run_bench 1GiB 30
 if errorlevel 1 exit /b 1

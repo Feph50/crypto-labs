@@ -40,48 +40,36 @@ message(STATUS "Suggested build dir: ${CMAKE_SOURCE_DIR}/build_${PLATFORM_NAME}_
 # =============================================================================
 # Module Path (for FindCryptoPP.cmake)
 # =============================================================================
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/../cmake")
 
 # =============================================================================
 # Find Dependencies
 # =============================================================================
 
 # --- Crypto++ ---
+option(AESTOOL_STATIC_RUNTIME "Link libstdc++/libgcc and Crypto++ statically (used for the release binaries: no extra DLL/.so needed)" OFF)
+if(AESTOOL_STATIC_RUNTIME)
+    set(CRYPTOPP_PREFER_STATIC ON)
+endif()
 find_package(CryptoPP REQUIRED)
 
-# --- OpenSSL ---
-# OpenSSL provides CMake config files in lib/cmake/OpenSSL or lib64/cmake/OpenSSL
-# Hint paths for different platforms/compilers
-if(WIN32)
-    if(MSVC)
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/msvc" CACHE PATH "OpenSSL root dir")
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/clang" CACHE PATH "OpenSSL root dir")
-    else()
-        set(OPENSSL_ROOT_DIR "D:/UIT/NT219/libs/openssl/gcc" CACHE PATH "OpenSSL root dir")
-    endif()
-else()
-    if(NOT DEFINED OPENSSL_ROOT_DIR AND NOT DEFINED ENV{OPENSSL_ROOT_DIR})
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND EXISTS "$ENV{HOME}/Desktop/nt219lib/openssl/clang")
-            set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/clang" CACHE PATH "OpenSSL root dir")
-        elseif(EXISTS "$ENV{HOME}/Desktop/nt219lib/openssl/gcc")
-            set(OPENSSL_ROOT_DIR "$ENV{HOME}/Desktop/nt219lib/openssl/gcc" CACHE PATH "OpenSSL root dir")
-        endif()
-    endif()
-endif()
-
-find_package(OpenSSL REQUIRED)
-
-# Threads (needed for OpenSSL)
+# Threads (std::thread for `bench --threads`, and Crypto++ on Linux)
 find_package(Threads REQUIRED)
 
 # =============================================================================
 # Compiler Warning Flags
 # =============================================================================
+option(AESTOOL_WARNINGS_AS_ERRORS "Treat compiler warnings as errors (developer option; OFF so other compilers still build)" OFF)
 if(MSVC)
     add_compile_options(/W4 /permissive- /utf-8)
+    if(AESTOOL_WARNINGS_AS_ERRORS)
+        add_compile_options(/WX)
+    endif()
 else()
-    add_compile_options(-Wall -Wextra -Wpedantic -Werror)
+    add_compile_options(-Wall -Wextra -Wpedantic)
+    if(AESTOOL_WARNINGS_AS_ERRORS)
+        add_compile_options(-Werror)
+    endif()
 endif()
 
 # =============================================================================
@@ -94,16 +82,21 @@ target_include_directories(aescore PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:include>
 )
+# Crypto++ is the ONLY cryptographic library used by Lab 1 (no OpenSSL, no libsodium).
 target_link_libraries(aescore PUBLIC
     CryptoPP::CryptoPP
-    OpenSSL::Crypto
-    OpenSSL::SSL
     Threads::Threads
 )
 
 # --- Executable: aestool ---
 add_executable(aestool src/main.cpp)
 target_link_libraries(aestool PRIVATE aescore)
+if(AESTOOL_STATIC_RUNTIME AND NOT MSVC)
+    target_link_options(aestool PRIVATE -static)   # MSVC builds are already self-contained when built with /MT
+endif()
+if(WIN32)
+    target_link_libraries(aestool PRIVATE shell32)   # CommandLineToArgvW (UTF-8 argv)
+endif()
 
 # =============================================================================
 # Tests (Optional)
@@ -113,19 +106,30 @@ option(BUILD_TESTS "Build unit tests and KAT runners" ON)
 if(BUILD_TESTS)
     enable_testing()
     
-    # Fetch Catch2 for unit tests
-    include(FetchContent)
-    FetchContent_Declare(Catch2
-        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-        GIT_TAG v3.5.3
-    )
-    FetchContent_MakeAvailable(Catch2)
+    # Catch2 v3: use an installed one (apt install catch2 / vcpkg install catch2 / pacman -S mingw-w64-x86_64-catch);
+    # otherwise download v3.5.3 at configure time (needs internet once).
+    # (MSVC and Linux ignore PATH-derived prefixes, so a MinGW/MSYS2 Catch2 on PATH - e.g. the Windows PATH that WSL
+    #  appends - is never picked up by mistake)
+    set(_catch_noenv "")
+    if(MSVC OR (UNIX AND NOT WIN32))
+        set(_catch_noenv NO_SYSTEM_ENVIRONMENT_PATH)
+    endif()
+    find_package(Catch2 3 QUIET ${_catch_noenv})
+    if(NOT Catch2_FOUND)
+        message(STATUS "Catch2 v3 not installed: fetching v3.5.3 (use -DBUILD_TESTS=OFF to skip the unit tests)")
+        include(FetchContent)
+        FetchContent_Declare(Catch2
+            GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+            GIT_TAG v3.5.3
+        )
+        FetchContent_MakeAvailable(Catch2)
+    endif()
     
     # On Windows Clang, skip unit tests due to ABI incompatibility with GCC-built libs
     set(SKIP_TESTS_FOR_CLANG_WINDOWS FALSE)
     if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set(SKIP_TESTS_FOR_CLANG_WINDOWS TRUE)
-        message(WARNING "Windows Clang: Skipping unit tests due to ABI incompatibility with GCC-built Crypto++/OpenSSL")
+        message(WARNING "Windows Clang: Skipping unit tests due to ABI incompatibility with a GCC-built Crypto++")
     endif()
     
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/test_core.cpp" AND NOT SKIP_TESTS_FOR_CLANG_WINDOWS)

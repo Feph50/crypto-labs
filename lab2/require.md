@@ -59,7 +59,7 @@ aestool decrypt --mode ctr --key key.bin --iv iv.bin --in ct.bin  --out msg.bin
 | AES-XTS | +5 | 2 khóa, nhân tweak trong GF(2¹²⁸), giải thích mã hóa ổ đĩa |
 | AES-NI hoặc bit-sliced | +5 | phát hiện CPU lúc chạy, so sánh hiệu năng, giải thích constant-time |
 
-> Code hiện tại **chưa** có các bonus này.
+> Cả ba bonus đã được triển khai (xem `README.md` mục 2.4).
 
 ## 3. Yêu cầu chung (áp dụng cho Lab 2)
 
@@ -82,7 +82,7 @@ aestool decrypt --mode ctr --key key.bin --iv iv.bin --in ct.bin  --out msg.bin
 | Chất lượng kỹ thuật & tài liệu (10) | build sạch 2 HĐH, README, ctest pass, fail-closed, binary hai HĐH | 5.1–5.2, 6.1–6.2, 5.9, 6.9 |
 | Hiệu năng (10) | CSV + bảng + biểu đồ; header phần cứng; N ≥ 30; CI 95% | 5.7–5.8, 6.7–6.8 |
 | Thảo luận bảo mật (20) | phần viết tay (Mục 7) + demo negative test | 5.5, 6.5, Mục 7 |
-| Bonus (+20) | chưa làm | — |
+| Bonus (+20) | đã làm: AES-192/256, XTS, AES-NI | README 2.4; `src/aesni.*`, `src/xts.*` |
 
 ---
 

@@ -1,4 +1,4 @@
-// Unit tests for Lab 2 (pure AES-128 + CTR). Run with `ctest` or `./aes_tests`.
+// Unit tests for Lab 2 (pure AES-128 + CTR; bonus: AES-192/256, AES-NI, XTS-AES). Run with `ctest` or `./aes_tests`.
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
@@ -9,12 +9,14 @@
 #include <sstream>
 
 #include "aes128.hpp"
+#include "aesni.hpp"
 #include "ctr.hpp"
 #include "errors.hpp"
 #include "json.hpp"
 #include "kat.hpp"
 #include "stats.hpp"
 #include "util.hpp"
+#include "xts.hpp"
 #include "xval.hpp"
 
 #ifndef AESP_KAT_FILE
@@ -360,4 +362,175 @@ TEST_CASE("Cross-validation against reference libraries (if compiled in)", "[xva
     REQUIRE(s.total > 0);
     REQUIRE(s.failed == 0);
   }
+}
+
+// ------------------------------------------------------------------ BONUS: AES-192 / AES-256
+namespace {
+std::vector<Backend> bonus_backends() {
+  std::vector<Backend> v(kAll.begin(), kAll.end());
+  if (aesni::available()) v.push_back(Backend::AesNi);
+  return v;
+}
+}  // namespace
+
+TEST_CASE("BONUS FIPS-197 Appendix C.2 / C.3 (AES-192, AES-256) on every backend", "[bonus][aes][kat]") {
+  const Bytes pt = H("00112233445566778899aabbccddeeff");
+  struct V { const char* key; const char* ct; };
+  const V vs[] = {{"000102030405060708090a0b0c0d0e0f1011121314151617", "dda97ca4864cdfe06eaf70a0ec0d7191"},
+                  {"000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f", "8ea2b7ca516745bfeafc49904b496089"}};
+  for (const V& v : vs)
+    for (Backend be : bonus_backends()) {
+      const Bytes key = H(v.key);
+      Aes aes(key.data(), key.size(), be);
+      uint8_t out[16];
+      aes.encrypt_block(pt.data(), out);
+      REQUIRE(to_hex(out, 16) == v.ct);
+      aes.decrypt_block(out, out);
+      REQUIRE(to_hex(out, 16) == to_hex(pt.data(), 16));
+    }
+}
+
+TEST_CASE("BONUS key schedule: FIPS-197 A.2 (AES-192) and A.3 (AES-256) round keys", "[bonus][aes][keyschedule]") {
+  {  // A.2: key 8e73b0f7..., w[6] = fe0c91f7, last word w[51] = 01002202
+    const Bytes key = H("8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b");
+    Aes aes(key.data(), key.size());
+    REQUIRE(aes.rounds() == 12);
+    const auto& rk = aes.round_keys();
+    REQUIRE(to_hex(rk.data() + 24, 4) == "fe0c91f7");
+    REQUIRE(to_hex(rk.data() + 4 * 51, 4) == "01002202");
+  }
+  {  // A.3: key 603deb10..., w[8] = 9ba35411, w[12] = a8b09c1a (extra SubWord), last word w[59] = 706c631e
+    const Bytes key = H("603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4");
+    Aes aes(key.data(), key.size());
+    REQUIRE(aes.rounds() == 14);
+    const auto& rk = aes.round_keys();
+    REQUIRE(to_hex(rk.data() + 32, 4) == "9ba35411");
+    REQUIRE(to_hex(rk.data() + 48, 4) == "a8b09c1a");
+    REQUIRE(to_hex(rk.data() + 4 * 59, 4) == "706c631e");
+  }
+}
+
+TEST_CASE("BONUS Aes accepts only 16/24/32-byte keys; Aes128 stays strictly 16", "[bonus][aes][negative]") {
+  for (std::size_t n : {0u, 1u, 15u, 17u, 23u, 25u, 31u, 33u, 64u}) {
+    Bytes k(n, 0x11);
+    REQUIRE(throws_code([&] { Aes a(k.data(), k.size()); }, ExitCode::InvalidInput));
+  }
+  for (std::size_t n : {16u, 24u, 32u}) {
+    Bytes k(n, 0x11);
+    REQUIRE_NOTHROW(Aes(k.data(), k.size()));
+  }
+  Bytes k24(24, 0x11);
+  REQUIRE(throws_code([&] { Aes128 a(k24.data(), k24.size()); }, ExitCode::InvalidInput));
+}
+
+TEST_CASE("BONUS NIST SP 800-38A F.5.3 / F.5.5 CTR-AES192/256 (4 blocks, all backends)", "[bonus][ctr][kat]") {
+  const Bytes iv = H("f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff");
+  const Bytes pt = H("6bc1bee22e409f96e93d7e117393172aae2d8a571e03ac9c9eb76fac45af8e5130c81c46a35ce411e5fbc1191a0a52eff69f2445df4f9b17ad2b417be66c3710");
+  const Bytes k192 = H("8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b");
+  const Bytes k256 = H("603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4");
+  const std::string c192 = "1abc932417521ca24f2b0459fe7e6e0b090339ec0aa6faefd5ccc2c6f4ce8e941e36b26bd1ebc670d1bd1d665620abf74f78a7f6d29809585a97daec58c6b050";
+  const std::string c256 = "601ec313775789a5b7a7f504bbf3d228f443e3ca4d62b59aca84e990cacaf5c52b0930daa23de94ce87017ba2d84988ddfc9c58db67aada613c2dd08457941a6";
+  for (Backend be : bonus_backends()) {
+    Aes a(k192.data(), k192.size(), be), b(k256.data(), k256.size(), be);
+    REQUIRE(to_hex(ctr_crypt(a, iv.data(), pt)) == c192);
+    REQUIRE(to_hex(ctr_crypt(b, iv.data(), pt)) == c256);
+  }
+}
+
+// ------------------------------------------------------------------ BONUS: AES-NI
+TEST_CASE("BONUS AES-NI agrees with the software implementation (random keys/blocks, 128/192/256)", "[bonus][aesni]") {
+  if (!aesni::available()) {
+    SUCCEED("AES-NI not available on this CPU: backend correctly reported as unavailable");
+    const Bytes key(16, 0x42);
+    REQUIRE(throws_code([&] { Aes a(key.data(), key.size(), Backend::AesNi); }, ExitCode::InvalidInput));
+    return;
+  }
+  for (std::size_t klen : {16u, 24u, 32u})
+    for (int i = 0; i < 200; ++i) {
+      const Bytes key = random_bytes(klen), pt = random_bytes(16);
+      Aes sw(key.data(), klen, Backend::SBoxTable), hw(key.data(), klen, Backend::AesNi);
+      uint8_t a[16], b[16], d[16];
+      sw.encrypt_block(pt.data(), a);
+      hw.encrypt_block(pt.data(), b);
+      REQUIRE(to_hex(a, 16) == to_hex(b, 16));
+      hw.decrypt_block(b, d);
+      REQUIRE(to_hex(d, 16) == to_hex(pt.data(), 16));
+    }
+}
+
+// ------------------------------------------------------------------ BONUS: XTS-AES
+TEST_CASE("BONUS XTS-AES: IEEE 1619-2007 vectors 1, 2, 3 and 15 (ciphertext stealing)", "[bonus][xts][kat]") {
+  struct S { std::string key, tweak, pt, ct; bool equal_keys; };
+  const std::string t33 = "33333333330000000000000000000000", p44(64, '4');
+  const std::vector<S> sv = {
+      {std::string(64, '0'), std::string(32, '0'), std::string(64, '0'),
+       "917cf69ebd68b2ec9b9fe9a3eadda692cd43d2f59598ed858c02c2652fbf922e", true},
+      {std::string(32, '1') + std::string(32, '2'), t33, p44,
+       "c454185e6a16936e39334038acef838bfb186fff7480adc4289382ecd6d394f0", false},
+      {"fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0" + std::string(32, '2'), t33, p44,
+       "af85336b597afc1a900b2eb21ec949d292df4c047e0b21532186a5971a227a89", false},
+      {"fffefdfcfbfaf9f8f7f6f5f4f3f2f1f0bfbebdbcbbbab9b8b7b6b5b4b3b2b1b0", "9a785634120000000000000000000000",
+       "000102030405060708090a0b0c0d0e0f10", "6c1625db4671522d3d7599601de7ca09ed", false},
+  };
+  for (const S& v : sv)
+    for (Backend be : bonus_backends()) {
+      const Bytes key = H(v.key), tw = H(v.tweak), pt = H(v.pt), ct = H(v.ct);
+      const Xts x(key.data(), key.size(), be, v.equal_keys);
+      Bytes out(pt.size());
+      x.encrypt(tw.data(), pt.data(), out.data(), pt.size());
+      REQUIRE(out == ct);
+      x.decrypt(tw.data(), ct.data(), out.data(), ct.size());
+      REQUIRE(out == pt);
+    }
+}
+
+TEST_CASE("BONUS XTS-AES: round trip for every length 16..130 (in place too), tweak matters", "[bonus][xts]") {
+  for (std::size_t klen : {32u, 64u}) {
+    const Bytes key = random_bytes(klen), tweak = random_bytes(16);
+    const Xts x(key.data(), klen);
+    for (std::size_t len = 16; len <= 130; ++len) {
+      const Bytes pt = random_bytes(len);
+      Bytes ct(len), back(len);
+      x.encrypt(tweak.data(), pt.data(), ct.data(), len);
+      REQUIRE(ct != pt);
+      x.decrypt(tweak.data(), ct.data(), back.data(), len);
+      REQUIRE(back == pt);
+      Bytes inplace = pt;  // in == out
+      x.encrypt(tweak.data(), inplace.data(), inplace.data(), len);
+      REQUIRE(inplace == ct);
+      x.decrypt(tweak.data(), inplace.data(), inplace.data(), len);
+      REQUIRE(inplace == pt);
+    }
+    const Bytes pt = random_bytes(48);
+    Bytes c1(48), c2(48);
+    Bytes tweak2 = tweak;
+    tweak2[0] ^= 1;
+    x.encrypt(tweak.data(), pt.data(), c1.data(), 48);
+    x.encrypt(tweak2.data(), pt.data(), c2.data(), 48);
+    REQUIRE(c1 != c2);
+  }
+}
+
+TEST_CASE("BONUS XTS-AES: GF(2^128) multiply-by-alpha (IEEE 1619 section 5.2)", "[bonus][xts]") {
+  uint8_t t[16] = {1};  // little-endian 1 -> x
+  xts_mul_alpha(t);
+  REQUIRE(t[0] == 2);
+  uint8_t u[16] = {0};
+  u[15] = 0x80;  // top bit set: carry folds in 0x87
+  xts_mul_alpha(u);
+  REQUIRE(u[0] == 0x87);
+  REQUIRE(u[15] == 0x00);
+}
+
+TEST_CASE("BONUS XTS-AES: fails closed on bad keys and data-unit sizes", "[bonus][xts][negative]") {
+  for (std::size_t n : {0u, 16u, 24u, 31u, 33u, 48u, 63u, 65u})
+    REQUIRE(throws_code([&] { Bytes k(n, 0x5A); Xts x(k.data(), k.size()); }, ExitCode::InvalidInput));
+  const Bytes same(32, 0x7E);  // K1 == K2 is forbidden (IEEE 1619-2018 / SP 800-38E)
+  REQUIRE(throws_code([&] { Xts x(same.data(), same.size()); }, ExitCode::InvalidInput));
+  const Bytes key = random_bytes(32), tw = random_bytes(16);
+  const Xts x(key.data(), key.size());
+  Bytes buf(32);
+  for (std::size_t len : {0u, 1u, 15u})
+    REQUIRE(throws_code([&] { x.encrypt(tw.data(), buf.data(), buf.data(), len); }, ExitCode::InvalidInput));
+  REQUIRE(throws_code([&] { x.decrypt(tw.data(), buf.data(), buf.data(), kXtsMaxDataUnit + 1); }, ExitCode::InvalidInput));
 }

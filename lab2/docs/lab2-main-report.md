@@ -36,9 +36,10 @@
 | 4 | **Chất lượng kỹ thuật, Build & CLI** | **10** | 10/10 | **Mục 1.2, 7**: CMake out-of-source đa nền tảng, cơ chế Fail-Closed toàn diện, giao diện PyQt6 GUI. |
 | 5 | **Đo lường hiệu năng & Thống kê** | **10** | 10/10 | **Mục 4**: Ma trận đo $N=30$ lượt độc lập, Mean, Median, SD, CI 95%, so sánh Table vs Computed S-Box, 5 biểu đồ trực quan. |
 | 6 | **Báo cáo chuyên sâu & Bảo mật** | **20** | 20/20 | **Mục 5**: Phân tích rò rỉ kênh kề Cache-timing, thảm họa Two-time pad, thực nghiệm tấn công lật bit (Bit-flipping). |
-| *Bonus* | *Bonus A: Hỗ trợ AES-192 và AES-256* | *+10* | *+10* | **Mục 6.1**: Lịch khóa 12/14 vòng FIPS-197, benchmark độc lập $N=30$ trên cả 2 độ dài khóa mở rộng. |
-| *Bonus* | *Bonus C: Nhận diện phần cứng AES-NI* | *+5* | *+5* | **Mục 6.2**: Module CPUID Leaf 1 (ECX bit 25) phát hiện tập lệnh tăng tốc phần cứng lúc chạy. |
-| **CỘNG** | **TỔNG ĐIỂM ĐỀ NGHỊ** | **120** | **115 / 100** | **ĐẠT TRỌN VẸN YÊU CẦU CHÍNH VÀ VƯỢT CHỈ TIÊU BONUS** |
+| *Bonus* | *Bonus A: Hỗ trợ AES-192 và AES-256* | *+10* | *+10* | **Mục 6**: lịch khóa 12/14 vòng FIPS-197, KAT FIPS-197 C.2/C.3 và SP 800-38A F.5.3/F.5.5, cross-validation OpenSSL. |
+| *Bonus* | *Bonus B: AES-XTS* | *+5* | *+5* | **Mục 6**: XTS-AES-128/256, nhân tweak GF(2^128), ciphertext stealing, vector IEEE 1619. |
+| *Bonus* | *Bonus C: AES-NI* | *+5* | *+5* | **Mục 6**: backend AES-NI chạy các vòng, phát hiện CPU lúc chạy (CPUID ECX bit 25), so khớp với backend phần mềm. |
+| **CỘNG** | **TỔNG ĐIỂM ĐỀ NGHỊ** | **120** | **120 / 100** | **ĐẠT TRỌN VẸN YÊU CẦU CHÍNH VÀ VƯỢT CHỈ TIÊU BONUS** |
 
 ---
 
@@ -166,11 +167,18 @@ Toàn bộ các test vector chính thức được tham chiếu trực tiếp t�
 
 ---
 
-## 4. MA TRẬN THỐNG KÊ HIỆU NĂNG THỰC TẾ (=100$ LƯỢT ĐỘC LẬP, 8 THREADS, CI 95%)
+## 4. MA TRẬN THỐNG KÊ HIỆU NĂNG THỰC TẾ (30-100 LƯỢT ĐỘC LẬP, CI 95%)
+
+**Protocol đo (chuẩn hóa):** mỗi cấu hình có warm-up 1,5 s, sau đó lặp N lần (30-100) một khối ~1000 thao tác
+(giảm cho payload lớn theo `--budget-mb`, mặc định 256 MiB; số thao tác thực tế nằm ở cột `ops_per_run` của CSV), rồi tính
+mean/median/SD/CI 95% (Student t). Số liệu do `aestool bench` tạo ra, không đo qua tiến trình con hay I/O file;
+`scripts/run_bench_matrix.py` chạy toàn bộ ma trận (AES-128/192/256, `table`/`ttable`/`aesni`, `computed` ở 1 MiB với khối ngắn hơn vì chậm ~100 lần).
+**Các bảng và biểu đồ dưới đây được tạo trước khi chuẩn hóa; chạy lại `scripts/run_bench_matrix.py` rồi `scripts/generate_lab2_rich_visuals.py` để cập nhật.**
+Bảng thống kê đầy đủ (Mean, Median, SD, ±CI95) cho bất kỳ CSV nào được sinh bằng `python scripts/csv_to_stats_table.py <file.csv>` (ở thư mục gốc dự án).
 
 ### 4.1. Bảng số liệu Benchmark trích xuất trực tiếp từ ench_lab2_windows.csv
 
-Toàn bộ các cấu hình đều được thực nghiệm chuẩn hóa **=100$ lượt chạy độc lập** trên vi xử lý Intel Core i7-11800H (8 nhân vật lý song song):
+Toàn bộ các cấu hình đều được thực nghiệm chuẩn hóa **30-100 lượt chạy độc lập (tùy kích thước payload)** trên vi xử lý Intel Core i7-11800H (8 nhân vật lý song song):
 
 | Cấu hình thuật toán | Độ dài khóa | Kích thước tải | Tác vụ | Số lượt ($) | Thông lượng TB ($\\text{MB/s}$) | Trung vị ($\\text{MB/s}$) | Độ lệch chuẩn $ | Khoảng tin cậy \\%$ | Độ trễ TB ($\\text{ms}$) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -193,7 +201,7 @@ Toàn bộ các cấu hình đều được thực nghiệm chuẩn hóa **=100$
 
 #### Biểu đồ 1: So sánh Thông lượng Table-based vs Computed S-Box
 ![So sánh Thông lượng Table vs Computed](../Output/windows/plots/table_vs_computed_throughput.png)
-*Hình 4: Biểu đồ cột so sánh thông lượng mã hóa và giải mã tại tải 1 MiB (=100$, thanh sai số thể hiện Khoảng tin cậy 95%).*
+*Hình 4: Biểu đồ cột so sánh thông lượng mã hóa và giải mã tại tải 1 MiB (30-100 lượt, thanh sai số thể hiện Khoảng tin cậy 95%).*
 
 #### Biểu đồ 2: Hệ thống Phân tầng Hiệu năng Đa cấp độ (Thang đo Logarithmic)
 ![Phân tầng hiệu năng](../Output/windows/plots/performance_hierarchy_log.png)
@@ -204,7 +212,7 @@ Toàn bộ các cấu hình đều được thực nghiệm chuẩn hóa **=100$
 
 #### Biểu đồ 3: Ảnh hưởng của Chiều dài khóa lên Hiệu năng
 ![Ảnh hưởng chiều dài khóa](../Output/windows/plots/key_length_scaling.png)
-*Hình 6: Thông lượng mã hóa/giải mã theo độ dài khóa (=100$ runs mỗi cấu hình, 8 threads): AES-128 (10 vòng), AES-192 (12 vòng), AES-256 (14 vòng).*
+*Hình 6: Thông lượng mã hóa/giải mã theo độ dài khóa (30-100 runs mỗi cấu hình): AES-128 (10 vòng), AES-192 (12 vòng), AES-256 (14 vòng).*
 
 Bảng đối chiếu tỷ lệ thực nghiệm so với tỷ lệ suy giảm lý thuyết:
 
@@ -220,7 +228,7 @@ Bảng đối chiếu tỷ lệ thực nghiệm so với tỷ lệ suy giảm l�
 
 #### Biểu đồ 5: Sự mở rộng Hiệu năng theo Kích thước Tải
 ![Mở rộng kích thước tải](../Output/windows/plots/payload_size_scaling.png)
-*Hình 8: Biểu đồ cột thể hiện thông lượng AES-128 CTR Table trên các kích thước 1 MiB, 100 MiB và 1 GiB (=100$ runs mỗi kích thước tải, 8 workers, kèm thanh sai số CI 95%).*
+*Hình 8: Biểu đồ cột thể hiện thông lượng AES-128 CTR Table trên các kích thước 1 MiB, 100 MiB và 1 GiB (30-100 runs mỗi kích thước tải, kèm thanh sai số CI 95%).*
 
 ---
 
@@ -267,10 +275,13 @@ flowchart TD
 
 Bảng tổng hợp các tính năng mở rộng đạt được trong Lab 2:
 
-| Tính năng Bonus | Điểm thưởng | Tệp tin mã nguồn | Cơ chế hoạt động & Kết quả thực tế |
+| Tính năng Bonus | Điểm thưởng | Tệp tin mã nguồn | Cơ chế hoạt động & kiểm chứng |
 | :--- | :---: | :--- | :--- |
-| **Bonus A: AES-192 & AES-256** | **+10 Điểm** | `bonus/aes_ext.hpp`<br>`bonus/aes_ext.cpp` | - AES-192: Khóa 24B, 12 vòng, lịch khóa 208B $\to$ **21.66 MB/s** ($N=30$).<br>- AES-256: Khóa 32B, 14 vòng, lịch khóa 240B, bổ sung phép biến đổi `SubWord` tại $i \pmod 8 == 4$ $\to$ **18.68 MB/s** ($N=30$). |
-| **Bonus C: Nhận diện tập lệnh AES-NI lúc chạy** | **+5 Điểm** | `bonus/aesni.cpp` | Truy vấn CPUID Leaf 1, kiểm tra `ECX` bit 25 (`ecx & (1 << 25)`). Xác nhận CPU Intel Core i7-11800H hỗ trợ tập lệnh phần cứng AES-NI. |
+| **Bonus A: AES-192 & AES-256** | **+10 Điểm** | `src/aes128.hpp`, `src/aes128.cpp` (lớp `Aes`) | Khóa 24 B (12 vòng, 208 B round key) và 32 B (14 vòng, 240 B), thêm `SubWord` tại `i mod 8 == 4` cho AES-256. KAT: FIPS-197 C.2/C.3, SP 800-38A F.1.3, F.1.5, F.5.3, F.5.5; round key A.2/A.3; cross-validation OpenSSL. |
+| **Bonus B: AES-XTS** | **+5 Điểm** | `src/xts.hpp`, `src/xts.cpp` | XTS-AES-128/256 (K1, K2), nhân alpha trong GF(2^128) (đa thức 0x87, little-endian, không rẽ nhánh), ciphertext stealing. Vector IEEE 1619-2007 số 1, 2, 3, 15; cross-validation OpenSSL mọi độ dài. |
+| **Bonus C: AES-NI** | **+5 Điểm** | `src/aesni.hpp`, `src/aesni.cpp` | `AESENC/AESDEC/AESIMC`; phát hiện lúc chạy bằng CPUID leaf 1, ECX bit 25. Cho cùng kết quả với backend phần mềm trên khóa ngẫu nhiên 128/192/256 và trên toàn bộ KAT. Constant-time: không có truy cập bảng hay nhánh phụ thuộc bí mật. |
+
+Số liệu hiệu năng của các backend (`table`, `ttable`, `aesni`) được đo bằng `aestool bench --backends table,ttable,aesni` theo protocol ở Mục 4; chạy lại trên máy nộp bài để lấy số liệu của chính máy đó.
 
 ---
 

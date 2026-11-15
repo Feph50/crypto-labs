@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include "aes_tables.hpp"
+#include "aesni.hpp"
 #include "errors.hpp"
 #include "util.hpp"
 
@@ -50,20 +51,23 @@ struct ComputedSbox {
 };
 
 // ---------------------------------------------------------------- KeyExpansion (§5.2)
+// Nk = key words (4/6/8), Nr = rounds (10/12/14); w receives 4*(Nr+1) words. Covers AES-128/192/256.
 template <class S>
-void key_expansion(const uint8_t* key, uint8_t* w) {
-  std::memcpy(w, key, 16);
-  for (std::size_t i = 4; i < 44; ++i) {
+void key_expansion(const uint8_t* key, std::size_t nk, std::size_t nr, uint8_t* w) {
+  std::memcpy(w, key, 4 * nk);
+  for (std::size_t i = nk; i < 4 * (nr + 1); ++i) {
     uint8_t t[4];
     std::memcpy(t, w + 4 * (i - 1), 4);
-    if (i % 4 == 0) {  // RotWord, SubWord, XOR Rcon
+    if (i % nk == 0) {  // RotWord, SubWord, XOR Rcon
       const uint8_t r = t[0];
-      t[0] = static_cast<uint8_t>(S::sub(t[1]) ^ tables::RCON[i / 4 - 1]);
+      t[0] = static_cast<uint8_t>(S::sub(t[1]) ^ tables::RCON[i / nk - 1]);
       t[1] = S::sub(t[2]);
       t[2] = S::sub(t[3]);
       t[3] = S::sub(r);
+    } else if (nk > 6 && i % nk == 4) {  // AES-256 only: extra SubWord (FIPS-197 §5.2)
+      for (int j = 0; j < 4; ++j) t[j] = S::sub(t[j]);
     }
-    for (int j = 0; j < 4; ++j) w[4 * i + j] = static_cast<uint8_t>(w[4 * (i - 4) + j] ^ t[j]);
+    for (int j = 0; j < 4; ++j) w[4 * i + j] = static_cast<uint8_t>(w[4 * (i - nk) + j] ^ t[j]);
   }
 }
 
@@ -136,11 +140,11 @@ inline void inv_mix_columns(uint8_t* s) {
 
 // ---------------------------------------------------------------- Cipher / InvCipher
 template <class S>
-void cipher(const uint8_t* rk, const uint8_t* in, uint8_t* out) {
+void cipher(const uint8_t* rk, std::size_t nr, const uint8_t* in, uint8_t* out) {
   uint8_t s[16];
   std::memcpy(s, in, 16);
   add_round_key(s, rk);
-  for (std::size_t round = 1; round < Aes128::kRounds; ++round) {
+  for (std::size_t round = 1; round < nr; ++round) {
     sub_bytes<S>(s);
     shift_rows(s);
     mix_columns(s);
@@ -148,17 +152,17 @@ void cipher(const uint8_t* rk, const uint8_t* in, uint8_t* out) {
   }
   sub_bytes<S>(s);
   shift_rows(s);
-  add_round_key(s, rk + 16 * Aes128::kRounds);
+  add_round_key(s, rk + 16 * nr);
   std::memcpy(out, s, 16);
   secure_zero(s, sizeof s);
 }
 
 template <class S>
-void inv_cipher(const uint8_t* rk, const uint8_t* in, uint8_t* out) {
+void inv_cipher(const uint8_t* rk, std::size_t nr, const uint8_t* in, uint8_t* out) {
   uint8_t s[16];
   std::memcpy(s, in, 16);
-  add_round_key(s, rk + 16 * Aes128::kRounds);
-  for (std::size_t round = Aes128::kRounds - 1; round >= 1; --round) {
+  add_round_key(s, rk + 16 * nr);
+  for (std::size_t round = nr - 1; round >= 1; --round) {
     inv_shift_rows(s);
     inv_sub_bytes<S>(s);
     add_round_key(s, rk + 16 * round);
@@ -182,11 +186,11 @@ inline void store_be(uint8_t* p, uint32_t v) {
   p[3] = static_cast<uint8_t>(v);
 }
 
-void cipher_ttable(const uint32_t* rk, const uint8_t* in, uint8_t* out) {
+void cipher_ttable(const uint32_t* rk, std::size_t nr, const uint8_t* in, uint8_t* out) {
   using namespace tables;
   uint32_t s0 = load_be(in) ^ rk[0], s1 = load_be(in + 4) ^ rk[1];
   uint32_t s2 = load_be(in + 8) ^ rk[2], s3 = load_be(in + 12) ^ rk[3];
-  for (int r = 1; r < 10; ++r) {
+  for (std::size_t r = 1; r < nr; ++r) {
     rk += 4;
     const uint32_t t0 = TE0[s0 >> 24] ^ TE1[(s1 >> 16) & 0xFF] ^ TE2[(s2 >> 8) & 0xFF] ^ TE3[s3 & 0xFF] ^ rk[0];
     const uint32_t t1 = TE0[s1 >> 24] ^ TE1[(s2 >> 16) & 0xFF] ^ TE2[(s3 >> 8) & 0xFF] ^ TE3[s0 & 0xFF] ^ rk[1];
@@ -225,6 +229,7 @@ const char* backend_name(Backend b) {
     case Backend::SBoxTable: return "sbox-table";
     case Backend::SBoxComputed: return "sbox-computed";
     case Backend::TTable: return "ttable";
+    case Backend::AesNi: return "aesni";
   }
   return "?";
 }
@@ -233,38 +238,60 @@ Backend parse_backend(const std::string& s) {
   if (s == "table" || s == "sbox-table") return Backend::SBoxTable;
   if (s == "computed" || s == "sbox-computed") return Backend::SBoxComputed;
   if (s == "ttable") return Backend::TTable;
-  throw Error(ExitCode::Usage, "unknown S-box backend '" + s + "' (use table|computed|ttable)");
+  if (s == "aesni" || s == "aes-ni") return Backend::AesNi;
+  throw Error(ExitCode::Usage, "unknown S-box backend '" + s + "' (use table|computed|ttable|aesni)");
 }
 
-// ---------------------------------------------------------------- Aes128
-Aes128::Aes128(const uint8_t* key, std::size_t key_len, Backend backend) : backend_(backend) {
-  if (key == nullptr || key_len != kKeySize)
-    throw Error(ExitCode::InvalidInput, "invalid key length: AES-128 requires exactly 16 bytes");
+// ---------------------------------------------------------------- Aes (128/192/256)
+Aes::Aes(const uint8_t* key, std::size_t key_len, Backend backend) : key_len_(key_len), backend_(backend) {
+  if (key == nullptr || (key_len != 16 && key_len != 24 && key_len != 32))
+    throw Error(ExitCode::InvalidInput, "invalid key length: AES requires 16, 24 or 32 bytes");
+  if (backend == Backend::AesNi && !aesni::available())
+    throw Error(ExitCode::InvalidInput, "AES-NI backend requested but this CPU/build does not support it");
+  const std::size_t nk = key_len / 4;
+  rounds_ = nk + 6;  // 10 / 12 / 14
   if (backend == Backend::SBoxComputed)
-    key_expansion<ComputedSbox>(key, rk_.data());
+    key_expansion<ComputedSbox>(key, nk, rounds_, rk_.data());
   else
-    key_expansion<TableSbox>(key, rk_.data());
-  for (std::size_t i = 0; i < 44; ++i) rkw_[i] = load_be(rk_.data() + 4 * i);
+    key_expansion<TableSbox>(key, nk, rounds_, rk_.data());
+  for (std::size_t i = 0; i < 4 * (rounds_ + 1); ++i) rkw_[i] = load_be(rk_.data() + 4 * i);
+  if (backend == Backend::AesNi) aesni::make_decrypt_keys(rk_.data(), rounds_, dk_.data());
 }
 
-Aes128::~Aes128() {
+Aes::~Aes() {
   secure_zero(rk_.data(), rk_.size());
   secure_zero(rkw_.data(), rkw_.size() * sizeof(uint32_t));
+  secure_zero(dk_.data(), dk_.size());
 }
 
-void Aes128::encrypt_block(const uint8_t in[16], uint8_t out[16]) const {
+void Aes::encrypt_block(const uint8_t in[16], uint8_t out[16]) const {
   switch (backend_) {
-    case Backend::SBoxTable: cipher<TableSbox>(rk_.data(), in, out); break;
-    case Backend::SBoxComputed: cipher<ComputedSbox>(rk_.data(), in, out); break;
-    case Backend::TTable: cipher_ttable(rkw_.data(), in, out); break;
+    case Backend::SBoxTable: cipher<TableSbox>(rk_.data(), rounds_, in, out); break;
+    case Backend::SBoxComputed: cipher<ComputedSbox>(rk_.data(), rounds_, in, out); break;
+    case Backend::TTable: cipher_ttable(rkw_.data(), rounds_, in, out); break;
+    case Backend::AesNi: aesni::encrypt_block(rk_.data(), rounds_, in, out); break;
   }
 }
 
-void Aes128::decrypt_block(const uint8_t in[16], uint8_t out[16]) const {
-  if (backend_ == Backend::SBoxComputed)
-    inv_cipher<ComputedSbox>(rk_.data(), in, out);
+void Aes::decrypt_block(const uint8_t in[16], uint8_t out[16]) const {
+  if (backend_ == Backend::AesNi)
+    aesni::decrypt_block(dk_.data(), rounds_, in, out);
+  else if (backend_ == Backend::SBoxComputed)
+    inv_cipher<ComputedSbox>(rk_.data(), rounds_, in, out);
   else
-    inv_cipher<TableSbox>(rk_.data(), in, out);  // TTable backend decrypts with the byte-wise path
+    inv_cipher<TableSbox>(rk_.data(), rounds_, in, out);  // TTable backend decrypts with the byte-wise path
 }
+
+// ---------------------------------------------------------------- Aes128 (the lab's core: 16-byte keys only)
+namespace {
+const uint8_t* require_aes128_key(const uint8_t* key, std::size_t key_len) {
+  if (key == nullptr || key_len != Aes128::kKeySize)
+    throw Error(ExitCode::InvalidInput, "invalid key length: AES-128 requires exactly 16 bytes");
+  return key;
+}
+}  // namespace
+
+Aes128::Aes128(const uint8_t* key, std::size_t key_len, Backend backend)
+    : Aes(require_aes128_key(key, key_len), key_len, backend) {}
 
 }  // namespace aesp

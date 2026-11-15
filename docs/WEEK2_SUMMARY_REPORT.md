@@ -54,13 +54,14 @@ Hoàn thành toàn diện **Lab 2: Pure C++ AES-128 in CTR mode**, tuân thủ n
   9. lab2_gui_encrypt.png: Ảnh chụp giao diện PyQt6 Form Mã hóa/Giải mã CTR.
   10. lab2_gui_tools.png: Ảnh chụp giao diện PyQt6 Tab Công cụ KAT & Benchmark.
 
-### 2.4. Tính năng Bonus hoàn thành (+15 điểm)
+### 2.4. Tính năng Bonus hoàn thành (+20 điểm)
 - **Bonus A (+10 điểm):** AES-192 (12 rounds) & AES-256 (14 rounds) full key expansion và CTR streaming encryption.
-- **Bonus C (+5 điểm):** Nhận diện tập lệnh tăng tốc phần cứng AES-NI lúc chạy thông qua CPUID Leaf 1 (ECX bit 25).
+- **Bonus B (+5 điểm):** XTS-AES-128/256 theo IEEE 1619, nhân tweak GF(2^128), ciphertext stealing.
+- **Bonus C (+5 điểm):** Backend AES-NI (AESENC/AESDEC) với phát hiện CPU lúc chạy (CPUID Leaf 1, ECX bit 25).
 
 ---
 
 ## 3. TỔNG KẾT ĐIỂM TỰ ĐÁNH GIÁ
 - **Điểm lõi:** 100 / 100 điểm.
-- **Điểm thưởng (Bonus):** +15 / 20 điểm.
-- **Tổng điểm Tuần 2:** **115 / 100 điểm**.
+- **Điểm thưởng (Bonus):** +20 / 20 điểm.
+- **Tổng điểm Tuần 2:** **120 / 100 điểm**.

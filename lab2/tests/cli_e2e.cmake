@@ -50,6 +50,33 @@ if(NOT LAST_OUT MATCHES "ciphertext\\(hex\\)=874d6191b620e3261bef6864990db6ce")
   message(FATAL_ERROR "SP 800-38A F.5.1 block 1 mismatch via CLI: ${LAST_OUT}")
 endif()
 
+# 3b. BONUS: AES-192 / AES-256 CTR (SP 800-38A F.5.3 / F.5.5 block 1) and XTS-AES (IEEE 1619 vector 2) via the CLI
+run(0 encrypt --key-hex 8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b --iv-hex f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff
+      --in-encode hex --text 6bc1bee22e409f96e93d7e117393172a --quiet)
+if(NOT LAST_OUT MATCHES "ciphertext\\(hex\\)=1abc932417521ca24f2b0459fe7e6e0b")
+  message(FATAL_ERROR "AES-192-CTR KAT mismatch via CLI: ${LAST_OUT}")
+endif()
+run(0 encrypt --key-hex 603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4 --iv-hex f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff
+      --in-encode hex --text 6bc1bee22e409f96e93d7e117393172a --quiet)
+if(NOT LAST_OUT MATCHES "ciphertext\\(hex\\)=601ec313775789a5b7a7f504bbf3d228")
+  message(FATAL_ERROR "AES-256-CTR KAT mismatch via CLI: ${LAST_OUT}")
+endif()
+run(0 encrypt --mode xts
+      --key-hex 1111111111111111111111111111111122222222222222222222222222222222
+      --iv-hex 33333333330000000000000000000000
+      --in-encode hex --text 4444444444444444444444444444444444444444444444444444444444444444 --quiet)
+if(NOT LAST_OUT MATCHES "ciphertext\\(hex\\)=c454185e6a16936e39334038acef838bfb186fff7480adc4289382ecd6d394f0")
+  message(FATAL_ERROR "XTS-AES-128 KAT mismatch via CLI: ${LAST_OUT}")
+endif()
+run(3 encrypt --mode xts --key-hex 2b7e151628aed2a6abf7158809cf4f3c --text 0123456789abcdef --quiet)  # XTS needs 32/64-byte key
+run(3 encrypt --mode xts --key-hex 1111111111111111111111111111111111111111111111111111111111111111
+      --text 0123456789abcdef --quiet)                                                              # K1 == K2 forbidden
+run(3 encrypt --mode xts --key-hex 1111111111111111111111111111111122222222222222222222222222222222
+      --text short --quiet)                                                                         # data unit < 16 bytes
+run(2 encrypt --mode xts --key-hex 1111111111111111111111111111111122222222222222222222222222222222
+      --nonce 000000000000000000000000 --text 0123456789abcdef --quiet)                             # --nonce is CTR only
+run(3 encrypt --key-hex 00112233445566778899aabbccddeeff0011 --text hi --quiet)                    # 18-byte key
+
 # 4. fail-closed paths (exit codes: 2 usage, 3 invalid input, 4 I/O, 5 counter overflow)
 run(3 encrypt --key-hex 00112233 --text hi --quiet)                           # short key
 run(3 encrypt --key-hex 2b7e151628aed2a6abf7158809cf4f3c --iv-hex 00 --text hi --quiet)  # short IV

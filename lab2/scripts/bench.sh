@@ -25,6 +25,6 @@ run_bench() {
     "$TOOL" bench --sizes "$size" --runs "$runs" --csv "$output"
 }
 
-run_bench 1MiB 500
-run_bench 100MiB 100
+run_bench 1MiB 100
+run_bench 100MiB 50
 run_bench 1GiB 30

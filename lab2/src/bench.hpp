@@ -1,8 +1,7 @@
 // Benchmark harness following the lab's performance protocol:
-//   warm-up (1-2 s) -> N >= 30 independent timed runs, each of `ops` operations
+//   warm-up (1-2 s, for every case) -> N = 30..100 independent timed runs, each a block of ~1000 operations
 //   -> mean / median / stddev / 95% CI of throughput (MB/s, 1 MB = 10^6 B) and latency (ms/op).
-// Synthetic payloads use a fixed-seed xorshift PRNG (allowed: not key/nonce material);
-// keys and IVs always come from the OS CSPRNG.
+// Payloads, keys and IVs all come from the CSPRNG (OpenSSL RAND_bytes).
 #pragma once
 #include <cstddef>
 #include <ostream>
@@ -21,8 +20,11 @@ struct BenchOptions {
   std::string ref = "all";     // all | openssl | cryptopp | none
   std::size_t runs = 30;       // independent timed runs per case (>= 30 recommended)
   double warmup_sec = 1.5;     // 1-2 s per case
-  double target_sec = 0.25;    // auto ops/run so one run lasts about this long (ignored if ops > 0)
-  std::size_t ops = 0;         // fixed ops per run (the lab suggests ~1000); 0 = auto, capped at 1000
+  double target_sec = 0.0;     // > 0: pick ops/run so one run lasts about this long (time based); 0 = use the data budget
+  std::size_t budget_bytes = static_cast<std::size_t>(256) << 20;  // auto ops = min(1000, budget / payload size), >= 1
+  std::size_t ops = 0;         // fixed ops per run (the protocol uses ~1000); 0 = auto (see budget_bytes)
+  std::size_t key_bytes = 16;  // 16 / 24 / 32 -> AES-128 / AES-192 / AES-256 (CTR)
+  std::size_t threads = 1;     // worker threads (each has a private buffer); throughput is the aggregate
   bool do_encrypt = true, do_decrypt = true;
   std::string csv_path;        // optional CSV output
 };

@@ -2,34 +2,29 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 REM ===========================================================================
-REM build_windows.bat - Build Lab 1 (aestool) on Windows with MSVC, GCC, or Clang
+REM build_windows.bat - Build + test Lab 1 (aestool) on Windows with MSVC or MinGW64 (GCC)
 REM
-REM Usage (from lab1 folder):
-REM     scripts\build_windows.bat [compiler] [clean]
+REM Usage (from the lab1 folder or anywhere):
+REM     scripts\build_windows.bat [msvc|gcc|clang] [clean]
 REM
-REM Compilers:
-REM     msvc    - Microsoft Visual C++ (default, requires x64 Native Tools)
-REM     gcc     - MinGW-w64 GCC (from MSYS2 mingw64)
-REM     clang   - Clang (from MSYS2 mingw64)
+REM   msvc   Microsoft Visual C++ (default). Run inside "x64 Native Tools Command Prompt for VS".
+REM   gcc    MinGW-w64 GCC (MSYS2 mingw64) - put C:\msys64\mingw64\bin first in PATH.
+REM   clang  Clang from MSYS2 mingw64.
 REM
-REM Examples:
-REM     scripts\build_windows.bat msvc
-REM     scripts\build_windows.bat gcc
-REM     scripts\build_windows.bat clang
-REM     scripts\build_windows.bat msvc clean
-REM
-REM Env vars (optional):
-REM     CRYPTOPP_ROOT     Crypto++ root (default: D:\UIT\NT219\libs\cryptopp)
-REM     OPENSSL_ROOT_DIR  OpenSSL root per compiler (auto-detected if not set)
-REM     MSVC_RUNTIME      MultiThreaded (/MT, default) or MultiThreadedDLL (/MD)
+REM No path has to be edited. Crypto++ is found automatically:
+REM   MSVC : set VCPKG_ROOT (or pass nothing if you already pass your own -D flags through CMAKE_ARGS) after
+REM          vcpkg install cryptopp:x64-windows-static     -> the script uses the vcpkg toolchain + static /MT.
+REM   MinGW: pacman -S mingw-w64-x86_64-crypto++ mingw-w64-x86_64-catch mingw-w64-x86_64-ninja
+REM Optional environment variables:
+REM   VCPKG_ROOT         vcpkg checkout (MSVC route)
+REM   CRYPTOPP_ROOT_DIR  install prefix of a self-built Crypto++ (headers in include\, library in lib\)
+REM   CMAKE_ARGS         extra arguments passed verbatim to the CMake configure step
 REM ===========================================================================
 
 cd /d "%~dp0\.."
 
-REM Parse arguments
-set "COMPILER="
+set "COMPILER=msvc"
 set "ACTION="
-
 :PARSE_ARGS
 if "%~1"=="" goto :DONE_PARSE
 if /I "%~1"=="msvc"  set "COMPILER=msvc"  & shift & goto :PARSE_ARGS
@@ -39,145 +34,80 @@ if /I "%~1"=="clean" set "ACTION=clean"   & shift & goto :PARSE_ARGS
 echo [WARN] Unknown argument: %~1
 shift
 goto :PARSE_ARGS
-
 :DONE_PARSE
 
-REM Defaults
-if "%COMPILER%"=="" set "COMPILER=msvc"
-
-REM Handle clean action
 if /I "%ACTION%"=="clean" (
-    echo Cleaning build directories...
-    for /d %%D in (build_windows_*) do (
-        echo Removing %%D
-        rmdir /s /q "%%D" 2>nul
-    )
+    for /d %%D in (build_windows_*) do rmdir /s /q "%%D" 2>nul
+    echo Build directories removed.
     exit /b 0
 )
 
-REM Validate compiler choice
-set "VALID_COMPILER=0"
-if /I "%COMPILER%"=="msvc"   set "VALID_COMPILER=1"
-if /I "%COMPILER%"=="gcc"    set "VALID_COMPILER=1"
-if /I "%COMPILER%"=="clang"  set "VALID_COMPILER=1"
-if "%VALID_COMPILER%"=="0" (
-    echo [ERROR] Invalid compiler: %COMPILER%
-    echo Usage: scripts\build_windows.bat ^<msvc^|gcc^|clang^> [clean]
-    exit /b 1
-)
-
-REM Check for cmake
 where cmake >nul 2>nul
 if errorlevel 1 (
     echo [ERROR] cmake not found in PATH. Install: winget install Kitware.CMake
     exit /b 1
 )
 
-REM Set compiler-specific variables
+REM Prefer Ninja when available (faster, works for every compiler); otherwise fall back to CMake's default.
+set "GEN="
+where ninja >nul 2>nul
+if not errorlevel 1 set "GEN=-G Ninja"
+
+set "BUILD_DIR=build_windows_%COMPILER%"
+set "EXTRA="
+set "CXX="
+
 if /I "%COMPILER%"=="msvc" (
-    set "BUILD_DIR=build_windows_msvc"
-    set "GENERATOR=-G \"Visual Studio 18 2026\" -A x64"
-    set "CMAKE_CXX_COMPILER="
-    set "OPENSSL_ROOT_DIR=D:/UIT/NT219/libs/openssl/msvc"
-    if "%MSVC_RUNTIME%"=="" set "MSVC_RUNTIME=MultiThreaded"
-    set "RUNTIME_FLAG=-DCMAKE_MSVC_RUNTIME_LIBRARY=%MSVC_RUNTIME%"
-    REM Check for cl.exe
     where cl >nul 2>nul
     if errorlevel 1 (
-        echo [ERROR] MSVC compiler (cl.exe) not found.
-        echo Run from "x64 Native Tools Command Prompt for VS 2022"
+        echo [ERROR] cl.exe not found. Open "x64 Native Tools Command Prompt for VS" and run again.
         exit /b 1
     )
+    set "EXTRA=-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded"
+    if not "%VCPKG_ROOT%"=="" set "EXTRA=!EXTRA! -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT:\=/%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static"
 )
-
 if /I "%COMPILER%"=="gcc" (
-    set "BUILD_DIR=build_windows_gcc"
-    set "GENERATOR=-G \"MinGW Makefiles\""
-    set "CMAKE_CXX_COMPILER=-DCMAKE_CXX_COMPILER=g++.exe"
-    set "OPENSSL_ROOT_DIR=D:/UIT/NT219/libs/openssl/gcc"
-    set "RUNTIME_FLAG="
-    where g++.exe >nul 2>nul
+    where g++ >nul 2>nul
     if errorlevel 1 (
-        echo [ERROR] g++.exe not found in PATH.
-        echo Use MSYS2 mingw64 shell: C:\msys64\mingw64\bin\g++.exe
+        echo [ERROR] g++ not found in PATH. Use MSYS2 mingw64: C:\msys64\mingw64\bin
         exit /b 1
     )
+    if "%GEN%"=="" set "GEN=-G "MinGW Makefiles""
+    set "CXX=-DCMAKE_CXX_COMPILER=g++"
 )
-
 if /I "%COMPILER%"=="clang" (
-    set "BUILD_DIR=build_windows_clang"
-    set "GENERATOR=-G \"MinGW Makefiles\""
-    set "CMAKE_CXX_COMPILER=-DCMAKE_CXX_COMPILER=clang++.exe"
-    set "OPENSSL_ROOT_DIR=D:/UIT/NT219/libs/openssl/clang"
-    set "RUNTIME_FLAG="
-    where clang++.exe >nul 2>nul
+    where clang++ >nul 2>nul
     if errorlevel 1 (
-        echo [ERROR] clang++.exe not found in PATH.
-        echo Use MSYS2 mingw64 shell: C:\msys64\mingw64\bin\clang++.exe
+        echo [ERROR] clang++ not found in PATH. Use MSYS2 mingw64.
         exit /b 1
     )
+    if "%GEN%"=="" set "GEN=-G "MinGW Makefiles""
+    set "CXX=-DCMAKE_CXX_COMPILER=clang++"
 )
+if not "%CRYPTOPP_ROOT_DIR%"=="" set "EXTRA=!EXTRA! -DCRYPTOPP_ROOT_DIR=%CRYPTOPP_ROOT_DIR:\=/%"
 
-REM Default Crypto++ root (FindCryptoPP.cmake will auto-detect compiler-specific libs)
-if "%CRYPTOPP_ROOT%"=="" set "CRYPTOPP_ROOT=D:/UIT/NT219/libs/cryptopp"
+echo == 1/4 Configure (%COMPILER%, build dir: %BUILD_DIR%) ==
+cmake -S . -B "%BUILD_DIR%" %GEN% %CXX% -DCMAKE_BUILD_TYPE=Release !EXTRA! %CMAKE_ARGS%
+if errorlevel 1 ( echo [ERROR] Configure failed. & exit /b 1 )
 
-echo.
-echo ================================================================================
-echo Building Lab 1 - AES Tool
-echo Compiler: %COMPILER%
-echo Build dir: %BUILD_DIR%
-echo Crypto++ root: %CRYPTOPP_ROOT%
-echo OpenSSL root: %OPENSSL_ROOT_DIR%
-echo ================================================================================
-echo.
-
-REM Configure
-echo == 1/4 Configure ==
-cmake -S . -B "%BUILD_DIR%" %GENERATOR% %CMAKE_CXX_COMPILER% ^
-    -DCMAKE_BUILD_TYPE=Release ^
-    -DCRYPTOPP_ROOT_DIR="%CRYPTOPP_ROOT%" ^
-    -DOPENSSL_ROOT_DIR="%OPENSSL_ROOT_DIR%" ^
-    %RUNTIME_FLAG%
-if errorlevel 1 (
-    echo [ERROR] Configure failed.
-    exit /b 1
-)
-
-REM Build
 echo == 2/4 Build ==
 cmake --build "%BUILD_DIR%" --config Release
-if errorlevel 1 (
-    echo [ERROR] Build failed.
-    exit /b 1
-)
+if errorlevel 1 ( echo [ERROR] Build failed. & exit /b 1 )
 
-REM Test
 echo == 3/4 Test (ctest) ==
 pushd "%BUILD_DIR%"
 ctest -C Release --output-on-failure
 set "CTEST_RC=!ERRORLEVEL!"
 popd
-if not "!CTEST_RC!"=="0" (
-    echo [ERROR] Tests failed.
-    exit /b 1
-)
+if not "!CTEST_RC!"=="0" ( echo [ERROR] Tests failed. & exit /b 1 )
 
-REM KAT
 echo == 4/4 KAT (Known Answer Tests) ==
 set "EXE=%BUILD_DIR%\aestool.exe"
 if not exist "!EXE!" set "EXE=%BUILD_DIR%\Release\aestool.exe"
-if not exist "!EXE!" (
-    echo [ERROR] Executable not found: !EXE!
-    exit /b 1
-)
+if not exist "!EXE!" ( echo [ERROR] Executable not found. & exit /b 1 )
 "!EXE!" --kat kat\vectors.json
-if errorlevel 1 (
-    echo [ERROR] KAT failed.
-    exit /b 1
-)
+if errorlevel 1 ( echo [ERROR] KAT failed. & exit /b 1 )
 
 echo.
-echo ================================================================================
-echo SUCCESS! Binary: %CD%\!EXE!
-echo ================================================================================
+echo SUCCESS - binary: %CD%\!EXE!
 exit /b 0
