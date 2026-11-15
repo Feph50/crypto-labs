@@ -44,7 +44,7 @@ Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ ch�
 | `--kat vectors.json`, JSON, PASS/FAIL từng test, tổng kết | ✅ | 29 vector, **29 passed** |
 | Negative: sai key, sai IV, ciphertext sửa (AEAD / non-AEAD), tag sai, IV sai độ dài | ✅ | Thêm: **tag/IV bị sửa trong header**, AAD sai, header hỏng, key file hỏng, XTS ngắn, KAT hỏng |
 | Unit test Catch2, `ctest` pass Windows + Linux | ✅ | 3 test ctest: unit, KAT, CLI negative |
-| Log bằng chứng (KAT, ctest, test âm tính) | 🟡 | Windows ✅ (MinGW, MSVC): `output/windows/{kat,ctest,negative}_windows_*.txt`. **Ubuntu: chưa có**, cần chạy lệnh ở `docs/TEST_EVIDENCE.md` mục 3 |
+| Log bằng chứng (KAT, ctest, test âm tính) | ✅ | Windows (MinGW, MSVC) và Ubuntu: `output/<os>/{kat,ctest,negative}_<os>_*.txt`; KAT 29/29, ctest 3/3, negative 12/17/5 trên cả ba |
 | CI | ❌ (tùy chọn) | Chưa có workflow |
 
 ## 4. Hiệu năng
