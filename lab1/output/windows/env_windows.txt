@@ -1,0 +1,52 @@
+﻿== commit (HEAD when the Windows data were collected; the Windows CSVs were measured on code identical to the Linux commit 57aef58) ==
+df000a9a866f46ce89f0e15238fb4cb9967c3970
+== kat sha256 ==
+0ecc5256a246459bd609790e0dcdf077ac5154bbc8318a5adbe3bd8248d4e9b3  kat/vectors.json
+== compiler / cmake / cryptopp ==
+g++.exe (Rev4, Built by MSYS2 project) 16.2.0
+cmake version 4.4.3
+mingw-w64-x86_64-crypto++ 8.9.0-2
+MSVC: cl 19.51 (Visual Studio 2026), Crypto++ from vcpkg x64-windows-static
+== cpu ==
+
+
+Name                      : 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
+NumberOfCores             : 8
+NumberOfLogicalProcessors : 16
+MaxClockSpeed             : 2304
+
+
+
+== ram ==
+
+
+Manufacturer : LENOVO
+Model        : 20Y4S2NA00
+RAM_GB       : 31.7
+
+
+
+== os ==
+
+
+Caption     : Microsoft Windows 11 Pro
+Version     : 10.0.26200
+BuildNumber : 26200
+
+
+
+== disk ==
+
+
+FriendlyName : Kingston DataTraveler 3.0
+MediaType    : Unspecified
+Size         : 61991813120
+
+FriendlyName : SAMSUNG MZVL2512HCJQ-00BL7
+MediaType    : SSD
+Size         : 512110190592
+
+
+
+== power plan (at the time of this capture) ==
+Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)

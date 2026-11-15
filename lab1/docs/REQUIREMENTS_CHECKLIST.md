@@ -44,6 +44,7 @@ Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ ch�
 | `--kat vectors.json`, JSON, PASS/FAIL từng test, tổng kết | ✅ | 29 vector, **29 passed** |
 | Negative: sai key, sai IV, ciphertext sửa (AEAD / non-AEAD), tag sai, IV sai độ dài | ✅ | Thêm: **tag/IV bị sửa trong header**, AAD sai, header hỏng, key file hỏng, XTS ngắn, KAT hỏng |
 | Unit test Catch2, `ctest` pass Windows + Linux | ✅ | 3 test ctest: unit, KAT, CLI negative |
+| Log bằng chứng (KAT, ctest, test âm tính) | 🟡 | Windows ✅ (MinGW, MSVC): `output/windows/{kat,ctest,negative}_windows_*.txt`. **Ubuntu: chưa có**, cần chạy lệnh ở `docs/TEST_EVIDENCE.md` mục 3 |
 | CI | ❌ (tùy chọn) | Chưa có workflow |
 
 ## 4. Hiệu năng
@@ -54,8 +55,8 @@ Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ ch�
 | Payload 1 KB … 8 MB; thông lượng + độ trễ | ✅ | |
 | Mean, median, SD, CI 95% | ✅ | Bảng 3b trong báo cáo (từ CSV) và script `scripts/csv_to_stats_table.py` |
 | So sánh Windows/Linux, stream/block, AEAD/non-AEAD, overhead tag | ✅ | Báo cáo mục 5.5 |
-| **Số liệu trong `output/` và biểu đồ** | 🟡 | **Cần bạn chạy lại bản đầy đủ** (số cũ tạo trước khi chuẩn hóa `bench`); lệnh mẫu: `aestool bench --runs 30 --out bench.csv`, rồi `python scripts/plot_bench.py` và `python ../scripts/csv_to_stats_table.py` |
-| Bảng phần cứng/OS, governor | 🟡 | Điền theo máy chạy lại |
+| **Số liệu trong `output/` và biểu đồ** | ✅ | Đã đo lại: `bench_windows_gcc.csv`, `bench_windows_msvc.csv`, `bench_ubuntu_gcc.csv` (cùng máy, 30 lần lặp); biểu đồ sinh bằng `plot_bench.py --auto --prefer gcc` |
+| Bảng phần cứng/OS, governor | ✅ | Báo cáo mục 5.1, từ `env_windows.txt` và `env_ubuntu.txt` |
 
 ## 5. Báo cáo
 
@@ -77,7 +78,7 @@ Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ ch�
 
 ## 7. Việc còn lại cho Lab 1
 
-1. **Chạy lại benchmark đầy đủ** trên Windows và Ubuntu, cập nhật CSV, biểu đồ, Bảng 3/3b trong báo cáo (bạn đã nói sẽ tự chạy).
+1. ~~Chạy lại benchmark đầy đủ~~ — **đã xong**: số liệu, biểu đồ, Bảng 3 đến 7 và mục 5.1, 5.4–5.6 của báo cáo đã cập nhật.
 2. **Đọc và xác nhận** khai báo AI trong báo cáo.
 3. Chạy thử Clang trên Windows nếu muốn giữ dòng Clang trong ma trận build.
 4. (Tùy chọn) Bonus: làm `.dll`/`.so` + API C và cho GUI gọi bằng `ctypes`; thêm CI.

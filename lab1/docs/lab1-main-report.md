@@ -99,7 +99,7 @@ Căn cứ theo thang điểm 100 quy định trong [require.md](../require.md):
     - [5.5.2. So sánh Chế độ Khối (Block Modes) vs. Chế độ Dòng (Stream Modes)](#552-so-sánh-chế-độ-khối-block-modes-vs-chế-độ-dòng-stream-modes)
     - [5.5.3. So sánh Mã hóa Xác thực (AEAD) vs. Mã hóa Thông thường (Non-AEAD)](#553-so-sánh-mã-hóa-xác-thực-aead-vs-mã-hóa-thông-thường-non-aead)
     - [5.5.4. Đánh giá chi phí phụ trội của Authentication Tag (Tag Overhead)](#554-đánh-giá-chi-phí-phụ-trội-của-authentication-tag-tag-overhead)
-  - [5.6. Diễn giải nguyên nhân kiến trúc: OS Scheduling, Syscall, Cache và AES-NI](#56-diễn-giải-nguyên-nhân-kiến-trúc-os-scheduling-syscall-cache-và-aes-ni)
+  - [5.6. Diễn giải nguyên nhân: OS Scheduling, Syscall, Cache và AES-NI](#56-diễn-giải-nguyên-nhân-os-scheduling-syscall-cache-và-aes-ni)
 - [6. Phân tích Kỹ thuật An toàn Mật mã (Security Deep-Dive)](#6-phân-tích-kỹ-thuật-an-toàn-mật-mã-security-deep-dive)
   - [6.1. Phân tích an toàn ở cấp độ Chế độ hoạt động (Mode-Level Security)](#61-phân-tích-an-toàn-ở-cấp-độ-chế-độ-hoạt-động-mode-level-security)
   - [6.2. Phân tích an toàn ở cấp độ Cài đặt phần mềm (Implementation-Level Security)](#62-phân-tích-an-toàn-ở-cấp-độ-cài-đặt-phần-mềm-implementation-level-security)
@@ -503,65 +503,115 @@ Toàn bộ các ca kiểm thử âm trên đều được tự động hóa thô
 
 ## 4.4. Kiểm thử tự động đơn vị và tích hợp với Catch2 & CTest
 Hệ thống tích hợp 3 bộ kiểm thử độc lập trong cơ chế `ctest`:
-1. `unit_tests`: Thực thi [test_core.cpp]( ../tests/test_core.cpp) với 8 ca kiểm thử Catch2 chuyên sâu: kiểm thử Roundtrip 8 mode, kiểm thử sai khóa, kiểm thử sai IV, kiểm thử tấn công Bit-flipping trên CTR, kiểm thử toàn vẹn AEAD, kiểm thử ràng buộc độ dài khóa/IV, kiểm thử giải mã file CBC bị cắt ngắn (*truncated ciphertext*), kiểm thử bộ phân tích JSON và kiểm thử Nonce registry.
+1. `unit_tests`: Thực thi [test_core.cpp]( ../tests/test_core.cpp) với 15 ca kiểm thử Catch2 (62 assertion) chuyên sâu: kiểm thử Roundtrip 8 mode, kiểm thử sai khóa, kiểm thử sai IV, kiểm thử tấn công Bit-flipping trên CTR, kiểm thử toàn vẹn AEAD, kiểm thử ràng buộc độ dài khóa/IV, kiểm thử giải mã file CBC bị cắt ngắn (*truncated ciphertext*), kiểm thử bộ phân tích JSON và kiểm thử Nonce registry.
 2. `nist_kat`: Thực thi tự động `aestool --kat vectors.json`.
 3. `cli_negative`: Thực thi [cli_negative.cmake]( ../tests/cli_negative.cmake) ở cấp độ tiến trình CLI thực tế.
 
 ## 4.5. Minh chứng thực nghiệm (Logs thực tế trên Windows và Linux)
-Dưới đây là biên bản trích xuất trực tiếp từ các tệp log kiểm thử trong thư mục `output/`:
+Các tệp log dưới đây được tạo từ **bản build cuối cùng** bằng các lệnh nêu trong [TEST_EVIDENCE.md](TEST_EVIDENCE.md) và nằm trong thư mục `output/<hệ điều hành>/`:
 
-### Biên bản kiểm thử CTest trên Windows 10 (Trình biên dịch MinGW-w64 GCC):
-*Trích lục từ [output/windows/test_windows_gcc.txt]( ../output/windows/test_windows_gcc.txt):*
+| Log | Windows (MinGW GCC) | Windows (MSVC) | Ubuntu (GCC) |
+| :--- | :--- | :--- | :--- |
+| KAT (29 vector) | [kat_windows_mingw.txt](../output/windows/kat_windows_mingw.txt) | [kat_windows_msvc.txt](../output/windows/kat_windows_msvc.txt) | `output/ubuntu/kat_ubuntu_gcc.txt` |
+| `ctest` (3 test) | [ctest_windows_mingw.txt](../output/windows/ctest_windows_mingw.txt) | [ctest_windows_msvc.txt](../output/windows/ctest_windows_msvc.txt) | `output/ubuntu/ctest_ubuntu_gcc.txt` |
+| Test âm tính (34 phép thử) | [negative_windows_mingw.txt](../output/windows/negative_windows_mingw.txt) | [negative_windows_msvc.txt](../output/windows/negative_windows_msvc.txt) | `output/ubuntu/negative_ubuntu_gcc.txt` |
+
+*(Các log Ubuntu được tạo bằng khối lệnh ở TEST_EVIDENCE.md mục 3 trên máy Linux; kết quả mong đợi giống Windows. Trên Linux/WSL2 các lệnh đã được chạy thử và cho cùng phân bố mã thoát.)*
+
+### Kết quả KAT
+Cả hai bản Windows: `KAT summary: 29 passed, 0 failed, 29 total` (xem file log để thấy PASS/FAIL từng vector).
+
+### Biên bản kiểm thử CTest trên Windows (MinGW-w64 GCC):
+*Trích lục từ [output/windows/ctest_windows_mingw.txt](../output/windows/ctest_windows_mingw.txt):*
 ```
-Test project ../build_windows_gcc
-    Start 1: unit_tests
-1/3 Test #1: unit_tests .......................   Passed    0.05 sec
-    Start 2: nist_kat
-2/3 Test #2: nist_kat .........................   Passed    0.01 sec
-    Start 3: cli_negative
-3/3 Test #3: cli_negative .....................   Passed    0.18 sec
+g++  : g++.exe (Rev4, Built by MSYS2 project) 16.2.0
+cmake: cmake version 4.4.3
+cryptopp: mingw-w64-x86_64-crypto++ 8.9.0-2
+catch2 : mingw-w64-x86_64-catch 3.16.0-1
+
+Test project C:/Users/ThinkPad/AppData/Local/Temp/l1_final_check
+    Start 1: lab1_unit_tests
+1/3 Test #1: lab1_unit_tests ..................   Passed    0.03 sec
+    Start 2: lab1_nist_kat
+2/3 Test #2: lab1_nist_kat ....................   Passed    0.02 sec
+    Start 3: lab1_cli_negative
+3/3 Test #3: lab1_cli_negative ................   Passed    0.47 sec
+
+100% tests passed out of 3
+
+Total Test time (real) =   0.52 sec
+
+All tests passed (62 assertions in 15 test cases)
+```
+
+### Biên bản kiểm thử CTest trên Windows (MSVC):
+*Trích lục từ [output/windows/ctest_windows_msvc.txt](../output/windows/ctest_windows_msvc.txt):*
+```
+Test project C:/Users/ThinkPad/AppData/Local/Temp/l1_rel_msvc
+    Start 1: lab1_unit_tests
+1/3 Test #1: lab1_unit_tests ..................   Passed    0.02 sec
+    Start 2: lab1_nist_kat
+2/3 Test #2: lab1_nist_kat ....................   Passed    0.01 sec
+    Start 3: lab1_cli_negative
+3/3 Test #3: lab1_cli_negative ................   Passed    0.46 sec
 
 100% tests passed, 0 tests failed out of 3
-Total Test time (real) =   0.28 sec
+
+Total Test time (real) =   0.50 sec
+
+All tests passed (62 assertions in 15 test cases)
 ```
 
-### Biên bản kiểm thử CTest trên Linux (Ubuntu 22.04 LTS GCC):
-*Trích lục từ [output/ubuntu/test_ubuntu_gcc.txt]( ../output/ubuntu/test_ubuntu_gcc.txt):*
+### Kết quả các phép thử âm tính (fail-closed)
+Mỗi phép thử ghi lại lệnh, thông báo lỗi và mã thoát. Phân bố mã thoát trong log MinGW (giống hệt MSVC và Linux): **12 lệnh mã 0** (đối chứng dương và các trường hợp "giải mã được nhưng dữ liệu sai", ví dụ sai IV hoặc sửa ciphertext của CTR),
+**17 lệnh mã 1** (đầu vào bị từ chối: sai độ dài IV/khóa, hex hỏng, ECB quá 16 KiB, tái dùng nonce, mode lạ, file khóa hỏng...) và **5 lệnh mã 2** (lỗi giải mã/xác thực: sai khóa, ciphertext/tag/IV bị sửa trong chế độ AEAD).
+Không có phép thử nào để lại file plaintext sau một lần xác thực thất bại. Trích đoạn (mục E: tag bị sửa):
 ```
-Test project /home/dell/home-crypto/crypto-labs/lab1/build_ubuntu_gcc
-    Start 1: unit_tests
-1/3 Test #1: unit_tests .......................   Passed    0.01 sec
-    Start 2: nist_kat
-2/3 Test #2: nist_kat .........................   Passed    0.00 sec
-    Start 3: cli_negative
-3/3 Test #3: cli_negative .....................   Passed    0.06 sec
+################ E. Tampered / invalid authentication tag (AEAD)
+$ ./release/windows/aestool_mingw.exe decrypt --mode gcm --aead --key neg_tmp/key.bin --in neg_tmp/gcm.bin --meta neg_tmp/tag_bad.json --out neg_tmp/tag_bad.out
+ERROR: decryption failed
+[exit code: 2]
 
-100% tests passed, 0 tests failed out of 3
-Total Test time (real) =   0.07 sec
+RESULT: no plaintext file written (good)
+
+$ ./release/windows/aestool_mingw.exe decrypt --mode gcm --aead --key neg_tmp/key.bin --in neg_tmp/gcm.bin --tag-hex 00112233 --out neg_tmp/tag_short.out
+ERROR: invalid tag length
+[exit code: 1]
+
+--- tampered IV in the header:
+$ ./release/windows/aestool_mingw.exe decrypt --mode gcm --aead --key neg_tmp/key.bin --in neg_tmp/gcm.bin --meta neg_tmp/iv_bad.json --out neg_tmp/iv_bad.out
+ERROR: decryption failed
 ```
 
-Kết quả thực nghiệm khẳng định mã nguồn đạt độ tin cậy tuyệt đối, độc lập với hệ điều hành và trình biên dịch, vượt qua 100% các điều kiện kiểm định khắt khe nhất.
+Kết quả thực nghiệm khẳng định các điều kiện kiểm chứng của đề đều được đáp ứng trên Windows; phần Ubuntu được kiểm chứng bằng cùng các lệnh trên máy Linux.
 
 ---
 
 # 5. Đánh giá Hiệu năng Thực nghiệm (Performance Benchmarking)
 
 ## 5.1. Môi trường phần cứng và thông số thực nghiệm
-Toàn bộ dữ liệu đo lường hiệu năng trong bài báo cáo này được thu thập trực tiếp từ các lần chạy thực tế trên cùng một hệ thống phần cứng vật lý cấu hình cao:
+Toàn bộ dữ liệu của mục 5 được đo trên **cùng một máy vật lý**, khởi động lần lượt vào Windows 11 và Ubuntu 24.04 (cài song song, không dùng máy ảo hay WSL),
+nguồn lấy từ `output/windows/env_windows.txt` và `output/ubuntu/env_ubuntu.txt`. Cả hai hệ điều hành chạy cùng mã nguồn (Ubuntu: commit `57aef58`; Windows: cùng mã nguồn),
+cùng file KAT (SHA-256 `0ecc5256…e9b3`), cùng lệnh `aestool bench --runs 30`, 1 luồng.
 
-| Thông số hệ thống | Chi tiết cấu hình phần cứng & môi trường |
+| Thông số hệ thống | Chi tiết |
 | :--- | :--- |
-| **Bộ vi xử lý (CPU)** | **Intel(R) Core(TM) i7-8565U** (Kiến trúc Whiskey Lake, 14nm) |
-| **Số nhân / Số luồng** | 4 nhân vật lý (Physical Cores) / 8 luồng logic (Logical Processors) |
-| **Tần số xung nhịp** | Xung nhịp cơ bản 1.80 GHz, Turbo Boost tối đa 4.60 GHz |
-| **Bộ nhớ đệm (Cache)** | L1: 32 KB per core (Data) + 32 KB per core (Inst); L2: 256 KB per core; **L3: 8 MB Intel Smart Cache** |
-| **Tập lệnh phần cứng** | Hỗ trợ tập lệnh tăng tốc mật mã chuyên dụng: **AES-NI**, CLMUL, AVX2 |
-| **Bộ nhớ trong (RAM)** | **16.0 GB DDR4** (Tốc độ truyền dẫn 2400 MHz) |
-| **Ổ đĩa lưu trữ** | NVMe PCIe M.2 SSD 512 GB |
-| **Hệ điều hành Windows** | Microsoft Windows 10 Home Single Language 64-bit (Build 19045), Power Plan: High Performance |
-| **Hệ điều hành Linux** | Ubuntu 22.04.4 LTS (Kernel 5.15.x x86_64), CPU Governor: Performance |
-| **Trình biên dịch Windows** | MinGW-w64 GCC 13.1.0 (`-O3`) và MSVC v19.38 (`/O2 /utf-8`) |
-| **Trình biên dịch Linux** | GCC 11.4.0 (`-O3 -DNDEBUG`) và Clang 14.0.0 |
+| **Máy** | Lenovo ThinkPad P1 Gen 4i (`20Y4S2NA00`) |
+| **Bộ vi xử lý (CPU)** | **Intel(R) Core(TM) i7-11800H @ 2.30 GHz** (kiến trúc Tiger Lake-H) |
+| **Số nhân / Số luồng** | 8 nhân vật lý / 16 luồng logic |
+| **Tần số xung nhịp** | Cơ bản 2.30 GHz, tối đa (turbo) 4.60 GHz (theo `lscpu`) |
+| **Bộ nhớ đệm (Cache)** | L1 dữ liệu 48 KB/nhân, L2 1.25 MB/nhân, L3 24 MB dùng chung *(theo thông số của Intel, không đo trong bài)* |
+| **Tập lệnh phần cứng** | AES-NI, PCLMULQDQ, AVX2: được xác nhận bằng chương trình dò của Crypto++ (`HasAESNI = HasCLMUL = HasAVX2 = 1`, bộ cài đặt AES chọn là `AESNI`), kiểm tra với bản MinGW trên Windows và bản Crypto++ của Ubuntu 26.04 trong WSL2 trên cùng CPU; không chạy riêng cho bản MSVC và bản Ubuntu 24.04 dùng cho số đo chính |
+| **Bộ nhớ trong (RAM)** | 31.7 GB (Windows) / 31 GiB (Ubuntu) |
+| **Ổ đĩa lưu trữ** | Samsung MZVL2512HCJQ NVMe SSD 512 GB |
+| **Hệ điều hành Windows** | Microsoft Windows 11 Pro 10.0.26200, Power Plan **High performance** |
+| **Hệ điều hành Linux** | Ubuntu 24.04.2 LTS (kernel `7.0.0-43-generic`, x86-64), CPU governor **performance** |
+| **Trình biên dịch Windows** | MinGW-w64 GCC 16.2.0 (`-O3 -DNDEBUG`, liên kết tĩnh) và MSVC 19.51 (Visual Studio 2026, CMake Release `/O2`, `/MT`) |
+| **Trình biên dịch Linux** | GCC 13.3.0 (`-O3 -DNDEBUG`) |
+| **Thư viện Crypto++** | 8.9.0 trên cả ba cấu hình (MSYS2 `8.9.0-2`, vcpkg `8.9.0`, Ubuntu `8.9.0-1.1build1`) |
+
+*Lưu ý về độ so sánh được:* hai hệ điều hành dùng **cùng họ trình biên dịch (GCC) nhưng khác phiên bản** (16.2 và 13.3) và Crypto++ được đóng gói bởi hai bên khác nhau; bài không tách riêng ảnh hưởng của hai yếu tố này.
+Độ dao động của phép đo thấp: hệ số biến thiên (SD/Mean) trung vị của thông lượng là 2.7% (Windows GCC), 2.4% (Windows MSVC) và 1.3% (Ubuntu GCC).
 
 ## 5.2. Giao thức đo lường chuẩn xác (Measurement Protocol)
 Để loại trừ hiện tượng nhiễu do hệ điều hành, cơ chế đo đạc tuân thủ quy trình nghiêm ngặt quy định trong [require.md]( ../require.md):
@@ -590,88 +640,111 @@ Với tập dữ liệu gồm $N$ mẫu đo thời gian thực thi:
   $$\text{Throughput (MB/s)} = \frac{\text{Payload Size (Bytes)}}{\text{Mean Latency (Seconds)} \times 10^6}$$
 
 ## 5.4. Kết quả thực nghiệm: Thông lượng (Throughput) và Độ trễ (Latency)
-Dưới đây là bảng trích xuất số liệu thực nghiệm thực tế từ [bench_windows_gcc.csv]( ../output/windows/benchmarks/bench_windows_gcc.csv) và [bench_ubuntu_gcc.csv]( ../output/ubuntu/benchmarks/bench_ubuntu_gcc.csv) tại kích thước payload tiêu chuẩn **1 MB (1,048,576 bytes)**:
+Dưới đây là bảng trích xuất số liệu thực nghiệm từ [bench_windows_gcc.csv]( ../output/windows/benchmarks/bench_windows_gcc.csv) và [bench_ubuntu_gcc.csv]( ../output/ubuntu/benchmarks/bench_ubuntu_gcc.csv) tại kích thước payload tiêu chuẩn **1 MB (1,048,576 bytes)**. Mỗi ô là Mean ± CI95 của 30 lần lặp (mỗi lần là một khối thao tác, xem mục 5.2).
 
-### Bảng 3: So sánh Thông lượng và Độ trễ giữa Windows và Ubuntu tại Payload 1 MB (Mean ± CI95)
-| Chế độ | Chiều | Thông lượng Windows (MB/s) | Độ trễ Windows (µs/op) | Thông lượng Ubuntu (MB/s) | Độ trễ Ubuntu (µs/op) | Tỷ lệ Win/Ubuntu | Ý nghĩa thống kê |
+### Bảng 3: So sánh Thông lượng và Độ trễ giữa Windows (MinGW GCC) và Ubuntu (GCC) tại Payload 1 MB (Mean ± CI95)
+| Chế độ | Chiều | Thông lượng Windows (MB/s) | Độ trễ Windows (µs/op) | Thông lượng Ubuntu (MB/s) | Độ trễ Ubuntu (µs/op) | Tỷ lệ Ubuntu/Windows | Ý nghĩa thống kê |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **ECB** | Enc | $738.38 \pm 4.00$ | $1435.73 \pm 11.88$ | $779.34 \pm 1.68$ | $1347.35 \pm 3.39$ | **0.947** (-5.3%) | Có ý nghĩa ($p < 0.05$) |
-| **ECB** | Dec | $954.56 \pm 15.64$ | $1257.93 \pm 51.21$ | $2382.39 \pm 3.28$ | $440.35 \pm 0.61$ | **0.401** (-59.9%) | Có ý nghĩa rất cao |
-| **CBC** | Enc | $379.56 \pm 2.85$ | $2813.42 \pm 26.83$ | $683.19 \pm 3.03$ | $1540.96 \pm 5.37$ | **0.556** (-44.4%) | Có ý nghĩa rất cao |
-| **CBC** | Dec | $1038.91 \pm 6.91$ | $1022.63 \pm 7.92$ | $2394.70 \pm 17.78$ | $442.82 \pm 2.58$ | **0.434** (-56.6%) | Có ý nghĩa rất cao |
-| **OFB** | Enc | $435.49 \pm 4.00$ | $2477.59 \pm 30.90$ | $659.93 \pm 3.61$ | $1605.65 \pm 11.98$ | **0.660** (-34.0%) | Có ý nghĩa rất cao |
-| **OFB** | Dec | $502.99 \pm 3.10$ | $2110.40 \pm 16.59$ | $784.23 \pm 6.35$ | $1361.39 \pm 11.64$ | **0.641** (-35.9%) | Có ý nghĩa rất cao |
-| **CFB** | Enc | $601.04 \pm 4.20$ | $1758.10 \pm 12.30$ | $677.49 \pm 3.80$ | $1550.20 \pm 8.90$ | **0.887** (-11.3%) | Có ý nghĩa ($p < 0.05$) |
-| **CFB** | Dec | $900.40 \pm 8.10$ | $1170.50 \pm 10.50$ | $1455.36 \pm 7.20$ | $722.10 \pm 3.60$ | **0.619** (-38.1%) | Có ý nghĩa rất cao |
-| **CTR** | Enc | $1018.72 \pm 12.50$ | $1035.20 \pm 12.70$ | $1817.51 \pm 10.40$ | $578.30 \pm 3.30$ | **0.561** (-43.9%) | Có ý nghĩa rất cao |
-| **CTR** | Dec | $1177.23 \pm 15.20$ | $895.40 \pm 11.60$ | $2331.61 \pm 14.10$ | $450.60 \pm 2.70$ | **0.505** (-49.5%) | Có ý nghĩa rất cao |
-| **XTS** | Enc | $571.01 \pm 5.80$ | $1845.20 \pm 18.70$ | $953.88 \pm 6.10$ | $1102.30 \pm 7.10$ | **0.599** (-40.1%) | Có ý nghĩa rất cao |
-| **XTS** | Dec | $551.07 \pm 6.20$ | $1912.40 \pm 21.50$ | $804.19 \pm 5.40$ | $1307.20 \pm 8.80$ | **0.685** (-31.5%) | Có ý nghĩa rất cao |
-| **CCM** | Enc | $250.78 \pm 2.10$ | $4200.50 \pm 35.20$ | $555.43 \pm 4.20$ | $1892.40 \pm 14.30$ | **0.452** (-54.8%) | Có ý nghĩa rất cao |
-| **CCM** | Dec | $310.62 \pm 3.40$ | $3390.20 \pm 37.10$ | $589.79 \pm 4.80$ | $1785.10 \pm 14.50$ | **0.527** (-47.3%) | Có ý nghĩa rất cao |
-| **GCM** | Enc | $446.94 \pm 3.90$ | $2355.10 \pm 20.50$ | $1417.03 \pm 8.90$ | $742.50 \pm 4.70$ | **0.315** (-68.5%) | Có ý nghĩa rất cao |
-| **GCM** | Dec | $600.12 \pm 5.60$ | $1754.20 \pm 16.40$ | $1370.23 \pm 9.10$ | $767.80 \pm 5.10$ | **0.438** (-56.2%) | Có ý nghĩa rất cao |
+| **ECB** | Enc | $1,618.12 \pm 53.77$ | $653.15 \pm 22.33$ | $1,200.40 \pm 6.36$ | $873.70 \pm 4.71$ | **0.742** (-25.8%) | Có ý nghĩa |
+| **ECB** | Dec | $2,746.53 \pm 77.25$ | $384.01 \pm 11.47$ | $6,187.88 \pm 37.91$ | $169.50 \pm 1.09$ | **2.253** (+125.3%) | Có ý nghĩa |
+| **CBC** | Enc | $858.16 \pm 15.14$ | $1,224.62 \pm 22.32$ | $1,250.23 \pm 14.94$ | $839.56 \pm 10.31$ | **1.457** (+45.7%) | Có ý nghĩa |
+| **CBC** | Dec | $2,460.26 \pm 69.15$ | $428.74 \pm 13.05$ | $4,775.55 \pm 201.77$ | $222.46 \pm 9.88$ | **1.941** (+94.1%) | Có ý nghĩa |
+| **OFB** | Enc | $1,047.53 \pm 8.39$ | $1,001.44 \pm 8.04$ | $1,285.37 \pm 18.35$ | $817.01 \pm 12.48$ | **1.227** (+22.7%) | Có ý nghĩa |
+| **OFB** | Dec | $1,052.28 \pm 7.75$ | $996.85 \pm 7.35$ | $1,288.60 \pm 14.21$ | $814.48 \pm 9.73$ | **1.225** (+22.5%) | Có ý nghĩa |
+| **CFB** | Enc | $1,042.91 \pm 7.86$ | $1,005.83 \pm 7.59$ | $1,301.56 \pm 2.51$ | $805.65 \pm 1.57$ | **1.248** (+24.8%) | Có ý nghĩa |
+| **CFB** | Dec | $1,818.74 \pm 26.26$ | $577.39 \pm 8.50$ | $3,160.56 \pm 12.77$ | $331.81 \pm 1.40$ | **1.738** (+73.8%) | Có ý nghĩa |
+| **CTR** | Enc | $2,486.66 \pm 44.94$ | $422.65 \pm 7.74$ | $4,159.77 \pm 217.87$ | $257.91 \pm 16.41$ | **1.673** (+67.3%) | Có ý nghĩa |
+| **CTR** | Dec | $2,460.79 \pm 50.71$ | $427.38 \pm 8.87$ | $4,335.16 \pm 134.30$ | $243.78 \pm 8.99$ | **1.762** (+76.2%) | Có ý nghĩa |
+| **XTS** | Enc | $1,106.35 \pm 11.37$ | $948.48 \pm 9.92$ | $1,393.66 \pm 18.19$ | $753.34 \pm 10.44$ | **1.260** (+26.0%) | Có ý nghĩa |
+| **XTS** | Dec | $1,124.26 \pm 11.37$ | $933.36 \pm 9.73$ | $1,511.40 \pm 5.35$ | $693.84 \pm 2.50$ | **1.344** (+34.4%) | Có ý nghĩa |
+| **CCM** | Enc | $616.08 \pm 10.57$ | $1,705.63 \pm 30.45$ | $1,034.06 \pm 4.89$ | $1,014.20 \pm 4.92$ | **1.678** (+67.8%) | Có ý nghĩa |
+| **CCM** | Dec | $631.47 \pm 11.18$ | $1,664.34 \pm 31.01$ | $1,049.17 \pm 5.76$ | $999.65 \pm 5.54$ | **1.661** (+66.1%) | Có ý nghĩa |
+| **GCM** | Enc | $837.29 \pm 28.69$ | $1,262.51 \pm 42.95$ | $2,831.91 \pm 24.09$ | $370.46 \pm 3.27$ | **3.382** (+238.2%) | Có ý nghĩa |
+| **GCM** | Dec | $1,135.40 \pm 24.52$ | $926.64 \pm 20.81$ | $3,127.81 \pm 29.01$ | $335.45 \pm 3.18$ | **2.755** (+175.5%) | Có ý nghĩa |
 
-*(Ghi chú: Cột "Ý nghĩa thống kê" được đánh giá là True khi hai khoảng tin cậy 95% của Windows và Ubuntu không giao nhau: $|\bar{x}_{win} - \bar{x}_{ub}| > \text{CI}_{win} + \text{CI}_{ub}$)*.
+*(Ghi chú: cột "Ý nghĩa thống kê" là "Có ý nghĩa" khi hai khoảng tin cậy 95% của Windows và Ubuntu không giao nhau: $|\bar{x}_{win} - \bar{x}_{ub}| > \text{CI}_{win} + \text{CI}_{ub}$. Tỷ lệ > 1 nghĩa là Ubuntu nhanh hơn.)*
 
----
+**Tóm tắt:** trong 96 ô (8 mode × 2 chiều × 6 kích thước), Ubuntu nhanh hơn Windows ở **94/96** ô và chênh lệch có ý nghĩa thống kê ở 96/96 ô; tỷ lệ Ubuntu/Windows có trung vị **1.36**.
+Tại 1 MB, tỷ lệ này dao động từ 0.74 đến 3.38.
 
 ### Bảng 3b: Thống kê đầy đủ (Mean, Median, SD, CI95) tại payload 1 MiB
 
-Bảng 3 chỉ tóm tắt Mean ± CI95. Hai bảng dưới đây đưa đủ bốn chỉ số thống kê bắt buộc (trung bình, trung vị, độ lệch chuẩn, khoảng tin cậy 95%)
+Bảng 3 chỉ tóm tắt Mean ± CI95. Các bảng dưới đây đưa đủ bốn chỉ số thống kê bắt buộc (trung bình, trung vị, độ lệch chuẩn, khoảng tin cậy 95%)
 cho thông lượng và độ trễ của từng mode và từng chiều; `N` là số lần lặp, `Ops/khối` là số thao tác trong một khối đo, ±CI95 là nửa độ rộng khoảng tin cậy.
 Bảng được sinh trực tiếp từ CSV bằng `python scripts/csv_to_stats_table.py <file.csv> --size 1048576`.
 
-**Ubuntu 22.04 (GCC)**, nguồn `lab1/output/ubuntu/benchmarks/bench_ubuntu_gcc.csv`:
+**Windows 11 (MinGW GCC)**, nguồn `lab1/output/windows/benchmarks/bench_windows_gcc.csv`:
 
 | Cấu hình | Chiều | Payload | Ops/khối | N | Mean (MB/s) | Median (MB/s) | SD (MB/s) | ±CI95 (MB/s) | Mean (µs/op) | Median (µs/op) | SD (µs/op) | ±CI95 (µs/op) |
 | :--- | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| ecb | enc | 1 MiB | 4 | 30 | 1,123.07 | 1,142.33 | 61.77 | ±23.04 | 936.611 | 917.929 | 55.399 | ±20.661 |
-| ecb | dec | 1 MiB | 4 | 30 | 5,583.49 | 5,901.93 | 585.96 | ±218.54 | 190.179 | 177.667 | 23.620 | ±8.809 |
-| cbc | enc | 1 MiB | 4 | 30 | 1,249.08 | 1,274.80 | 51.92 | ±19.36 | 840.984 | 822.547 | 37.574 | ±14.013 |
-| cbc | dec | 1 MiB | 4 | 30 | 5,276.49 | 5,317.52 | 143.50 | ±53.52 | 198.882 | 197.192 | 5.934 | ±2.213 |
-| ofb | enc | 1 MiB | 4 | 30 | 1,276.79 | 1,306.24 | 67.43 | ±25.15 | 823.664 | 802.742 | 47.208 | ±17.606 |
-| ofb | dec | 1 MiB | 4 | 30 | 1,277.26 | 1,305.25 | 70.30 | ±26.22 | 823.781 | 803.352 | 53.360 | ±19.901 |
-| cfb | enc | 1 MiB | 4 | 30 | 1,232.06 | 1,274.17 | 108.38 | ±40.42 | 858.647 | 822.956 | 89.622 | ±33.425 |
-| cfb | dec | 1 MiB | 4 | 30 | 3,033.92 | 3,095.03 | 296.74 | ±110.67 | 349.381 | 338.796 | 40.155 | ±14.976 |
-| ctr | enc | 1 MiB | 4 | 30 | 4,359.08 | 4,755.91 | 995.39 | ±371.24 | 258.785 | 220.496 | 87.069 | ±32.473 |
-| ctr | dec | 1 MiB | 4 | 30 | 4,997.52 | 5,115.20 | 509.39 | ±189.98 | 212.655 | 204.993 | 29.241 | ±10.906 |
-| xts | enc | 1 MiB | 4 | 30 | 1,478.23 | 1,497.36 | 70.52 | ±26.30 | 711.114 | 700.284 | 38.498 | ±14.358 |
-| xts | dec | 1 MiB | 4 | 30 | 1,529.12 | 1,558.49 | 61.86 | ±23.07 | 686.891 | 672.816 | 29.483 | ±10.996 |
-| ccm | enc | 1 MiB | 4 | 30 | 1,034.83 | 1,046.91 | 36.71 | ±13.69 | 1,014.595 | 1,001.595 | 38.243 | ±14.263 |
-| ccm | dec | 1 MiB | 4 | 30 | 1,043.15 | 1,066.07 | 54.19 | ±20.21 | 1,008.037 | 983.593 | 56.618 | ±21.116 |
-| gcm | enc | 1 MiB | 4 | 30 | 2,949.87 | 3,057.74 | 208.67 | ±77.82 | 357.407 | 342.925 | 28.478 | ±10.621 |
-| gcm | dec | 1 MiB | 4 | 30 | 3,073.83 | 3,237.93 | 371.39 | ±138.51 | 346.599 | 323.842 | 47.290 | ±17.637 |
+| ecb | enc | 1 MiB | 256 | 30 | 1,618.12 | 1,603.25 | 144.17 | ±53.77 | 653.152 | 654.033 | 59.881 | ±22.333 |
+| ecb | dec | 1 MiB | 256 | 30 | 2,746.53 | 2,723.49 | 207.13 | ±77.25 | 384.010 | 385.012 | 30.753 | ±11.469 |
+| cbc | enc | 1 MiB | 256 | 30 | 858.16 | 886.14 | 40.59 | ±15.14 | 1,224.622 | 1,183.313 | 59.837 | ±22.317 |
+| cbc | dec | 1 MiB | 256 | 30 | 2,460.26 | 2,480.88 | 185.42 | ±69.15 | 428.737 | 422.673 | 35.000 | ±13.053 |
+| ofb | enc | 1 MiB | 256 | 30 | 1,047.53 | 1,045.46 | 22.49 | ±8.39 | 1,001.444 | 1,002.992 | 21.566 | ±8.043 |
+| ofb | dec | 1 MiB | 256 | 30 | 1,052.28 | 1,049.41 | 20.78 | ±7.75 | 996.854 | 999.245 | 19.717 | ±7.354 |
+| cfb | enc | 1 MiB | 256 | 30 | 1,042.91 | 1,039.90 | 21.07 | ±7.86 | 1,005.830 | 1,008.340 | 20.345 | ±7.588 |
+| cfb | dec | 1 MiB | 256 | 30 | 1,818.74 | 1,810.87 | 70.41 | ±26.26 | 577.391 | 579.045 | 22.781 | ±8.496 |
+| ctr | enc | 1 MiB | 256 | 30 | 2,486.66 | 2,473.22 | 120.49 | ±44.94 | 422.649 | 423.972 | 20.742 | ±7.736 |
+| ctr | dec | 1 MiB | 256 | 30 | 2,460.79 | 2,449.86 | 135.98 | ±50.71 | 427.379 | 428.015 | 23.773 | ±8.866 |
+| xts | enc | 1 MiB | 256 | 30 | 1,106.35 | 1,112.28 | 30.48 | ±11.37 | 948.484 | 942.729 | 26.610 | ±9.925 |
+| xts | dec | 1 MiB | 256 | 30 | 1,124.26 | 1,132.12 | 30.48 | ±11.37 | 933.361 | 926.209 | 26.089 | ±9.730 |
+| ccm | enc | 1 MiB | 256 | 30 | 616.08 | 622.68 | 28.34 | ±10.57 | 1,705.632 | 1,683.990 | 81.633 | ±30.446 |
+| ccm | dec | 1 MiB | 256 | 30 | 631.47 | 634.84 | 29.97 | ±11.18 | 1,664.340 | 1,651.730 | 83.159 | ±31.014 |
+| gcm | enc | 1 MiB | 256 | 30 | 837.29 | 819.96 | 76.93 | ±28.69 | 1,262.505 | 1,278.812 | 115.152 | ±42.946 |
+| gcm | dec | 1 MiB | 256 | 30 | 1,135.40 | 1,151.49 | 65.74 | ±24.52 | 926.644 | 910.649 | 55.792 | ±20.808 |
 
-**Windows 10 (MinGW GCC)**, nguồn `lab1/output/windows/benchmarks/bench_windows_gcc.csv`:
+**Ubuntu 24.04 (GCC)**, nguồn `lab1/output/ubuntu/benchmarks/bench_ubuntu_gcc.csv`:
 
 | Cấu hình | Chiều | Payload | Ops/khối | N | Mean (MB/s) | Median (MB/s) | SD (MB/s) | ±CI95 (MB/s) | Mean (µs/op) | Median (µs/op) | SD (µs/op) | ±CI95 (µs/op) |
 | :--- | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| ecb | enc | 1 MiB | 32 | 1000 | 738.38 | 747.30 | 64.41 | ±4.00 | 1,435.730 | 1,403.144 | 191.473 | ±11.882 |
-| ecb | dec | 1 MiB | 32 | 1000 | 954.56 | 1,047.17 | 251.99 | ±15.64 | 1,257.930 | 1,001.345 | 825.290 | ±51.215 |
-| cbc | enc | 1 MiB | 32 | 1000 | 379.56 | 397.69 | 45.94 | ±2.85 | 2,813.416 | 2,636.689 | 432.343 | ±26.830 |
-| cbc | dec | 1 MiB | 32 | 1000 | 1,038.91 | 1,045.24 | 111.31 | ±6.91 | 1,022.631 | 1,003.194 | 127.557 | ±7.916 |
-| ofb | enc | 1 MiB | 32 | 1000 | 435.49 | 450.73 | 64.50 | ±4.00 | 2,477.590 | 2,326.381 | 497.886 | ±30.897 |
-| ofb | dec | 1 MiB | 32 | 1000 | 503.00 | 510.08 | 49.96 | ±3.10 | 2,110.396 | 2,055.725 | 267.339 | ±16.590 |
-| cfb | enc | 1 MiB | 32 | 1000 | 601.04 | 602.37 | 25.96 | ±1.61 | 1,748.197 | 1,740.747 | 83.660 | ±5.192 |
-| cfb | dec | 1 MiB | 32 | 1000 | 900.40 | 944.32 | 147.96 | ±9.18 | 1,218.079 | 1,110.402 | 338.664 | ±21.016 |
-| ctr | enc | 1 MiB | 32 | 1000 | 1,018.72 | 1,076.55 | 198.37 | ±12.31 | 1,091.417 | 974.014 | 391.070 | ±24.268 |
-| ctr | dec | 1 MiB | 32 | 1000 | 1,177.23 | 1,226.64 | 108.72 | ±6.75 | 900.230 | 854.837 | 105.332 | ±6.537 |
-| xts | enc | 1 MiB | 32 | 1000 | 571.01 | 586.57 | 79.90 | ±4.96 | 1,884.098 | 1,787.639 | 358.565 | ±22.251 |
-| xts | dec | 1 MiB | 32 | 1000 | 551.07 | 569.74 | 70.82 | ±4.39 | 1,952.662 | 1,840.433 | 423.513 | ±26.282 |
-| ccm | enc | 1 MiB | 32 | 1000 | 250.78 | 249.89 | 59.91 | ±3.72 | 4,539.408 | 4,196.198 | 1,648.410 | ±102.295 |
-| ccm | dec | 1 MiB | 32 | 1000 | 310.62 | 322.85 | 40.32 | ±2.50 | 3,453.719 | 3,247.906 | 635.347 | ±39.427 |
-| gcm | enc | 1 MiB | 32 | 1000 | 446.94 | 460.54 | 71.60 | ±4.44 | 2,421.918 | 2,276.863 | 488.809 | ±30.334 |
-| gcm | dec | 1 MiB | 32 | 1000 | 600.12 | 626.62 | 82.44 | ±5.12 | 1,792.089 | 1,673.386 | 348.427 | ±21.622 |
+| ecb | enc | 1 MiB | 256 | 30 | 1,200.40 | 1,205.53 | 17.06 | ±6.36 | 873.699 | 869.808 | 12.641 | ±4.714 |
+| ecb | dec | 1 MiB | 256 | 30 | 6,187.88 | 6,216.67 | 101.65 | ±37.91 | 169.503 | 168.672 | 2.926 | ±1.091 |
+| cbc | enc | 1 MiB | 256 | 30 | 1,250.23 | 1,267.06 | 40.05 | ±14.94 | 839.564 | 827.563 | 27.641 | ±10.309 |
+| cbc | dec | 1 MiB | 256 | 30 | 4,775.55 | 4,929.52 | 541.01 | ±201.77 | 222.464 | 212.714 | 26.497 | ±9.882 |
+| ofb | enc | 1 MiB | 256 | 30 | 1,285.37 | 1,308.74 | 49.20 | ±18.35 | 817.015 | 801.209 | 33.463 | ±12.480 |
+| ofb | dec | 1 MiB | 256 | 30 | 1,288.60 | 1,302.06 | 38.10 | ±14.21 | 814.481 | 805.323 | 26.097 | ±9.733 |
+| cfb | enc | 1 MiB | 256 | 30 | 1,301.56 | 1,304.28 | 6.73 | ±2.51 | 805.654 | 803.947 | 4.217 | ±1.573 |
+| cfb | dec | 1 MiB | 256 | 30 | 3,160.56 | 3,168.77 | 34.24 | ±12.77 | 331.808 | 330.909 | 3.752 | ±1.399 |
+| ctr | enc | 1 MiB | 256 | 30 | 4,159.77 | 4,172.87 | 584.17 | ±217.87 | 257.911 | 251.297 | 44.012 | ±16.414 |
+| ctr | dec | 1 MiB | 256 | 30 | 4,335.16 | 4,354.83 | 360.09 | ±134.30 | 243.785 | 240.786 | 24.103 | ±8.989 |
+| xts | enc | 1 MiB | 256 | 30 | 1,393.66 | 1,409.54 | 48.78 | ±18.19 | 753.338 | 743.913 | 27.990 | ±10.439 |
+| xts | dec | 1 MiB | 256 | 30 | 1,511.40 | 1,515.14 | 14.33 | ±5.35 | 693.839 | 692.066 | 6.691 | ±2.496 |
+| ccm | enc | 1 MiB | 256 | 30 | 1,034.06 | 1,038.41 | 13.12 | ±4.89 | 1,014.202 | 1,009.795 | 13.179 | ±4.915 |
+| ccm | dec | 1 MiB | 256 | 30 | 1,049.17 | 1,054.86 | 15.45 | ±5.76 | 999.648 | 994.045 | 14.846 | ±5.537 |
+| gcm | enc | 1 MiB | 256 | 30 | 2,831.91 | 2,846.89 | 64.59 | ±24.09 | 370.465 | 368.324 | 8.773 | ±3.272 |
+| gcm | dec | 1 MiB | 256 | 30 | 3,127.81 | 3,151.22 | 77.78 | ±29.01 | 335.447 | 332.752 | 8.523 | ±3.179 |
+
+**Windows (MSVC)**, nguồn `lab1/output/windows/benchmarks/bench_windows_msvc.csv`:
+
+| Cấu hình | Chiều | Payload | Ops/khối | N | Mean (MB/s) | Median (MB/s) | SD (MB/s) | ±CI95 (MB/s) | Mean (µs/op) | Median (µs/op) | SD (µs/op) | ±CI95 (µs/op) |
+| :--- | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| ecb | enc | 1 MiB | 256 | 30 | 1,129.43 | 1,134.29 | 59.35 | ±22.14 | 930.939 | 924.446 | 49.842 | ±18.589 |
+| ecb | dec | 1 MiB | 256 | 30 | 1,527.44 | 1,518.92 | 59.39 | ±22.15 | 687.496 | 690.344 | 26.735 | ±9.971 |
+| cbc | enc | 1 MiB | 256 | 30 | 747.83 | 753.49 | 22.85 | ±8.52 | 1,403.439 | 1,391.624 | 43.370 | ±16.175 |
+| cbc | dec | 1 MiB | 256 | 30 | 1,489.27 | 1,492.25 | 56.99 | ±21.26 | 705.102 | 702.685 | 27.471 | ±10.245 |
+| ofb | enc | 1 MiB | 256 | 30 | 790.53 | 793.86 | 28.84 | ±10.76 | 1,328.208 | 1,320.857 | 50.615 | ±18.877 |
+| ofb | dec | 1 MiB | 256 | 30 | 804.05 | 805.70 | 11.92 | ±4.45 | 1,304.394 | 1,301.442 | 19.554 | ±7.293 |
+| cfb | enc | 1 MiB | 256 | 30 | 857.91 | 855.18 | 20.02 | ±7.46 | 1,222.886 | 1,226.144 | 28.528 | ±10.639 |
+| cfb | dec | 1 MiB | 256 | 30 | 1,462.48 | 1,456.64 | 37.89 | ±14.13 | 717.455 | 719.859 | 18.793 | ±7.009 |
+| ctr | enc | 1 MiB | 256 | 30 | 1,443.66 | 1,436.02 | 34.64 | ±12.92 | 726.732 | 730.198 | 17.229 | ±6.426 |
+| ctr | dec | 1 MiB | 256 | 30 | 1,407.53 | 1,417.45 | 45.28 | ±16.89 | 745.731 | 739.762 | 24.351 | ±9.082 |
+| xts | enc | 1 MiB | 256 | 30 | 811.03 | 813.53 | 13.46 | ±5.02 | 1,293.246 | 1,288.917 | 21.462 | ±8.004 |
+| xts | dec | 1 MiB | 256 | 30 | 799.08 | 797.91 | 20.41 | ±7.61 | 1,313.056 | 1,314.162 | 33.240 | ±12.397 |
+| ccm | enc | 1 MiB | 256 | 30 | 500.37 | 501.28 | 14.72 | ±5.49 | 2,097.327 | 2,091.805 | 61.166 | ±22.812 |
+| ccm | dec | 1 MiB | 256 | 30 | 555.23 | 554.81 | 14.25 | ±5.32 | 1,889.727 | 1,889.988 | 48.263 | ±18.000 |
+| gcm | enc | 1 MiB | 256 | 30 | 782.45 | 779.86 | 25.01 | ±9.33 | 1,341.434 | 1,344.592 | 42.671 | ±15.914 |
+| gcm | dec | 1 MiB | 256 | 30 | 957.77 | 957.51 | 51.72 | ±19.29 | 1,097.971 | 1,095.103 | 60.645 | ±22.618 |
 
 ## 5.5. Phân tích 4 so sánh cốt lõi bắt buộc
 
-Nhằm làm sáng tỏ toàn diện đặc tính kỹ thuật của các chế độ AES theo quy định trong [require.md]( ../require.md), phần này phân tích sâu sắc 4 bài toán so sánh nền tảng, kết hợp các biểu đồ phân tích chuyên biệt và dữ liệu thống kê hình học từ thư mục [output/compare/mode_cmp/]( ../output/compare/mode_cmp/).
+Phần này phân tích 4 bài toán so sánh theo yêu cầu của đề, dựa trên các biểu đồ và bảng sinh tự động từ thư mục [output/compare](../output/compare/) bằng `python scripts/plot_bench.py --auto --prefer gcc`.
+Mọi con số dưới đây được tính từ các file CSV nói trên.
 
 ### 5.5.1. So sánh đa nền tảng: Windows vs. Linux (Ubuntu)
 
 ![So sánh Thông lượng 1MB giữa Windows và Ubuntu](../output/compare/compare_bars_1MB.png)
-*Hình 1: Biểu đồ cột so sánh trực tiếp Thông lượng (Throughput) tại Payload 1 MB giữa Ubuntu (xanh dương) và Windows (cam) trên cả hai chiều Mã hóa và Giải mã.*
+*Hình 1: Biểu đồ cột so sánh trực tiếp Thông lượng (Throughput) tại Payload 1 MB giữa Ubuntu và Windows trên cả hai chiều Mã hóa và Giải mã.*
 
 ![Lưới đồ thị Thông lượng Mã hóa](../output/compare/compare_throughput_enc.png)
 *Hình 2: Phân bố Thông lượng Mã hóa (Encryption Throughput) trên 8 chế độ hoạt động từ 1 KB đến 8 MB giữa Ubuntu và Windows.*
@@ -679,38 +752,60 @@ Nhằm làm sáng tỏ toàn diện đặc tính kỹ thuật của các chế �
 ![Lưới đồ thị Thông lượng Giải mã](../output/compare/compare_throughput_dec.png)
 *Hình 3: Phân bố Thông lượng Giải mã (Decryption Throughput) trên 8 chế độ hoạt động từ 1 KB đến 8 MB giữa Ubuntu và Windows.*
 
-![Tỷ lệ Thông lượng Windows so với Baseline Ubuntu](../output/compare/compare_ratio_enc.png)
-*Hình 4: Tỷ lệ Throughput Windows / Baseline Ubuntu trên chiều Mã hóa (Giá trị < 1.0 biểu thị Ubuntu nhanh hơn).*
+![Tỷ lệ Thông lượng Ubuntu so với Baseline Windows](../output/compare/compare_ratio_enc.png)
+*Hình 4: Tỷ lệ Throughput Ubuntu / Windows trên chiều Mã hóa (> 1.0 nghĩa là Ubuntu nhanh hơn).*
 
-- **Khoảng cách hiệu năng rõ rệt:** Trên hầu hết các chế độ và kích thước payload, Ubuntu đạt hiệu năng vượt trội so với Windows. Tại mốc 1 MB, thông lượng trên Ubuntu cao hơn từ **1.5 lần đến 3.17 lần** so với Windows (ví dụ: GCM Enc trên Ubuntu đạt $1417.03$ MB/s trong khi Windows chỉ đạt $446.94$ MB/s; CBC Dec trên Ubuntu đạt $2394.70$ MB/s so với $1038.91$ MB/s trên Windows).
-- **Tỷ lệ suy giảm ở payload nhỏ:** Quan sát đồ thị tỷ lệ [compare_ratio_enc.png](../output/compare/compare_ratio_enc.png), ở các payload nhỏ (1 KB và 4 KB), tỷ lệ thông lượng Windows / Ubuntu chỉ đạt từ $0.28$ đến $0.68$. Nguyên nhân chính là do chi phí lời gọi hàm, cơ chế cấp phát bộ nhớ động của Windows Heap Manager (`RtlAllocateHeap`) có độ trễ lớn hơn đáng kể so với bộ cấp phát `glibc ptmalloc` tối ưu trên nhân Linux.
+**Quan sát từ số liệu:**
+- **Ubuntu nhanh hơn Windows ở phần lớn các cấu hình:** 94/96 ô, trung vị tỷ lệ Ubuntu/Windows là **1.36**. Trung vị theo kích thước payload: 1 KB: 1.49, 4 KB: 1.35, 16 KB: 1.29, 256 KB: 1.14, 1 MB: 1.67, 8 MB: 1.64.
+- **Ngoại lệ (Windows nhanh hơn Ubuntu):** ECB Enc 1 MB (Ubuntu/Windows = 0.74), ECB Enc 8 MB (Ubuntu/Windows = 0.80).
+- **GCM là mode có chênh lệch lớn nhất:** tại 1 MB, GCM Enc đạt 2,832 MB/s trên Ubuntu so với 837 MB/s trên Windows (**3.38 lần**), trong khi CTR Enc chỉ chênh 1.67 lần (4,160 so với 2,487 MB/s).
+- **Hai trình biên dịch trên Windows:** tỷ lệ thông lượng MSVC / MinGW GCC có trung vị 0.78 (MSVC chậm hơn ở hầu hết các ô); ở 1 MB, chênh lệch nhỏ nhất ở GCM Enc (0.93) và lớn nhất ở ECB Dec (0.56).
+
+**Thử nghiệm bổ sung để xác định vị trí của chênh lệch (chương trình dò độc lập, 1 MiB, AES-256, lấy lần tốt nhất trong 7):**
+Một chương trình nhỏ gọi trực tiếp Crypto++ (không qua `aestool`) cho thấy bộ cài đặt AES là `AESNI` và `HasCLMUL = 1` ở cả bản MinGW và bản Linux, nên **không phải một bên thiếu AES-NI hay PCLMULQDQ**. Khi tái sử dụng bộ đệm,
+thông lượng gần như bằng nhau giữa hai bên (CTR ≈ 5.8 GB/s trên Windows và ≈ 6.0 GB/s trên Linux; GCM ≈ 3.7 và ≈ 3.3 GB/s). Nhưng khi **mỗi thao tác cấp phát chuỗi đầu ra mới và sao chép thêm một lần**
+(đúng cách hàm `encrypt()` của `aestool` làm việc), thông lượng rơi xuống còn ≈ 1.0 GB/s (CTR, Windows) và ≈ 1.2 GB/s (CTR, Linux), còn GCM là ≈ 0.9 GB/s (Windows) so với ≈ 1.9 GB/s (Linux).
+Như vậy phần lớn khoảng cách đo được nằm ở **chi phí cấp phát và sao chép bộ nhớ trong vòng đo**, và hệ điều hành xử lý chi phí đó khác nhau; điều này khớp với việc GCM (nhiều bước sao chép hơn) chênh lệch nhiều nhất.
+*(Hạn chế: phép dò Linux này chạy trong WSL2 (Ubuntu 26.04, GCC 15.2) chứ không phải Ubuntu cài trực tiếp dùng cho số đo chính, nên chỉ có giá trị là bằng chứng hỗ trợ.)*
 
 ---
 
 ### 5.5.2. So sánh Chế độ Khối (Block Modes) vs. Chế độ Dòng (Stream Modes)
 
 Phân loại 6 chế độ Non-AEAD thành hai nhóm chức năng:
-- **Nhóm chế độ khối (Block Modes):** Bao gồm **ECB, CBC, XTS** (làm việc trực tiếp trên các khối dữ liệu 16-byte, yêu cầu padding PKCS#7 hoặc ciphertext stealing).
-- **Nhóm chế độ dòng (Stream Modes):** Bao gồm **OFB, CFB, CTR** (sinh luồng khóa giả lập keystream, mã hóa bằng phép XOR bit, không yêu cầu padding).
+- **Nhóm chế độ khối (Block Modes):** **ECB, CBC, XTS** (làm việc trực tiếp trên các khối 16 byte, cần padding PKCS#7 hoặc ciphertext stealing).
+- **Nhóm chế độ dòng (Stream Modes):** **OFB, CFB, CTR** (sinh luồng khóa, mã hóa bằng XOR, không cần padding).
 
-Để loại trừ độ lệch do từng mode riêng lẻ, hệ thống áp dụng phương pháp **Trung bình nhân (Geometric Mean)** của nhóm trên từng kích thước payload:
+Để giảm ảnh hưởng của từng mode riêng lẻ, dùng **trung bình nhân (geometric mean)** của nhóm trên từng kích thước payload:
 $$\text{Group Geomean} = \left( \prod_{i=1}^k \text{Throughput}_i \right)^{1/k}$$
 
 ### Bảng 4: So sánh Thông lượng Trung bình nhân giữa Block Modes và Stream Modes (Trích xuất từ `analysis_stream_vs_block.csv`)
 | Nền tảng | Chiều | Payload | Block Geomean (MB/s) | Stream Geomean (MB/s) | Tỷ số Stream / Block | Xu hướng ưu thế |
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **Windows GCC** | **Enc** | 1 KB | 182.42 | 171.73 | 0.941 | Block nhanh hơn 5.9% |
-| Windows GCC | Enc | 16 KB | 684.92 | 627.06 | 0.916 | Block nhanh hơn 8.4% |
-| Windows GCC | Enc | 256 KB | 853.97 | 794.41 | 0.930 | Block nhanh hơn 7.0% |
-| Windows GCC | Enc | **1 MB** | **542.92** | **643.64** | **1.186** | **Stream nhanh hơn 18.6%** |
-| Windows GCC | Enc | **8 MB** | **478.17** | **560.88** | **1.173** | **Stream nhanh hơn 17.3%** |
-| **Ubuntu GCC** | **Enc** | 1 KB | 461.27 | 358.78 | 0.778 | Block nhanh hơn 22.2% |
-| Ubuntu GCC | Enc | 16 KB | 1169.79 | 923.99 | 0.790 | Block nhanh hơn 21.0% |
-| Ubuntu GCC | Enc | 256 KB | 1285.82 | 927.18 | 0.721 | Block nhanh hơn 27.9% |
-| Ubuntu GCC | Enc | **1 MB** | **797.85** | **933.17** | **1.170** | **Stream nhanh hơn 17.0%** |
-| Ubuntu GCC | Enc | **8 MB** | **619.37** | **903.46** | **1.459** | **Stream nhanh hơn 45.9%** |
-| **Windows GCC** | **Dec** | 1 MB | 817.58 | 810.87 | 0.992 | Tương đương tuyệt đối |
-| **Ubuntu GCC** | **Dec** | 1 MB | 1661.66 | 1385.77 | 0.834 | Block nhanh hơn (CBC dec song song) |
+| Windows GCC | Enc | 1 KB | 544.38 | 541.50 | 0.995 | Tương đương (< 2%) |
+| Windows GCC | Enc | 4 KB | 1,275.62 | 1,187.38 | 0.931 | Block nhanh hơn 7.4% |
+| Windows GCC | Enc | 16 KB | 1,860.31 | 1,669.81 | 0.898 | Block nhanh hơn 11.4% |
+| Windows GCC | Enc | 256 KB | 2,125.18 | 1,987.60 | 0.935 | Block nhanh hơn 7.0% |
+| Windows GCC | Enc | 1 MB | 1,153.87 | 1,395.33 | 1.209 | Stream nhanh hơn 20.9% |
+| Windows GCC | Enc | 8 MB | 957.03 | 1,109.46 | 1.159 | Stream nhanh hơn 15.9% |
+| Windows GCC | Dec | 1 KB | 593.98 | 576.17 | 0.970 | Block nhanh hơn 3.1% |
+| Windows GCC | Dec | 4 KB | 1,635.83 | 1,395.35 | 0.853 | Block nhanh hơn 17.2% |
+| Windows GCC | Dec | 16 KB | 2,663.43 | 2,076.30 | 0.780 | Block nhanh hơn 28.2% |
+| Windows GCC | Dec | 256 KB | 3,504.55 | 2,620.68 | 0.748 | Block nhanh hơn 33.7% |
+| Windows GCC | Dec | 1 MB | 1,965.82 | 1,676.20 | 0.853 | Block nhanh hơn 17.2% |
+| Windows GCC | Dec | 8 MB | 1,439.48 | 1,245.99 | 0.866 | Block nhanh hơn 15.5% |
+| Ubuntu GCC | Enc | 1 KB | 780.46 | 736.76 | 0.944 | Block nhanh hơn 5.9% |
+| Ubuntu GCC | Enc | 4 KB | 1,635.67 | 1,458.01 | 0.891 | Block nhanh hơn 12.2% |
+| Ubuntu GCC | Enc | 16 KB | 2,264.48 | 1,940.09 | 0.857 | Block nhanh hơn 16.7% |
+| Ubuntu GCC | Enc | 256 KB | 2,332.22 | 2,206.44 | 0.946 | Block nhanh hơn 5.7% |
+| Ubuntu GCC | Enc | 1 MB | 1,278.86 | 1,909.21 | 1.493 | Stream nhanh hơn 49.3% |
+| Ubuntu GCC | Enc | 8 MB | 1,169.52 | 1,670.62 | 1.428 | Stream nhanh hơn 42.8% |
+| Ubuntu GCC | Dec | 1 KB | 880.23 | 814.23 | 0.925 | Block nhanh hơn 8.1% |
+| Ubuntu GCC | Dec | 4 KB | 2,262.50 | 1,802.61 | 0.797 | Block nhanh hơn 25.5% |
+| Ubuntu GCC | Dec | 16 KB | 3,567.67 | 2,578.48 | 0.723 | Block nhanh hơn 38.3% |
+| Ubuntu GCC | Dec | 256 KB | 4,067.31 | 2,974.96 | 0.731 | Block nhanh hơn 36.8% |
+| Ubuntu GCC | Dec | 1 MB | 3,547.98 | 2,603.93 | 0.734 | Block nhanh hơn 36.2% |
+| Ubuntu GCC | Dec | 8 MB | 3,022.42 | 2,321.89 | 0.768 | Block nhanh hơn 30.2% |
 
 ![So sánh Stream vs Block Modes chiều Mã hóa](../output/compare/mode_cmp/analysis_stream_vs_block_enc.png)
 *Hình 5: Phân tích so sánh Stream Modes vs. Block Modes trên chiều Mã hóa (Enc): (1) Thông lượng trung bình nhân nhóm; (2) Tỷ số Stream/Block; (3) Phân bố chi tiết từng mode tại 1 MB.*
@@ -718,35 +813,52 @@ $$\text{Group Geomean} = \left( \prod_{i=1}^k \text{Throughput}_i \right)^{1/k}$
 ![So sánh Stream vs Block Modes chiều Giải mã](../output/compare/mode_cmp/analysis_stream_vs_block_dec.png)
 *Hình 6: Phân tích so sánh Stream Modes vs. Block Modes trên chiều Giải mã (Dec): (1) Thông lượng trung bình nhân nhóm; (2) Tỷ số Stream/Block; (3) Phân bố chi tiết từng mode tại 1 MB.*
 
-#### Phân tích chuyên sâu:
-1. **Sự đảo chiều hiệu năng theo kích thước dữ liệu (The Crossover Phenomenon):**
-   - Ở các payload vừa và nhỏ ($\le 256$ KB), Block modes chiếm ưu thế nhờ tốc độ bứt phá của ECB trong bộ nhớ đệm L2.
-   - Tuy nhiên, khi kích thước payload tăng lên **1 MB và 8 MB**, Stream modes hoàn toàn áp đảo Block modes: Stream đạt tỷ số **1.17x trên Windows và lên tới 1.459x trên Ubuntu (+45.9% thông lượng)**.
-   - *Nguyên nhân:* Khi dữ liệu tràn bộ nhớ đệm CPU L2/L3, Block modes (như CBC Enc phải đợi phản hồi khối trước, XTS phải tính toán Tweak đa thức Galois liên tục) chịu áp lực nghẽn dòng dữ liệu nghiêm trọng. Trong khi đó, CTR mode trong nhóm Stream modes có bộ sinh counter độc lập, cho phép CPU nạp và giải phóng bộ nhớ đệm tuần tự mượt mà.
-2. **Tính bất đối xứng đặc biệt trong CBC mode (CBC Asymmetry):**
-   - Trong **CBC Enc**: Công thức $C_i = E_K(P_i \oplus C_{i-1})$ bắt buộc tuần tự 100%. Thông lượng bị chặn ở mức $683.19$ MB/s (Ubuntu).
-   - Trong **CBC Dec**: Công thức $P_i = D_K(C_i) \oplus C_{i-1}$ cho phép xử lý song song toàn bộ các khối bản mã $C_i$ đã có sẵn. Nhờ tận dụng tối đa 8 thanh ghi SIMD XMM và tập lệnh `_mm_aesdec_si128` lồng nhau, **CBC Dec vọt lên $2394.70$ MB/s (nhanh gấp 3.5 lần CBC Enc)**, kéo mức trung bình nhân của nhóm Block Dec vượt lên trên Stream Dec.
+#### Phân tích:
+1. **Tỷ số Stream/Block theo kích thước (từ 1 KB đến 8 MB):**
+   - Windows GCC, Enc: 1 KB (0.99), 4 KB (0.93), 16 KB (0.90), 256 KB (0.94), 1 MB (1.21), 8 MB (1.16).
+   - Ubuntu GCC, Enc: 1 KB (0.94), 4 KB (0.89), 16 KB (0.86), 256 KB (0.95), 1 MB (1.49), 8 MB (1.43).
+   - Windows GCC, Dec: 1 KB (0.97), 4 KB (0.85), 16 KB (0.78), 256 KB (0.75), 1 MB (0.85), 8 MB (0.87).
+   - Ubuntu GCC, Dec: 1 KB (0.93), 4 KB (0.80), 16 KB (0.72), 256 KB (0.73), 1 MB (0.73), 8 MB (0.77).
+   Tỷ số > 1 nghĩa là nhóm Stream nhanh hơn nhóm Block. Ở chiều Mã hóa, nhóm Stream chỉ vượt nhóm Block từ 1 MB trở lên; ở chiều Giải mã, nhóm Block nhanh hơn nhóm Stream ở hầu hết các kích thước, vì CBC và ECB giải mã song song hóa được (xem điểm 2).
+2. **Tính bất đối xứng của CBC:** CBC Enc là $C_i = E_K(P_i \oplus C_{i-1})$ nên **bắt buộc tuần tự**; CBC Dec là $P_i = D_K(C_i) \oplus C_{i-1}$ cho phép xử lý song song các khối. Tại 1 MB, thông lượng CBC Dec / CBC Enc là
+   **2.87 lần** trên Windows (2,460 so với 858 MB/s) và **3.82 lần** trên Ubuntu (4,776 so với 1,250 MB/s).
+3. **Giải thích (suy luận, không được tách riêng bằng thí nghiệm riêng):** phụ thuộc dữ liệu giữa các khối của CBC Enc làm CPU không thể xếp chồng nhiều lệnh AES (độ trễ của mỗi vòng AES lộ ra), trong khi CTR/GCM/CBC Dec cho phép đẩy nhiều khối vào đường ống cùng lúc. XTS phải tính thêm phép nhân tweak trong $\mathrm{GF}(2^{128})$ cho mỗi khối.
 
 ---
 
 ### 5.5.3. So sánh Mã hóa Xác thực (AEAD) vs. Mã hóa Thông thường (Non-AEAD)
 
-Chế độ AEAD bổ sung cơ chế tính toán thẻ xác thực toàn vẹn (Integrity Authentication). Để đánh giá chính xác cái giá phải trả về mặt hiệu năng cho tính năng bảo mật tối quan trọng này:
-- Lấy **CTR mode** làm thước đo tham chiếu cốt lõi (Ground-truth baseline) vì cả GCM và CCM đều sử dụng lõi CTR để mã hóa dữ liệu. Sự chênh lệch giữa GCM/CCM và CTR phản ánh chính xác chi phí phụ trội của cơ chế xác thực.
-- Đồng thời so sánh với trung bình nhân của toàn bộ 6 chế độ Non-AEAD (`nonaead_geomean`).
+Chế độ AEAD bổ sung cơ chế tính thẻ xác thực toàn vẹn. Để đánh giá cái giá về hiệu năng:
+- Lấy **CTR** làm mốc tham chiếu vì GCM và CCM đều dùng lõi CTR để mã hóa dữ liệu; sự chênh lệch giữa GCM/CCM và CTR phản ánh chi phí phụ trội của cơ chế xác thực.
+- Đồng thời so sánh với trung bình nhân của 6 chế độ Non-AEAD (`nonaead_geomean`).
 
 ### Bảng 5: Đánh giá Hiệu năng AEAD so với Non-AEAD Baseline (Trích xuất từ `analysis_aead_vs_nonaead.csv`)
 | Nền tảng | Chiều | Payload | CTR (MB/s) | Non-AEAD Geomean (MB/s) | GCM (MB/s) | Tỷ số GCM / CTR | Tỷ số GCM / Non-AEAD | CCM (MB/s) | Tỷ số CCM / CTR |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Windows GCC | Enc | 1 KB | 123.25 | 176.99 | 134.70 | 1.093 | 0.761 | 131.45 | 1.067 |
-| Windows GCC | Enc | 16 KB | 909.19 | 655.35 | 906.62 | 0.997 | 1.383 | 374.05 | 0.411 |
-| Windows GCC | Enc | 256 KB | 1830.73 | 823.65 | 1132.47 | 0.619 | 1.375 | 438.60 | 0.240 |
-| **Windows GCC** | **Enc** | **1 MB** | **1018.72** | **591.14** | **446.94** | **0.439** | **0.756** | **250.78** | **0.246** |
-| Ubuntu GCC | Enc | 1 KB | 443.13 | 406.81 | 457.18 | 1.032 | 1.124 | 361.53 | 0.816 |
-| Ubuntu GCC | Enc | 16 KB | 1778.42 | 1039.65 | 1242.47 | 0.699 | 1.195 | 495.92 | 0.279 |
-| Ubuntu GCC | Enc | 256 KB | 1627.09 | 1091.87 | 1385.87 | 0.852 | 1.269 | 556.92 | 0.342 |
-| **Ubuntu GCC** | **Enc** | **1 MB** | **1817.51** | **862.86** | **1417.03** | **0.780** | **1.642** | **555.43** | **0.306** |
-| **Ubuntu GCC** | **Dec** | **1 MB** | **2331.61** | **1517.46** | **1370.24** | **0.588** | **0.903** | **589.79** | **0.253** |
+| Windows GCC | Enc | 1 KB | 630.89 | 542.94 | 503.28 | 0.798 | 0.927 | 429.66 | 0.681 |
+| Windows GCC | Enc | 4 KB | 1,928.19 | 1,230.71 | 1,446.57 | 0.750 | 1.175 | 792.51 | 0.411 |
+| Windows GCC | Enc | 16 KB | 3,348.39 | 1,762.49 | 2,048.01 | 0.612 | 1.162 | 960.45 | 0.287 |
+| Windows GCC | Enc | 256 KB | 4,823.51 | 2,055.24 | 2,725.96 | 0.565 | 1.326 | 1,035.76 | 0.215 |
+| Windows GCC | Enc | 1 MB | 2,486.66 | 1,268.87 | 837.29 | 0.337 | 0.660 | 616.08 | 0.248 |
+| Windows GCC | Enc | 8 MB | 1,761.91 | 1,030.43 | 715.06 | 0.406 | 0.694 | 535.61 | 0.304 |
+| Windows GCC | Dec | 1 KB | 645.39 | 585.01 | 361.93 | 0.561 | 0.619 | 315.50 | 0.489 |
+| Windows GCC | Dec | 4 KB | 1,892.45 | 1,510.81 | 1,040.30 | 0.550 | 0.689 | 642.67 | 0.340 |
+| Windows GCC | Dec | 16 KB | 3,372.08 | 2,351.61 | 1,851.15 | 0.549 | 0.787 | 918.97 | 0.273 |
+| Windows GCC | Dec | 256 KB | 4,882.19 | 3,030.56 | 2,912.50 | 0.597 | 0.961 | 1,020.73 | 0.209 |
+| Windows GCC | Dec | 1 MB | 2,460.79 | 1,815.24 | 1,135.40 | 0.461 | 0.625 | 631.47 | 0.257 |
+| Windows GCC | Dec | 8 MB | 1,715.31 | 1,339.24 | 924.27 | 0.539 | 0.690 | 554.34 | 0.323 |
+| Ubuntu GCC | Enc | 1 KB | 951.02 | 758.29 | 832.32 | 0.875 | 1.098 | 583.81 | 0.614 |
+| Ubuntu GCC | Enc | 4 KB | 2,653.40 | 1,544.29 | 2,004.37 | 0.755 | 1.298 | 944.24 | 0.356 |
+| Ubuntu GCC | Enc | 16 KB | 4,451.86 | 2,096.02 | 3,082.58 | 0.692 | 1.471 | 1,090.38 | 0.245 |
+| Ubuntu GCC | Enc | 256 KB | 5,826.10 | 2,268.46 | 3,400.71 | 0.584 | 1.499 | 1,107.68 | 0.190 |
+| Ubuntu GCC | Enc | 1 MB | 4,159.77 | 1,562.57 | 2,831.91 | 0.681 | 1.812 | 1,034.06 | 0.249 |
+| Ubuntu GCC | Enc | 8 MB | 3,084.13 | 1,397.79 | 1,983.74 | 0.643 | 1.419 | 889.10 | 0.288 |
+| Ubuntu GCC | Dec | 1 KB | 964.79 | 846.59 | 629.82 | 0.653 | 0.744 | 475.95 | 0.493 |
+| Ubuntu GCC | Dec | 4 KB | 2,729.05 | 2,019.50 | 1,693.13 | 0.620 | 0.838 | 865.44 | 0.317 |
+| Ubuntu GCC | Dec | 16 KB | 4,535.32 | 3,033.01 | 2,868.45 | 0.632 | 0.946 | 1,060.98 | 0.234 |
+| Ubuntu GCC | Dec | 256 KB | 5,676.04 | 3,478.52 | 3,546.95 | 0.625 | 1.020 | 1,123.23 | 0.198 |
+| Ubuntu GCC | Dec | 1 MB | 4,335.16 | 3,039.52 | 3,127.81 | 0.721 | 1.029 | 1,049.17 | 0.242 |
+| Ubuntu GCC | Dec | 8 MB | 3,673.93 | 2,649.10 | 2,182.29 | 0.594 | 0.824 | 902.23 | 0.246 |
 
 ![So sánh AEAD vs Non-AEAD chiều Mã hóa](../output/compare/mode_cmp/analysis_aead_vs_nonaead_enc.png)
 *Hình 7: Đánh giá chi tiết AEAD vs. Non-AEAD trên chiều Mã hóa (Enc): (1) Đường cong thông lượng CTR vs. GCM vs. CCM; (2) Tỷ số suy giảm so với CTR baseline; (3) So sánh trực quan tại mốc 1 MB.*
@@ -754,44 +866,42 @@ Chế độ AEAD bổ sung cơ chế tính toán thẻ xác thực toàn vẹn (
 ![So sánh AEAD vs Non-AEAD chiều Giải mã](../output/compare/mode_cmp/analysis_aead_vs_nonaead_dec.png)
 *Hình 8: Đánh giá chi tiết AEAD vs. Non-AEAD trên chiều Giải mã (Dec): (1) Đường cong thông lượng CTR vs. GCM vs. CCM; (2) Tỷ số suy giảm so với CTR baseline; (3) So sánh trực quan tại mốc 1 MB.*
 
-#### Phân tích chuyên sâu:
-1. **GCM - Sự đánh đổi lý tưởng (The Ideal Trade-off):**
-   - Tại mốc 1 MB trên Ubuntu, GCM đạt thông lượng mã hóa lên tới **$1417.03$ MB/s**, tương đương **78.0% thông lượng của CTR** ($1817.51$ MB/s). Nghĩa là cơ chế tính toán thẻ xác thực GHASH chỉ làm hao tổn **22% chu kỳ xử lý**.
-   - Thậm chí, khi so với mức trung bình của toàn bộ các chế độ Non-AEAD ($862.86$ MB/s), **GCM nhanh hơn tới 1.642 lần (vượt trội 64%)**.
-   - Thành tựu này đạt được là nhờ tập lệnh phần chứng **PCLMULQDQ** (Carry-less Multiplication) của CPU Intel, cho phép thực hiện phép nhân đa thức trên trường Galois $\text{GF}(2^{128})$ chỉ trong vài chu kỳ máy, giải quyết triệt để nút thắt cổ chai xác thực.
-2. **Sự yếu kém về hiệu năng của CCM:**
-   - Ngược lại với GCM, **CCM có hiệu năng thấp nhất trong toàn bộ 8 chế độ khảo sát** (chỉ đạt $555.43$ MB/s trên Ubuntu và $250.78$ MB/s trên Windows tại 1 MB). Tốc độ của CCM chỉ bằng **30.6% của CTR** và chỉ bằng **39% của GCM**.
-   - *Nguyên nhân kỹ thuật:* CCM là thuật toán Two-Pass bắt buộc. Dữ liệu phải đi qua bộ xử lý AES hai lần tuần tự: lần một thực hiện CBC-MAC để tạo tag, lần hai thực hiện CTR để mã hóa. Do CBC-MAC không thể song song hóa, CCM tiêu tốn gấp đôi số lượng phép tính mã hóa khối và không thể tận dụng tối đa kiến trúc vi xử lý đa luồng.
+#### Phân tích:
+1. **GCM:** tại 1 MB, GCM Enc đạt 837 MB/s trên Windows (34% của CTR) và 2,832 MB/s trên Ubuntu (68% của CTR);
+   GCM Dec đạt 46% (Windows) và 72% (Ubuntu) so với CTR. So với trung bình nhân của các mode Non-AEAD, GCM Enc ở mức 0.66 lần (Windows) và 1.81 lần (Ubuntu).
+   Phép nhân đa thức GHASH trong $\mathrm{GF}(2^{128})$ được tăng tốc bằng lệnh PCLMULQDQ (CPU báo `HasCLMUL = 1`), nên GCM có thể nhanh hơn nhiều mode Non-AEAD tuần tự như CBC Enc hay CFB Enc dù phải tính thêm thẻ xác thực.
+   Phần chênh lệch giữa hai hệ điều hành ở GCM đã được thảo luận ở mục 5.5.1.
+2. **CCM:** CCM Enc đạt 616 MB/s (Windows) và 1,034 MB/s (Ubuntu) tại 1 MB, tức 25% và 25% của CTR. CCM là mode chậm nhất trong cả 8 mode ở 1 MB trên cả hai hệ điều hành và cả hai chiều.
+   *Nguyên nhân kỹ thuật:* CCM là thuật toán hai lượt: một lượt CBC-MAC (tuần tự, không song song hóa được) để tạo thẻ, một lượt CTR để mã hóa, nên số phép mã hóa khối gấp đôi và một nửa số phép đó không thể xếp chồng trong đường ống.
 
 ---
 
 ### 5.5.4. Đánh giá chi phí phụ trội của Authentication Tag (Tag Overhead)
 
-Chi phí phụ trội của Authentication Tag được bóc tách khoa học trên hai khía cạnh: **Chi phí Tính toán (Computational Overhead)** và **Chi phí Không gian Lưu trữ (Storage Overhead)**.
+Chi phí phụ trội của Authentication Tag được tách theo hai khía cạnh: **Chi phí tính toán** và **Chi phí không gian lưu trữ**.
 
-#### A. Chi phí tính toán: Mô hình hồi quy tuyến tính thời gian trễ
-Để mô hình hóa chính xác chi phí phụ trội của tag, áp dụng mô hình toán học:
+#### A. Chi phí tính toán: mô hình hồi quy tuyến tính của độ trễ
 $$\text{Latency}(\text{Size}) \approx a + b \cdot \text{Size}$$
-- **Hệ số $a$ (Fixed Cost - $\mu\text{s/op}$):** Chi phí cố định cho mỗi lần thực thi thao tác, ngoại suy về kích thước 0 Byte. Đại diện cho chi phí thiết lập ban đầu: mở bộ lọc Crypto++, phân bổ heap, mở rộng lịch khóa, thiết lập vector $J_0$, sinh/so sánh thẻ xác thực cuối cùng.
-- **Hệ số $b$ (Marginal Per-Byte Cost - $\text{ns/Byte}$):** Chi phí biên tính toán trên từng byte dữ liệu, được tính toán từ độ dốc của hai kích thước payload lớn nhất (1 MB và 8 MB) khi tốc độ đã bão hòa:
+- **Hệ số $a$ (chi phí cố định, $\mu\text{s/op}$):** ngoại suy về kích thước 0 byte; đại diện cho chi phí thiết lập mỗi thao tác (khởi tạo bộ lọc Crypto++, cấp phát, lịch khóa, thiết lập $J_0$, sinh/so sánh thẻ).
+- **Hệ số $b$ (chi phí biên, ns/byte):** tính từ độ dốc giữa hai payload lớn nhất:
   $$b = \frac{\text{Latency}(8\text{MB}) - \text{Latency}(1\text{MB})}{8\text{MB} - 1\text{MB}}$$
-  Tốc độ xử lý tương đương của pha streaming: $\text{Throughput}_{\text{equiv}} = \frac{1}{b}$ (MB/s).
+  Tốc độ tương đương của pha streaming: $\text{Throughput}_{\text{equiv}} = 1/b$ (MB/s).
 
 ### Bảng 6: Mô hình Chi phí Cố định và Chi phí Biên của Thẻ Xác thực (Trích xuất từ `analysis_tag_overhead.csv`)
 | Nền tảng | Chiều | Chế độ | Chi phí cố định $a$ ($\mu$s/op) | Chi phí biên $b$ (ns/B) | Tốc độ tương đương (MB/s) | $\Delta$ Chi phí cố định so với CTR | $\Delta$ Chi phí biên so với CTR | Phần trăm tăng thêm chi phí biên |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| Windows GCC | Enc | CTR | 8.484 | 1.114 | 897.38 | Baseline | Baseline | Baseline |
-| Windows GCC | Enc | **GCM** | 6.357 | **2.241** | 446.15 | -2.127 | **+1.127 ns/B** | **+101.1%** |
-| Windows GCC | Enc | **CCM** | 3.336 | **4.802** | 208.26 | -5.148 | **+3.687 ns/B** | **+330.9%** |
-| Ubuntu GCC | Enc | CTR | 1.697 | 0.612 | 1635.08 | Baseline | Baseline | Baseline |
-| Ubuntu GCC | Enc | **GCM** | -0.485 | **2.708** | 369.31 | -2.182 | **+2.096 ns/B** | **+342.7%** |
-| Ubuntu GCC | Enc | **CCM** | -0.991 | **3.746** | 266.94 | -2.688 | **+3.135 ns/B** | **+512.5%** |
-| Windows GCC | Dec | CTR | 2.324 | 1.424 | 702.25 | Baseline | Baseline | Baseline |
-| Windows GCC | Dec | **GCM** | 5.721 | **1.774** | 563.85 | +3.397 | **+0.350 ns/B** | **+24.5%** |
-| Windows GCC | Dec | **CCM** | 3.234 | **4.720** | 211.89 | +0.909 | **+3.296 ns/B** | **+231.4%** |
-| Ubuntu GCC | Dec | CTR | 1.905 | 0.632 | 1583.16 | Baseline | Baseline | Baseline |
-| Ubuntu GCC | Dec | **GCM** | 2.265 | **0.942** | 1062.14 | +0.360 | **+0.310 ns/B** | **+49.1%** |
-| Ubuntu GCC | Dec | **CCM** | 2.409 | **1.957** | 511.11 | +0.504 | **+1.325 ns/B** | **+209.8%** |
+| Windows GCC | Enc | CTR | 0.998 | 0.612 | 1,635.09 | Baseline | Baseline | Baseline |
+| Windows GCC | Enc | **GCM** | 0.554 | **1.449** | 690.18 | -0.443 | **+0.837 ns/B** | **+136.9%** |
+| Windows GCC | Enc | **CCM** | 0.421 | **1.917** | 521.64 | -0.577 | **+1.306 ns/B** | **+213.5%** |
+| Windows GCC | Dec | CTR | 0.937 | 0.634 | 1,576.64 | Baseline | Baseline | Baseline |
+| Windows GCC | Dec | **GCM** | 1.675 | **1.128** | 886.35 | +0.738 | **+0.494 ns/B** | **+77.9%** |
+| Windows GCC | Dec | **CCM** | 1.366 | **1.840** | 543.35 | +0.429 | **+1.206 ns/B** | **+190.2%** |
+| Ubuntu GCC | Enc | CTR | 0.726 | 0.343 | 2,918.45 | Baseline | Baseline | Baseline |
+| Ubuntu GCC | Enc | **GCM** | 0.691 | **0.527** | 1,898.32 | -0.035 | **+0.184 ns/B** | **+53.7%** |
+| Ubuntu GCC | Enc | **CCM** | 0.579 | **1.148** | 871.36 | -0.147 | **+0.805 ns/B** | **+234.9%** |
+| Ubuntu GCC | Dec | CTR | 0.775 | 0.280 | 3,566.99 | Baseline | Baseline | Baseline |
+| Ubuntu GCC | Dec | **GCM** | 1.136 | **0.478** | 2,090.80 | +0.361 | **+0.198 ns/B** | **+70.6%** |
+| Ubuntu GCC | Dec | **CCM** | 0.994 | **1.131** | 884.24 | +0.219 | **+0.851 ns/B** | **+303.4%** |
 
 ![Phân tích Chi phí Phụ trội Tag chiều Mã hóa](../output/compare/mode_cmp/analysis_tag_overhead_enc.png)
 *Hình 9: Phân tích Chi phí phụ trội của Tag (GCM/CCM vs. CTR) chiều Mã hóa (Enc): (1) Độ trễ gia tăng tuyệt đối theo payload; (2) Chi phí cố định mỗi thao tác ngoại suy; (3) Chi phí tính toán biên trên mỗi byte (ns/B).*
@@ -799,60 +909,54 @@ $$\text{Latency}(\text{Size}) \approx a + b \cdot \text{Size}$$
 ![Phân tích Chi phí Phụ trội Tag chiều Giải mã](../output/compare/mode_cmp/analysis_tag_overhead_dec.png)
 *Hình 10: Phân tích Chi phí phụ trội của Tag (GCM/CCM vs. CTR) chiều Giải mã (Dec): (1) Độ trễ gia tăng tuyệt đối theo payload; (2) Chi phí cố định mỗi thao tác ngoại suy; (3) Chi phí tính toán biên trên mỗi byte (ns/B).*
 
-#### Phân tích ý nghĩa số liệu mô hình:
-- **Trên chiều Giải mã (Dec):**
-  - Trong GCM Dec trên Ubuntu, chi phí biên chỉ tăng thêm **$+0.310$ ns/Byte (+49.1% so với CTR)**, giữ tốc độ giải mã bão hòa ở mức cực cao $1062.14$ MB/s. Chi phí cố định của việc kiểm tra thẻ xác thực thời gian hằng số chỉ tốn vẻn vẹn $+0.360$ $\mu$s.
-  - Ngược lại, CCM Dec tốn thêm tới **$+1.325$ ns/Byte (+209.8% chi phí biên)** do phải chạy lại thuật toán CBC-MAC trên toàn bộ dữ liệu để đối chiếu thẻ tag.
-- **Trên chiều Mã hóa (Enc):**
-  - CCM tiêu tốn tới $3.75 - 4.80$ ns cho mỗi byte dữ liệu (gấp hơn 4 đến 6 lần so với CTR), minh chứng thực nghiệm sinh động cho thấy Two-pass AEAD là một gánh nặng lớn đối với thông lượng streaming.
+#### Phân tích:
+- **Chi phí biên (ns/byte):** GCM Enc thêm +0.837 ns/B (Windows) và +0.184 ns/B (Ubuntu) so với CTR;
+  CCM Enc thêm +1.306 và +0.805 ns/B. Ở chiều Dec, GCM thêm +0.494 (Windows) và +0.198 (Ubuntu) ns/B, CCM thêm +1.206 và +0.851 ns/B.
+  Như vậy CCM luôn có chi phí biên cao hơn GCM, phù hợp với việc CCM phải chạy hai lượt.
+- **Chi phí cố định:** các giá trị chỉ vào khoảng vài phần mười micro giây đến dưới 2 µs mỗi thao tác, rất nhỏ so với thời gian xử lý dữ liệu từ vài chục KB trở lên.
+  
+- **Thận trọng khi đọc bảng:** mô hình chỉ dùng hai kích thước lớn nhất; chi phí biên còn bao gồm chi phí cấp phát và sao chép bộ nhớ mỗi thao tác của `aestool` (mục 5.5.1), nên nó không phải chi phí thuần của thuật toán xác thực.
 
 ---
 
 #### B. Chi phí không gian lưu trữ (Storage Overhead)
-Thẻ xác thực AEAD yêu cầu gắn kèm bản mã một lượng byte nhất định: 4 bytes (CCM tối thiểu), 8 bytes (CCM trung bình) hoặc 16 bytes (chuẩn mực GCM/CCM).
+Thẻ xác thực AEAD được gắn kèm bản mã: 4 byte (CCM tối thiểu), 8 byte (CCM trung bình) hoặc 16 byte (chuẩn mực GCM/CCM).
 $$\text{Storage Overhead (\%)} = \frac{\text{Tag Length (Bytes)}}{\text{Payload Size (Bytes)}} \times 100\%$$
 
 ### Bảng 7: Tỷ lệ Phần trăm Dung lượng Thẻ xác thực theo Kích thước Payload (Trích xuất từ `analysis_tag_storage_overhead.csv`)
-| Kích thước Payload | Tag 4 Bytes (CCM Low) | Tag 8 Bytes (CCM Med) | Tag 16 Bytes (GCM / CCM Full) | Mức độ ảnh hưởng lưu trữ |
-| :---: | :---: | :---: | :---: | :--- |
-| **1 KB (1,024 B)** | 0.3906% | 0.7812% | **1.5625%** | Có thể nhận biết (> 1%) |
-| **4 KB (4,096 B)** | 0.0977% | 0.1953% | 0.3906% | Rất nhỏ (< 0.5%) |
-| **16 KB (16,384 B)** | 0.0244% | 0.0488% | 0.0977% | Không đáng kể (< 0.1%) |
-| **256 KB (262,144 B)** | 0.0015% | 0.0031% | 0.0061% | Hoàn toàn không đáng kể |
-| **1 MB (1,048,576 B)** | 0.0004% | 0.0008% | 0.0015% | Gần như bằng 0 |
-| **8 MB (8,388,608 B)** | 0.0000% | 0.0001% | 0.0002% | Triệt tiêu hoàn toàn |
+| Kích thước Payload | Tag 4 Bytes (CCM Low) | Tag 8 Bytes (CCM Med) | Tag 16 Bytes (GCM / CCM Full) |
+| :---: | :---: | :---: | :---: |
+| **1 KB (1,024 B)** | 0.3906% | 0.7812% | **1.5625%** |
+| **4 KB (4,096 B)** | 0.0977% | 0.1953% | **0.3906%** |
+| **16 KB (16,384 B)** | 0.0244% | 0.0488% | **0.0977%** |
+| **256 KB (262,144 B)** | 0.0015% | 0.0031% | **0.0061%** |
+| **1 MB (1,048,576 B)** | 0.0004% | 0.0008% | **0.0015%** |
+| **8 MB (8,388,608 B)** | 0.0000% | 0.0001% | **0.0002%** |
 
 ![Biểu đồ Tỷ lệ Dung lượng Thẻ xác thực](../output/compare/mode_cmp/analysis_tag_storage_overhead.png)
-*Hình 11: Biểu đồ suy giảm Log-Log của Tỷ lệ dung lượng Thẻ xác thực (Storage Overhead %) theo kích thước Payload trên các độ dài Tag 4B, 8B và 16B.*
+*Hình 11: Biểu đồ Log-Log của Tỷ lệ dung lượng Thẻ xác thực (Storage Overhead %) theo kích thước Payload trên các độ dài Tag 4B, 8B và 16B.*
 
 #### Kết luận về chi phí lưu trữ:
-Quan sát đồ thị suy giảm tuyến tính trên hệ trục Log-Log [analysis_tag_storage_overhead.png](../output/compare/mode_cmp/analysis_tag_storage_overhead.png):
-- Tại payload nhỏ 1 KB, thẻ tag 16-byte chiếm tỷ trọng $1.56\%$.
-- Ngay khi kích thước dữ liệu đạt từ **16 KB trở lên**, chi phí lưu trữ của thẻ tag lập tức giảm xuống dưới **$0.097\%$** và tiệm cận mức **$0.0015\%$** tại 1 MB.
-- Điều này chứng minh rằng trong các hệ thống truyền dẫn tệp tin thực tế, chi phí lưu trữ thêm 16 bytes của AEAD là **hoàn toàn không đáng kể (negligible)**, hoàn toàn bù đắp được bằng lợi ích an ninh bảo vệ dữ liệu chống giả mạo tuyệt đối.
+- Tại payload 1 KB, thẻ 16 byte chiếm 1.56%; từ 16 KB trở lên chiếm dưới 0.098%; tại 1 MB chỉ 0.0015%.
+- Với dữ liệu từ vài chục KB trở lên, chi phí lưu trữ của thẻ AEAD là không đáng kể so với lợi ích chống giả mạo; chi phí này chỉ đáng chú ý với các thông điệp rất ngắn (vài trăm byte).
 
 ---
 
-## 5.6. Diễn giải nguyên nhân kiến trúc: OS Scheduling, Syscall, Cache và AES-NI
-Các hiện tượng quan sát được trên đồ thị không phải là ngẫu nhiên mà phản ánh trực tiếp kiến trúc phần cứng và hệ điều hành:
+## 5.6. Diễn giải nguyên nhân: OS Scheduling, Syscall, Cache và AES-NI
+Phần này đối chiếu các hiện tượng trên đồ thị với kiến trúc phần cứng và hệ điều hành. **Mỗi nhận định được ghi rõ là đã đo hay chỉ là suy luận**: bài này chỉ đo thông lượng/độ trễ của `aestool` và một chương trình dò Crypto++ (mục 5.5.1); nó **không** dùng bộ đếm phần cứng, `perf` hay ETW để tách riêng từng nguyên nhân.
 
-1. **Hiện tượng "đỉnh vòm" (Peak) tại 256 KB - 1 MB và suy giảm tại 8 MB:**
-   - Quan sát trên toàn bộ các đồ thị thông lượng, tốc độ xử lý tăng vọt từ 1 KB, đạt đỉnh cực đại tại 256 KB hoặc 1 MB, sau đó **lao dốc mạnh tại mốc 8 MB** (ví dụ: ECB Enc trên Ubuntu từ đỉnh $3528.95$ MB/s tại 256 KB tụt xuống $462.31$ MB/s tại 8 MB).
-   - **Bản chất kiến trúc:** Bộ vi xử lý Intel Core i7-8565U có cấu trúc bộ nhớ đệm phân tầng:
-     - L1 Data Cache: 32 KB/core.
-     - L2 Cache: 256 KB/core (độ trễ ~12 chu kỳ clock).
-     - L3 Shared Cache: 8 MB (độ trễ ~40 chu kỳ clock).
-   - Khi kích thước payload là **256 KB**, toàn bộ khối dữ liệu nằm gọn trong bộ nhớ đệm L2 cực nhanh, đạt băng thông tính toán tối đa.
-   - Khi payload tăng lên **8 MB**, dữ liệu vượt quá dung lượng L2 và chiếm trọn L3 Cache, dẫn đến hiện tượng tranh chấp bộ nhớ đệm (*cache thrashing*). CPU buộc phải liên tục đọc/ghi dữ liệu ra bộ nhớ chính RAM ngoại vi (DRAM bandwidth bottleneck với độ trễ lên tới ~150-200 chu kỳ clock). Chính sự nghẽn cổ chai bộ nhớ (Memory Wall) này đã kéo tụt thông lượng xử lý.
+1. **Đường cong thông lượng theo kích thước payload (đã đo):** thông lượng tăng từ 1 KB, đạt đỉnh ở kích thước trung bình rồi giảm ở 8 MB, ví dụ: ECB Enc trên Windows: đỉnh 4,991 MB/s tại 256 KB, còn 1,264 MB/s tại 8 MB; CTR Enc trên Windows: đỉnh 4,824 MB/s tại 256 KB, còn 1,762 MB/s tại 8 MB; GCM Enc trên Windows: đỉnh 2,726 MB/s tại 256 KB, còn 715 MB/s tại 8 MB; ECB Enc trên Ubuntu: đỉnh 5,950 MB/s tại 256 KB, còn 1,014 MB/s tại 8 MB; CTR Enc trên Ubuntu: đỉnh 5,826 MB/s tại 256 KB, còn 3,084 MB/s tại 8 MB; GCM Enc trên Ubuntu: đỉnh 3,401 MB/s tại 256 KB, còn 1,984 MB/s tại 8 MB.
+   - *Giải thích khả dĩ (suy luận):* payload nhỏ chịu chi phí cố định mỗi thao tác (khởi tạo bộ lọc, cấp phát, lịch khóa) nên thông lượng thấp. Máy này có L2 1.25 MB mỗi nhân và L3 24 MB (thông số Intel). Mỗi thao tác của `aestool` giữ cả đầu vào lẫn đầu ra (và bản sao), nên khi payload tăng đến vài MB, tổng dữ liệu đang dùng vượt L2 và áp lực lên L3 và băng thông RAM tăng, làm thông lượng giảm.
 
-2. **Nguyên nhân chênh lệch giữa Windows và Linux:**
-   - **Cơ chế lập lịch tiến trình (OS Process Scheduling):** Bộ điều phối hoàn toàn công bằng (*Completely Fair Scheduler - CFS*) của Linux có mức độ trễ chuyển ngữ cảnh (*context switch overhead*) thấp hơn đáng kể so với Windows Thread Dispatcher.
-   - **Tối ưu hóa quản lý bộ nhớ ảo (Virtual Memory & Page Faults):** Linux áp dụng cơ chế nạp trang linh hoạt (*aggressive demand paging*) và bộ cấp phát heap `ptmalloc` không khóa phân mảnh, trong khi Windows CRT thực hiện nhiều kiểm tra an toàn bổ sung trong hàm cấp phát bộ nhớ người dùng.
-   - **Độ phân giải của đồng hồ đo:** Trên Linux, lời gọi hàm `clock_gettime(CLOCK_MONOTONIC_RAW)` truy cập trực tiếp thanh ghi phần cứng TSC với chi phí gần như bằng 0. Trên Windows, hàm `QueryPerformanceCounter` chịu chi phí bọc trừu tượng của lớp phần cứng HAL (Hardware Abstraction Layer).
+2. **Chênh lệch giữa Windows và Linux (đã đo, nguyên nhân chỉ được khoanh vùng):**
+   - Đã loại trừ (với hai bản Crypto++ dùng trong phép dò, xem mục 5.5.1): khác biệt về tăng tốc phần cứng của thư viện. Cả hai bản dùng AES-NI và PCLMULQDQ, và khi tái sử dụng bộ đệm thì tốc độ gần bằng nhau (mục 5.5.1).
+   - Đã quan sát: khoảng cách xuất hiện khi mỗi thao tác cấp phát và sao chép chuỗi đầu ra mới; Linux chịu chi phí này nhẹ hơn (đặc biệt với GCM). Điều này phù hợp với khác biệt về **quản lý bộ nhớ ảo** (cấp phát heap, cấp trang bộ nhớ theo yêu cầu và đưa về 0, page fault) giữa hai hệ điều hành.
+   - *Các yếu tố khác có thể đóng góp nhưng không được đo riêng:* bộ lập lịch tiến trình (chi phí chuyển ngữ cảnh, xử lý ngắt), đồng hồ đo (`QueryPerformanceCounter` so với `clock_gettime`), runtime C/C++ (MinGW so với glibc) và hai phiên bản GCC khác nhau (16.2 và 13.3).
 
-3. **Vai trò của tập lệnh phần cứng AES-NI:**
-   - Các lệnh `_mm_aesenc_si128` và `_mm_aesenclast_si128` cho phép thực hiện trọn vẹn một vòng biến đổi AES (SubBytes, ShiftRows, MixColumns, AddRoundKey) chỉ trong **1 chu kỳ xung nhịp (clock cycle)** với độ trễ 4 chu kỳ.
-   - Điều này giải thích tại sao các chế độ có khả năng song song hóa (CTR, GCM, CBC Dec) lại đạt được thông lượng khổng lồ vượt mốc 2.3 GB/s trên phần cứng máy trạm.
+3. **Chi phí lời gọi hệ thống và I/O (đã xác định phạm vi):** vòng đo của `bench` chạy hoàn toàn trong bộ nhớ, không có `read`/`write` file trong khoảng thời gian được đo, nên chi phí system call chủ yếu là các lời gọi cấp phát bộ nhớ (`mmap`/`VirtualAlloc`) và khi đọc đồng hồ; nó không bao gồm I/O đĩa.
+
+4. **Vai trò của AES-NI (đã đo gián tiếp):** nhờ AES-NI và PCLMULQDQ, các mode xếp chồng được nhiều khối (CTR, GCM, CBC giải mã) đạt thông lượng cao nhất trong bài (ví dụ CTR Enc tại 1 MB là 4,160 MB/s trên Ubuntu và 2,487 MB/s trên Windows), còn các mode phụ thuộc tuần tự (CBC Enc, CFB Enc, OFB) chậm hơn do độ trễ của lệnh AES không được che giấu.
+   Đây là kết luận từ tương quan giữa mode và thông lượng, bài không so với một bản Crypto++ tắt AES-NI.
 
 ---
 
@@ -949,14 +1053,15 @@ Trong quá trình triển khai thực tế hệ thống, tác giả đã phát h
    - *Khắc phục:* tìm Crypto++ tự động (package config, pkg-config, prefix chuẩn), bỏ hoàn toàn OpenSSL, và kiểm tra lại bằng bản build sạch trên MSVC, MinGW và Ubuntu.
 
 ## 7.2. So sánh hành vi giữa các trình biên dịch (MSVC, MinGW GCC, Clang)
-- **MinGW-w64 GCC vs. MSVC trên Windows:** GCC cho kết quả thông lượng cao hơn MSVC khoảng 5-10% trên các chế độ xử lý luồng (CTR, GCM) nhờ khả năng tối ưu hóa vòng lặp (loop unrolling) và lập lịch thanh ghi SIMD tốt hơn của backend GCC. Tuy nhiên, MSVC có thời gian biên dịch nhanh hơn và tích hợp mượt mà hơn với công cụ gỡ lỗi của Visual Studio.
-- **GCC vs. Clang trên Ubuntu:** Clang 14 và GCC 11 cho kết quả hiệu năng tương đương nhau (chênh lệch dưới 2%), cho thấy cả hai trình tối ưu hóa hiện đại đều nhận diện và tận dụng triệt để tập lệnh phần cứng AES-NI.
+- **MinGW-w64 GCC vs. MSVC trên Windows (đã đo):** trên cùng một máy, thông lượng của bản MSVC bằng khoảng **78%** của bản MinGW GCC ở trung vị (MSVC chậm hơn ở 98% số ô đo; xem mục 5.5.1 và `bench_windows_msvc.csv`).
+  Hai bản liên kết thư viện Crypto++ khác nhau (MSYS2 so với vcpkg) và dùng runtime khác nhau, nên khác biệt không chỉ do trình biên dịch; bài không tách riêng từng yếu tố.
+- **GCC vs. Clang trên Ubuntu:** Clang chưa được đo lại trong đợt đo cuối (chỉ GCC 13.3.0). Nhận xét về Clang trong các phiên bản trước của báo cáo dựa trên đợt đo cũ nên không được dùng làm kết luận hiện tại.
 
 ## 7.3. Đánh đổi giữa An toàn Mật mã và Hiệu năng Thực thi
 - Mật mã học trong kỹ thuật phần mềm luôn là bài toán cân bằng giữa **Độ an toàn (Security)** và **Chi phí tài nguyên (Performance Overhead)**:
-  - Việc lựa chọn chế độ đơn giản như CTR mang lại hiệu năng tối đa ($1817$ MB/s) nhưng đặt toàn bộ rủi ro về tính toàn vẹn lên tầng ứng dụng.
-  - Việc sử dụng GCM chịu hao phí khoảng 22% thông lượng nhưng loại bỏ hoàn toàn nguy cơ bị tấn công thay đổi dữ liệu.
-  - Việc lựa chọn CCM làm giảm hơn một nửa hiệu năng do kiến trúc Two-pass, chỉ nên áp dụng trong các môi trường bắt buộc tuân thủ tiêu chuẩn phần cứng mạng cũ (như chuẩn Wi-Fi WPA2 / 802.11i hoặc Bluetooth Low Energy).
+  - Việc lựa chọn chế độ đơn giản như CTR mang lại hiệu năng cao (tại 1 MB, mã hóa đạt $4,160$ MB/s trên Ubuntu và $2,487$ MB/s trên Windows) nhưng đặt toàn bộ rủi ro về tính toàn vẹn lên tầng ứng dụng.
+  - Việc sử dụng GCM chỉ còn khoảng 68% thông lượng của CTR trên Ubuntu và 34% trên Windows (tại 1 MB, mã hóa), nhưng bổ sung khả năng phát hiện việc sửa đổi dữ liệu.
+  - Việc lựa chọn CCM chỉ còn khoảng 25% thông lượng của CTR (Ubuntu) do kiến trúc Two-pass, chỉ nên áp dụng trong các môi trường bắt buộc tuân thủ tiêu chuẩn phần cứng mạng cũ (như chuẩn Wi-Fi WPA2 / 802.11i hoặc Bluetooth Low Energy).
 
 ---
 
@@ -1031,35 +1136,62 @@ aestool bench --runs 100 --out bench_results.csv
 
 ## Phụ lục P2. Toàn văn Biên bản Kiểm thử Tự động CTest
 
-### 1. Nhật ký CTest trên Windows 10 (MSVC x64 Release):
-*Trích lục từ [output/windows/test_windows_msvc.txt](../output/windows/test_windows_msvc.txt):*
+### 1. Nhật ký CTest trên Windows (MSVC, Release, `/MT`):
+*Toàn văn [output/windows/ctest_windows_msvc.txt](../output/windows/ctest_windows_msvc.txt):*
 ```
-Test project ../build_windows_msvc
-    Start 1: unit_tests
-1/3 Test #1: unit_tests .......................   Passed    0.06 sec
-    Start 2: nist_kat
-2/3 Test #2: nist_kat .........................   Passed    0.01 sec
-    Start 3: cli_negative
-3/3 Test #3: cli_negative .....................   Passed    0.20 sec
+== ctest: MSVC - Release, /MT, static Crypto++ from vcpkg ==
+date : Sun 11/15/2026 15:14:39.16
+git  : df000a9
+Microsoft (R) C/C++ Optimizing Compiler Version 19.51.36260 for x64
+cmake: cmake version 4.3.1-msvc1
+cryptopp: 8.9.0 vcpkg x64-windows-static
+
+Test project C:/Users/ThinkPad/AppData/Local/Temp/l1_rel_msvc
+    Start 1: lab1_unit_tests
+1/3 Test #1: lab1_unit_tests ..................   Passed    0.02 sec
+    Start 2: lab1_nist_kat
+2/3 Test #2: lab1_nist_kat ....................   Passed    0.01 sec
+    Start 3: lab1_cli_negative
+3/3 Test #3: lab1_cli_negative ................   Passed    0.46 sec
 
 100% tests passed, 0 tests failed out of 3
-Total Test time (real) =   0.31 sec
+
+Total Test time (real) =   0.50 sec
+
+-- unit tests (Catch2) summary:
+All tests passed (62 assertions in 15 test cases)
 ```
 
-### 2. Nhật ký CTest trên Ubuntu 22.04 LTS (Clang 14):
-*Trích lục từ [output/ubuntu/test_ubuntu_clang.txt](../output/ubuntu/test_ubuntu_clang.txt):*
+### 2. Nhật ký CTest trên Windows (MinGW-w64 GCC):
+*Toàn văn [output/windows/ctest_windows_mingw.txt](../output/windows/ctest_windows_mingw.txt):*
 ```
-Test project /home/dell/home-crypto/crypto-labs/lab1/build_ubuntu_clang
-    Start 1: unit_tests
-1/3 Test #1: unit_tests .......................   Passed    0.01 sec
-    Start 2: nist_kat
-2/3 Test #2: nist_kat .........................   Passed    0.00 sec
-    Start 3: cli_negative
-3/3 Test #3: cli_negative .....................   Passed    0.06 sec
+== ctest: MinGW-w64 GCC (Release, static) ==
+date : 2026-11-15T08:14:25Z
+git  : df000a9
+g++  : g++.exe (Rev4, Built by MSYS2 project) 16.2.0
+cmake: cmake version 4.4.3
+cryptopp: mingw-w64-x86_64-crypto++ 8.9.0-2
+catch2 : mingw-w64-x86_64-catch 3.16.0-1
 
-100% tests passed, 0 tests failed out of 3
-Total Test time (real) =   0.08 sec
+Test project C:/Users/ThinkPad/AppData/Local/Temp/l1_final_check
+    Start 1: lab1_unit_tests
+1/3 Test #1: lab1_unit_tests ..................   Passed    0.03 sec
+    Start 2: lab1_nist_kat
+2/3 Test #2: lab1_nist_kat ....................   Passed    0.02 sec
+    Start 3: lab1_cli_negative
+3/3 Test #3: lab1_cli_negative ................   Passed    0.47 sec
+
+100% tests passed out of 3
+
+Total Test time (real) =   0.52 sec
+
+-- unit tests (Catch2) summary:
+===============================================================================
+All tests passed (62 assertions in 15 test cases)
 ```
+
+### 3. Nhật ký CTest trên Ubuntu (GCC):
+Xem `output/ubuntu/ctest_ubuntu_gcc.txt` (tạo bằng lệnh ở [TEST_EVIDENCE.md](TEST_EVIDENCE.md) mục 3.2).
 
 ---
 
@@ -1086,20 +1218,20 @@ AESKEY-HEX
 ---
 
 ## Phụ lục P4. Trích lục Dữ liệu Benchmark đối chiếu (CSV Preview)
-Trích lục trực tiếp từ tập tin tổng hợp so sánh chéo [compare_summary.csv](../output/compare/compare_summary.csv):
+Trích lục trực tiếp từ tập tin tổng hợp so sánh chéo [compare_summary.csv](../output/compare/compare_summary.csv) (baseline = Windows GCC; `ratio` = Ubuntu / Windows):
 
 ```csv
 platform,baseline,mode,dir,size_bytes,base_MBps,cmp_MBps,ratio,diff_pct,significant
-Windows,Ubuntu,ecb,enc,1024,943.92,277.50,0.294,-70.6,True
-Windows,Ubuntu,ecb,enc,16384,3200.39,1433.81,0.448,-55.2,True
-Windows,Ubuntu,ecb,enc,1048576,779.34,738.38,0.947,-5.3,True
-Windows,Ubuntu,cbc,enc,1048576,683.19,379.56,0.556,-44.4,True
-Windows,Ubuntu,cbc,dec,1048576,2394.70,1038.91,0.434,-56.6,True
-Windows,Ubuntu,ctr,enc,1048576,1817.51,1018.72,0.561,-43.9,True
-Windows,Ubuntu,ctr,dec,1048576,2331.61,1177.23,0.505,-49.5,True
-Windows,Ubuntu,gcm,enc,1048576,1417.03,446.94,0.315,-68.5,True
-Windows,Ubuntu,gcm,dec,1048576,1370.23,600.12,0.438,-56.2,True
-Windows,Ubuntu,ccm,enc,1048576,555.43,250.78,0.452,-54.8,True
+ubuntu_gcc,windows_gcc,ecb,enc,1024,788.44,1193.97,1.514,51.4,True
+ubuntu_gcc,windows_gcc,ecb,enc,16384,3759.45,5089.9,1.354,35.4,True
+ubuntu_gcc,windows_gcc,ecb,enc,1048576,1618.12,1200.4,0.742,-25.8,True
+ubuntu_gcc,windows_gcc,cbc,enc,1048576,858.16,1250.23,1.457,45.7,True
+ubuntu_gcc,windows_gcc,cbc,dec,1048576,2460.26,4775.55,1.941,94.1,True
+ubuntu_gcc,windows_gcc,ctr,enc,1048576,2486.66,4159.77,1.673,67.3,True
+ubuntu_gcc,windows_gcc,ctr,dec,1048576,2460.79,4335.16,1.762,76.2,True
+ubuntu_gcc,windows_gcc,gcm,enc,1048576,837.29,2831.91,3.382,238.2,True
+ubuntu_gcc,windows_gcc,gcm,dec,1048576,1135.4,3127.81,2.755,175.5,True
+ubuntu_gcc,windows_gcc,ccm,enc,1048576,616.08,1034.06,1.678,67.8,True
 ```
 
 ---

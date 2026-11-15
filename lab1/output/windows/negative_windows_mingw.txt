@@ -1,0 +1,185 @@
+== Lab 1 negative tests (fail-closed evidence) ==
+tool : ./release/windows/aestool_mingw.exe
+date : 2026-11-15T08:14:11Z
+git  : df000a9
+
+################ 0. Setup (test keys and IVs, generated with the OS CSPRNG)
+$ ./release/windows/aestool_mingw.exe keygen --bits 256 --out neg_tmp/key.bin
+Key (256 bits) written to neg_tmp/key.bin
+WARNING: protect this file (chmod 600); never commit real keys.
+[exit code: 0]
+
+$ ./release/windows/aestool_mingw.exe keygen --bits 256 --out neg_tmp/key_wrong.bin
+Key (256 bits) written to neg_tmp/key_wrong.bin
+WARNING: protect this file (chmod 600); never commit real keys.
+[exit code: 0]
+
+################ A. Positive controls (must succeed, exit code 0)
+$ ./release/windows/aestool_mingw.exe encrypt --mode cbc --key neg_tmp/key.bin --iv neg_tmp/iv16.bin --in neg_tmp/plain.txt --out neg_tmp/cbc.bin --nonce-db neg_tmp/nonces
+ciphertext -> neg_tmp/cbc.bin ; header -> neg_tmp/cbc.bin.json
+alg:        AES-256-CBC
+iv:         c9aa2d05c38a84020e2cae63977f60df
+ciphertext: 7c93f7badb2afde32d526e6183cfe2f044367f8f326d21cac51975de86186d578cb4ddfd700eaf71823077346693bc32
+[exit code: 0]
+
+$ ./release/windows/aestool_mingw.exe decrypt --mode cbc --key neg_tmp/key.bin --iv neg_tmp/iv16.bin --in neg_tmp/cbc.bin --out neg_tmp/cbc.out
+plaintext -> neg_tmp/cbc.out
+[exit code: 0]
+
+$ cmp neg_tmp/plain.txt neg_tmp/cbc.out
+[exit code: 0]
+
+$ ./release/windows/aestool_mingw.exe encrypt --mode gcm --aead --key neg_tmp/key.bin --in neg_tmp/plain.txt --out neg_tmp/gcm.bin --nonce-db neg_tmp/nonces
+ciphertext -> neg_tmp/gcm.bin ; header -> neg_tmp/gcm.bin.json
+alg:        AES-256-GCM
+iv:         884e9260a7328319d9e3d4ae
+ciphertext: 957a82c8e51f91bbd894c360c3c5aabcc0cb1fb655a72f5a7c43399eb2cf364942e44f3758fe1ef6c9
+tag:        87f87667386a32354d55ed8b138e304b
+[exit code: 0]
+
+$ ./release/windows/aestool_mingw.exe decrypt --mode gcm --aead --key neg_tmp/key.bin --in neg_tmp/gcm.bin --out neg_tmp/gcm.out
+plaintext -> neg_tmp/gcm.out
+[exit code: 0]
+
+$ cmp neg_tmp/plain.txt neg_tmp/gcm.out
+[exit code: 0]
+
+################ B. Wrong key -> refusal / wrong plaintext
+$ ./release/windows/aestool_mingw.exe decrypt --mode cbc --key neg_tmp/key_wrong.bin --iv neg_tmp/iv16.bin --in neg_tmp/cbc.bin --out neg_tmp/wrongkey.out
+ERROR: decryption failed
+[exit code: 2]
+
+$ ./release/windows/aestool_mingw.exe decrypt --mode gcm --aead --key neg_tmp/key_wrong.bin --in neg_tmp/gcm.bin --out neg_tmp/wrongkey_gcm.out
+ERROR: decryption failed
+[exit code: 2]
+
+RESULT: no plaintext file written (good)
+
+################ C. Wrong IV -> wrong plaintext (CTR: decryption 'succeeds' but output differs)
+$ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv16.bin --in neg_tmp/plain.txt --out neg_tmp/ctr.bin --nonce-db neg_tmp/nonces
+ciphertext -> neg_tmp/ctr.bin ; header -> neg_tmp/ctr.bin.json
+alg:        AES-256-CTR
+iv:         c9aa2d05c38a84020e2cae63977f60df
+ciphertext: 840bcd428a329136c15cda2e765b90aa375461c1919d96a517853408f121ef45b00bd0f94644b43a7b
+[exit code: 0]
+
+$ ./release/windows/aestool_mingw.exe decrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv_wrong.bin --in neg_tmp/ctr.bin --out neg_tmp/ctr_wrongiv.out
+plaintext -> neg_tmp/ctr_wrongiv.out
+[exit code: 0]
+
+$ cmp neg_tmp/plain.txt neg_tmp/ctr_wrongiv.out
+neg_tmp/plain.txt neg_tmp/ctr_wrongiv.out differ: char 1, line 1
+[exit code: 1]
+
+(cmp exit code 1 = files differ = expected)
+
+################ D. Tampered ciphertext
+--- D1. non-AEAD (CTR): one flipped bit -> decrypts, plaintext corrupted, NOT detected
+$ ./release/windows/aestool_mingw.exe decrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv16.bin --in neg_tmp/ctr_bad.bin --out neg_tmp/ctr_bad.out
+plaintext -> neg_tmp/ctr_bad.out
+[exit code: 0]
+
+$ cmp neg_tmp/plain.txt neg_tmp/ctr_bad.out
+neg_tmp/plain.txt neg_tmp/ctr_bad.out differ: char 4, line 1
+[exit code: 1]
+
+(cmp exit code 1 = corrupted output = expected)
+
+--- D2. AEAD (GCM): one flipped ciphertext bit -> authentication failure, no plaintext file
+$ ./release/windows/aestool_mingw.exe decrypt --mode gcm --aead --key neg_tmp/key.bin --in neg_tmp/gcm_bad.bin --out neg_tmp/gcm_bad.out
+ERROR: decryption failed
+[exit code: 2]
+
+RESULT: no plaintext file written (good)
+
+################ E. Tampered / invalid authentication tag (AEAD)
+$ ./release/windows/aestool_mingw.exe decrypt --mode gcm --aead --key neg_tmp/key.bin --in neg_tmp/gcm.bin --meta neg_tmp/tag_bad.json --out neg_tmp/tag_bad.out
+ERROR: decryption failed
+[exit code: 2]
+
+RESULT: no plaintext file written (good)
+
+$ ./release/windows/aestool_mingw.exe decrypt --mode gcm --aead --key neg_tmp/key.bin --in neg_tmp/gcm.bin --tag-hex 00112233 --out neg_tmp/tag_short.out
+ERROR: invalid tag length
+[exit code: 1]
+
+--- tampered IV in the header:
+$ ./release/windows/aestool_mingw.exe decrypt --mode gcm --aead --key neg_tmp/key.bin --in neg_tmp/gcm.bin --meta neg_tmp/iv_bad.json --out neg_tmp/iv_bad.out
+ERROR: decryption failed
+[exit code: 2]
+
+################ F. Invalid IV / nonce length -> rejected
+$ ./release/windows/aestool_mingw.exe encrypt --mode cbc --key neg_tmp/key.bin --iv neg_tmp/iv8.bin --in neg_tmp/plain.txt --out neg_tmp/x1.bin --nonce-db neg_tmp/nonces
+ERROR: invalid IV/nonce length for mode cbc
+[exit code: 1]
+
+$ ./release/windows/aestool_mingw.exe encrypt --mode gcm --aead --key neg_tmp/key.bin --nonce 0011 --in neg_tmp/plain.txt --out neg_tmp/x2.bin --nonce-db neg_tmp/nonces
+ERROR: invalid IV/nonce length for mode gcm
+[exit code: 1]
+
+################ G. Misuse prevention
+--- G1. AEAD mode without --aead
+$ ./release/windows/aestool_mingw.exe encrypt --mode gcm --key neg_tmp/key.bin --in neg_tmp/plain.txt --out neg_tmp/x3.bin --nonce-db neg_tmp/nonces
+ERROR: mode gcm is AEAD: pass --aead
+[exit code: 1]
+
+--- G2. ECB on a 20000-byte file (> 16 KiB): blocked, then allowed only with --allow-ecb
+$ ./release/windows/aestool_mingw.exe encrypt --mode ecb --key neg_tmp/key.bin --in neg_tmp/big.bin --out neg_tmp/ecb1.bin --nonce-db neg_tmp/nonces
+WARNING: ECB leaks plaintext patterns and is NOT semantically secure. Do not use for real data.
+ERROR: ECB blocked for inputs > 16 KiB (override with --allow-ecb)
+[exit code: 1]
+
+$ ./release/windows/aestool_mingw.exe encrypt --mode ecb --allow-ecb --encode raw --key neg_tmp/key.bin --in neg_tmp/big.bin --out neg_tmp/ecb2.bin --nonce-db neg_tmp/nonces
+WARNING: ECB leaks plaintext patterns and is NOT semantically secure. Do not use for real data.
+ciphertext -> neg_tmp/ecb2.bin ; header -> neg_tmp/ecb2.bin.json
+[exit code: 0]
+
+--- G3. Nonce reuse (same key + same IV again, CTR) -> rejected
+$ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --iv neg_tmp/iv16.bin --in neg_tmp/plain.txt --out neg_tmp/ctr2.bin --nonce-db neg_tmp/nonces
+ERROR: REJECTED: this (key, nonce) pair was already used (nonce reuse is catastrophic)
+[exit code: 1]
+
+################ H. Malformed input -> fail closed
+--- H1. malformed hex key
+$ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key-hex ZZ --in neg_tmp/plain.txt --out neg_tmp/x4.bin --nonce-db neg_tmp/nonces
+ERROR: invalid hex: bad character
+[exit code: 1]
+
+--- H2. key of wrong length
+$ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key-hex 00112233 --in neg_tmp/plain.txt --out neg_tmp/x5.bin --nonce-db neg_tmp/nonces
+ERROR: invalid key length for mode ctr
+[exit code: 1]
+
+--- H3. corrupted key file (hex header, non-hex content)
+$ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/badkey.hex --in neg_tmp/plain.txt --out neg_tmp/x6.bin --nonce-db neg_tmp/nonces
+ERROR: invalid hex: bad character
+[exit code: 1]
+
+--- H4. missing key file / missing input file
+$ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/no_such_key.bin --in neg_tmp/plain.txt --out neg_tmp/x7.bin --nonce-db neg_tmp/nonces
+ERROR: cannot open input file: neg_tmp/no_such_key.bin
+[exit code: 1]
+
+$ ./release/windows/aestool_mingw.exe encrypt --mode ctr --key neg_tmp/key.bin --in neg_tmp/no_such_input.bin --out neg_tmp/x8.bin --nonce-db neg_tmp/nonces
+ERROR: cannot open input file: neg_tmp/no_such_input.bin
+[exit code: 1]
+
+--- H5. unknown mode / XTS input shorter than 16 bytes / corrupted sidecar header
+$ ./release/windows/aestool_mingw.exe encrypt --mode des --key neg_tmp/key.bin --in neg_tmp/plain.txt --out neg_tmp/x9.bin
+ERROR: --mode must be ecb|cbc|ofb|cfb|ctr|xts|ccm|gcm
+[exit code: 1]
+
+$ ./release/windows/aestool_mingw.exe encrypt --mode xts --key-hex 000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f --text short --out neg_tmp/x10.bin --nonce-db neg_tmp/nonces
+ERROR: XTS needs at least 16 bytes of input
+[exit code: 1]
+
+$ ./release/windows/aestool_mingw.exe decrypt --mode gcm --aead --key neg_tmp/key.bin --in neg_tmp/gcm.bin --meta neg_tmp/garbage.json --out neg_tmp/g.out
+ERROR: malformed JSON: no objects
+[exit code: 1]
+
+################ I. Known Answer Test file that is not valid JSON must not report success
+$ ./release/windows/aestool_mingw.exe --kat neg_tmp/bad_kat.json
+ERROR: malformed JSON: missing '}'
+[exit code: 1]
+
+== end ==

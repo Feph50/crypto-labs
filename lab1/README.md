@@ -193,70 +193,13 @@ instead of loading the library.
 
 All commands should be executed from the `lab1` root directory.
 
-### Step 0: Directory Preparation
+### Steps 0-4: KAT, unit tests and negative tests (evidence logs)
+The exact commands that produce the evidence logs (`kat_*`, `ctest_*`, `negative_*` in `output/windows/`) are in
+[`docs/TEST_EVIDENCE.md`](docs/TEST_EVIDENCE.md). Quick checks:
+
 ```powershell
-# Create required output directory structure
-mkdir -Force output\windows\key_bin
-mkdir -Force output\windows\neg_results
-mkdir -Force output\windows\benchmarks
-```
-
-### Step 1: Known Answer Tests (NIST KAT)
-Execute the 29 KAT vectors (NIST SP 800-38A/C, GCM, IEEE 1619) and save logs:
-```powershell
-.\release\windows\aestool_mingw.exe --kat kat\vectors.json > output\windows\kat_windows_release.txt 2>&1
-```
-
-### Step 2: Automated Unit Tests (Catch2 via CTest)
-```powershell
-cd build_windows_gcc
-ctest --output-on-failure > ..\output\windows\test_windows_gcc.txt 2>&1
-cd ..
-```
-
-### Step 3: Prepare Test Data for Negative Testing
-Generate keys, IVs, plaintexts, and valid ciphertexts for tamper testing:
-```powershell
-# Helper function for CSPRNG random generation
-function New-RandomFile {
-    param([string]$Path, [int]$Bytes)
-    $buf = New-Object byte[] $Bytes
-    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($buf)
-    [System.IO.File]::WriteAllBytes($Path, $buf)
-}
-
-New-RandomFile "output\windows\key_bin\key.bin"       32
-New-RandomFile "output\windows\key_bin\key_wrong.bin" 32
-New-RandomFile "output\windows\key_bin\iv.bin"        16
-New-RandomFile "output\windows\key_bin\iv_wrong.bin"  16
-New-RandomFile "output\windows\key_bin\short_iv.bin"  8
-
-# Create sample plaintext
-"Hello World plaintext for testing negative cases" | Out-File -Encoding ascii output\windows\key_bin\plain.txt
-
-# Encrypt to create valid reference ciphertexts (CBC & GCM)
-.\release\windows\aestool_mingw.exe encrypt --mode cbc --key output\windows\key_bin\key.bin --in output\windows\key_bin\plain.txt --out output\windows\key_bin\ct.bin
-.\release\windows\aestool_mingw.exe encrypt --mode gcm --aead --key output\windows\key_bin\key.bin --in output\windows\key_bin\plain.txt --out output\windows\key_bin\ct_gcm.bin
-```
-
-### Step 4: Negative Testing (Fail-Closed Validations)
-Execute negative test cases and record outputs into `output\windows\neg_results\`:
-```powershell
-# 1. Test wrong key (decryption failure)
-.\release\windows\aestool_mingw.exe decrypt --mode cbc --key output\windows\key_bin\key_wrong.bin --in output\windows\key_bin\ct.bin --out output\windows\key_bin\out.txt 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_key.txt
-
-# 2. Test wrong IV
-.\release\windows\aestool_mingw.exe decrypt --mode cbc --key output\windows\key_bin\key.bin --iv output\windows\key_bin\iv_wrong.bin --in output\windows\key_bin\ct.bin --out output\windows\key_bin\out.txt 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_iv.txt
-
-# 3. Test wrong AEAD Tag (GCM authentication failure)
-.\release\windows\aestool_mingw.exe decrypt --mode gcm --aead --key output\windows\key_bin\key.bin --in output\windows\key_bin\ct_gcm.bin --out output\windows\key_bin\out.txt 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_tag.txt
-
-# 4. Test invalid IV length (rejection on entry)
-.\release\windows\aestool_mingw.exe encrypt --mode cbc --key output\windows\key_bin\key.bin --iv output\windows\key_bin\short_iv.bin --in output\windows\key_bin\plain.txt --out output\windows\key_bin\ct.bin 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_ivlen.txt
-
-# 5. Test ECB policy restriction on large payload without --allow-ecb
-fsutil file createnew output\windows\key_bin\large.bin 32768
-.\release\windows\aestool_mingw.exe encrypt --mode ecb --key output\windows\key_bin\key.bin --in output\windows\key_bin\large.bin --out output\windows\key_bin\ct.bin 2>&1 | Tee-Object -FilePath output\windows\neg_results\neg_ecb.txt
+.elease\windowsestool_mingw.exe --kat katectors.json          # expect: 29 passed, 0 failed, 29 total
+cd build_cmp_win; ctest --output-on-failure; cd ..                    # expect: 100% tests passed out of 3
 ```
 
 ### Step 5: Performance Benchmarking & Graph Generation
@@ -290,67 +233,13 @@ python ..\scripts\csv_to_stats_table.py output\windows\benchmarks\bench_windows_
 
 All commands should be executed from the `lab1` root directory.
 
-### Step 0: Directory Preparation
+### Steps 0-4: KAT, unit tests and negative tests (evidence logs)
+The exact commands that produce the evidence logs (`kat_*`, `ctest_*`, `negative_*` in `output/ubuntu/`) are in
+[`docs/TEST_EVIDENCE.md`](docs/TEST_EVIDENCE.md) (section 3). Quick checks:
+
 ```bash
-# Create required output directory structure
-mkdir -p output/ubuntu/key_bin
-mkdir -p output/ubuntu/neg_results
-mkdir -p output/ubuntu/benchmarks
-```
-
-### Step 1: Known Answer Tests (NIST KAT)
-```bash
-# KAT - GCC
-./release/ubuntu/aestool_gcc --kat kat/vectors.json > output/ubuntu/kat_ubuntu_release.txt 2>&1
-```
-
-### Step 2: Automated Unit Tests (Catch2 via CTest)
-```bash
-# Unit Test - GCC
-cd build_ubuntu_gcc
-ctest --output-on-failure > ../output/ubuntu/test_ubuntu_gcc.txt 2>&1
-cd ..
-
-# Unit Test - Clang
-cd build_ubuntu_clang
-ctest --output-on-failure > ../output/ubuntu/test_ubuntu_clang.txt 2>&1
-cd ..
-```
-
-### Step 3: Prepare Test Data for Negative Testing
-```bash
-# 1. Generate keys & IVs using CSPRNG (/dev/urandom)
-head -c 32 /dev/urandom > output/ubuntu/key_bin/key.bin
-head -c 32 /dev/urandom > output/ubuntu/key_bin/key_wrong.bin
-head -c 16 /dev/urandom > output/ubuntu/key_bin/iv.bin
-head -c 16 /dev/urandom > output/ubuntu/key_bin/iv_wrong.bin
-head -c 8  /dev/urandom > output/ubuntu/key_bin/short_iv.bin
-
-# 2. Generate sample plaintext
-echo "Hello World plaintext for testing negative cases" > output/ubuntu/key_bin/plain.txt
-
-# 3. Encrypt plain text to create valid reference ciphertexts (CBC & GCM)
-./release/ubuntu/aestool_gcc encrypt --mode cbc --key output/ubuntu/key_bin/key.bin --in output/ubuntu/key_bin/plain.txt --out output/ubuntu/key_bin/ct.bin
-./release/ubuntu/aestool_gcc encrypt --mode gcm --aead --key output/ubuntu/key_bin/key.bin --in output/ubuntu/key_bin/plain.txt --out output/ubuntu/key_bin/ct_gcm.bin
-```
-
-### Step 4: Negative Testing (Fail-Closed Validations)
-```bash
-# 1. Test wrong key
-./release/ubuntu/aestool_gcc decrypt --mode cbc --key output/ubuntu/key_bin/key_wrong.bin --in output/ubuntu/key_bin/ct.bin --out output/ubuntu/key_bin/out.txt 2>&1 | tee output/ubuntu/neg_results/neg_key.txt
-
-# 2. Test wrong IV
-./release/ubuntu/aestool_gcc decrypt --mode cbc --key output/ubuntu/key_bin/key.bin --iv output/ubuntu/key_bin/iv_wrong.bin --in output/ubuntu/key_bin/ct.bin --out output/ubuntu/key_bin/out.txt 2>&1 | tee output/ubuntu/neg_results/neg_iv.txt
-
-# 3. Test wrong AEAD Tag (GCM)
-./release/ubuntu/aestool_gcc decrypt --mode gcm --aead --key output/ubuntu/key_bin/key.bin --in output/ubuntu/key_bin/ct_gcm.bin --out output/ubuntu/key_bin/out.txt 2>&1 | tee output/ubuntu/neg_results/neg_tag.txt
-
-# 4. Test wrong IV length
-./release/ubuntu/aestool_gcc encrypt --mode cbc --key output/ubuntu/key_bin/key.bin --iv output/ubuntu/key_bin/short_iv.bin --in output/ubuntu/key_bin/plain.txt --out output/ubuntu/key_bin/ct.bin 2>&1 | tee output/ubuntu/neg_results/neg_ivlen.txt
-
-# 5. Test ECB policy restriction on large payload without --allow-ecb
-dd if=/dev/zero of=output/ubuntu/key_bin/large.bin bs=1K count=32
-./release/ubuntu/aestool_gcc encrypt --mode ecb --key output/ubuntu/key_bin/key.bin --in output/ubuntu/key_bin/large.bin --out output/ubuntu/key_bin/ct.bin 2>&1 | tee output/ubuntu/neg_results/neg_ecb.txt
+./release/ubuntu/aestool_gcc --kat kat/vectors.json                    # expect: 29 passed, 0 failed, 29 total
+cd build_cmp_linux && ctest --output-on-failure && cd ..               # expect: 100% tests passed, 0 tests failed out of 3
 ```
 
 ### Step 5: Performance Benchmarking & Graph Generation
