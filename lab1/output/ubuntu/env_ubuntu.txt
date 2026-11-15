@@ -1,0 +1,50 @@
+== commit ==
+57aef5879f421a45064f7b2e19c1f7ab1b0bc903
+== kat sha256 ==
+0ecc5256a246459bd609790e0dcdf077ac5154bbc8318a5adbe3bd8248d4e9b3  kat/vectors.json
+== compiler / cmake / cryptopp ==
+g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+cmake version 3.28.3
+Version: 8.9.0-1.1build1
+== cpu ==
+CPU(s):                                  16
+Model name:                              11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
+Thread(s) per core:                      2
+Core(s) per socket:                      8
+CPU(s) scaling MHz:                      49%
+CPU max MHz:                             4600.0000
+CPU min MHz:                             800.0000
+== governor ==
+performance
+== ram ==
+               total        used        free      shared  buff/cache   available
+Mem:            31Gi       6.2Gi        20Gi       1.0Gi       5.7Gi        24Gi
+Swap:             0B          0B          0B
+== os ==
+Description:	Ubuntu 24.04.2 LTS
+Linux lngu-ThinkPad-P1-Gen-4i 7.0.0-43-generic #43~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Sat Oct 31 06:52:47 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
+== disk ==
+NAME    ROTA   SIZE MODEL
+loop0      0     4K 
+loop1      0  55.5M 
+loop2      0  66.8M 
+loop3      0  60.7M 
+loop4      0  73.9M 
+loop5      0 274.2M 
+loop6      0  50.7M 
+loop7      0 164.8M 
+loop8      0   516M 
+loop9      0  11.1M 
+loop10     0   616M 
+loop11     0  91.7M 
+loop12     0   402M 
+loop13     0 111.8M 
+loop14     0  44.4M 
+loop15     0  10.8M 
+loop16     0   568K 
+loop17     0 143.8M 
+loop18     0 117.7M 
+loop19     0 118.7M 
+loop20     0 118.8M 
+sda        1  57.7G DataTraveler 3.0
+nvme0n1    0 476.9G SAMSUNG MZVL2512HCJQ-00BL7
