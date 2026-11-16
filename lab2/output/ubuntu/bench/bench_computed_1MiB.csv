@@ -1,0 +1,3 @@
+implementation,direction,size_bytes,ops_per_run,runs,mean_MBps,median_MBps,stddev_MBps,ci95_lo_MBps,ci95_hi_MBps,mean_ms_per_op,median_ms_per_op,stddev_ms_per_op,ci95_lo_ms,ci95_hi_ms
+pure/sbox-computed,encrypt,1048576,2,30,1.498561379,1.506643084,0.0191447633,1.49141341,1.505709349,699.8345975,695.9686045,9.138426668,696.4226361,703.246559
+pure/sbox-computed,decrypt,1048576,2,30,1.499697459,1.503148497,0.01043930046,1.495799798,1.50359512,699.2245435,697.5866095,4.882650171,697.4015367,701.0475504
