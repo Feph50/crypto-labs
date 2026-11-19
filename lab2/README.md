@@ -154,6 +154,7 @@ lab2/
 │   ├── REQUIREMENTS_CHECKLIST.md   # Đối chiếu yêu cầu đề / rules chung
 │   ├── BENCHMARK_RUNBOOK.md        # Lệnh chạy benchmark Windows và Linux (cùng cấu hình)
 │   ├── LINUX_RUNBOOK.md            # Bản rút gọn: chỉ các lệnh cần chạy trên Linux
+│   ├── UBUNTU_FINISH.md            # Việc cuối cùng trên Ubuntu 24.04 (log + binary), có kết quả mong đợi
 │   └── TEST_EVIDENCE.md            # Lệnh sinh log KAT / ctest / negative / env
 ├── gui/
 │   └── aestool_gui.py          # GUI tùy chọn
