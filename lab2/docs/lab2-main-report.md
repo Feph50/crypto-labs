@@ -9,7 +9,7 @@
 
 **Thông tin sinh viên thực hiện:**
 - **Họ và tên:** Trần Lâm Nguyên (Feph50)
-- **Mã số sinh viên (MSSV):** Feph50
+- **Mã số sinh viên (MSSV):** 25521257
 - **Lớp học phần:** NT219.P11.MMTT
 - **Thời gian hoàn thành:** Học kỳ I - Năm học 2026–2027
 
@@ -121,10 +121,10 @@ aestool decrypt --mode ctr --key key.bin --iv iv.bin --in ct.bin --out msg.bin
 
 | Kiểm chứng | Windows MinGW | Windows MSVC | Ubuntu 24.04 |
 | :--- | :--- | :--- | :--- |
-| KAT (`--kat`) | Summary: 31 tests, 31 passed, 0 failed | Summary: 31 tests, 31 passed, 0 failed | chưa có (cần chạy trên Ubuntu 24.04) |
-| Cross-validation (`xval`) | Summary: 1722 cross-validation cases, 0 failed | Summary: 1722 cross-validation cases, 0 failed | chưa có (cần chạy trên Ubuntu 24.04) |
-| `ctest` (4 test) | 100% tests passed, 0 tests failed out of 4 | 100% tests passed, 0 tests failed out of 4 | chưa có (cần chạy trên Ubuntu 24.04) |
-| Unit test Catch2 | All tests passed (3276 assertions in 32 test cases) | All tests passed (3276 assertions in 32 test cases) | chưa có (cần chạy trên Ubuntu 24.04) |
+| KAT (`--kat`) | Summary: 31 tests, 31 passed, 0 failed | Summary: 31 tests, 31 passed, 0 failed | Summary: 31 tests, 31 passed, 0 failed |
+| Cross-validation (`xval`) | Summary: 1722 cross-validation cases, 0 failed | Summary: 1722 cross-validation cases, 0 failed | Summary: 1722 cross-validation cases, 0 failed |
+| `ctest` (4 test) | 100% tests passed, 0 tests failed out of 4 | 100% tests passed, 0 tests failed out of 4 | 100% tests passed, 0 tests failed out of 4 |
+| Unit test Catch2 | All tests passed (3276 assertions in 32 test cases) | All tests passed (3276 assertions in 32 test cases) | All tests passed (3276 assertions in 32 test cases) |
 
 ## 3.2. Cross-validation
 
@@ -136,7 +136,7 @@ Catch2, chạy qua `ctest` (4 test): unit test (32 test case, 3276 assertion: kh
 
 ## 3.4. Test âm tính (Negative Tests)
 
-Các phép thử dưới đây chạy bằng đúng một khối lệnh (`docs/TEST_EVIDENCE.md`), log nằm ở `output/<os>/negative_*.txt`. Kết quả mã thoát trên Windows MinGW: 14 lần exit 0, 3 lần exit 1, 4 lần exit 2, 10 lần exit 3, 4 lần exit 4, 1 lần exit 5; Windows MSVC: 14 lần exit 0, 3 lần exit 1, 4 lần exit 2, 10 lần exit 3, 4 lần exit 4, 1 lần exit 5; Ubuntu: chưa có log trên Ubuntu 24.04. Không có dòng `WRITTEN (BAD)` nào trên Windows (0 và 0).
+Các phép thử dưới đây chạy bằng đúng một khối lệnh (`docs/TEST_EVIDENCE.md`), log nằm ở `output/<os>/negative_*.txt`. Kết quả mã thoát trên Windows MinGW: 14 lần exit 0, 3 lần exit 1, 4 lần exit 2, 10 lần exit 3, 4 lần exit 4, 1 lần exit 5; Windows MSVC: 14 lần exit 0, 3 lần exit 1, 4 lần exit 2, 10 lần exit 3, 4 lần exit 4, 1 lần exit 5; Ubuntu: 14 lần exit 0, 3 lần exit 1, 4 lần exit 2, 10 lần exit 3, 4 lần exit 4, 1 lần exit 5; 0 dòng `WRITTEN (BAD)`; **giống hệt Windows**. Không có dòng `WRITTEN (BAD)` nào trên Windows (0 và 0).
 
 | Nhóm | Phép thử | Kết quả mong đợi | Mã thoát |
 | :--- | :--- | :--- | :---: |

@@ -48,7 +48,7 @@ Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ ch�
 | Cross-validation: giống hệt Crypto++ hoặc OpenSSL | ✅ | Cả hai: 1722 ca (`xval_*.txt`) |
 | Negative: sai key, sai IV, ciphertext bị sửa; giải thích vì sao CTR không phát hiện | ✅ | `negative_*.txt` mục B, C, D (lật 1 bit ciphertext thì lật đúng 1 bit plaintext); giải thích: viết trong báo cáo |
 | Unit test Catch2, `ctest` pass trên Windows và Linux | ✅ | 4 test (unit 32 case / 3276 assertion, KAT, CLI end-to-end, cross-validation) |
-| Log bằng chứng theo hệ điều hành | 🟡 | Windows (MinGW, MSVC): đủ kat, xval, ctest, negative, env. Ubuntu 24.04: có `env_ubuntu.txt`; **thiếu** kat, xval, ctest, negative (cần chạy `LINUX_RUNBOOK.md` mục 7) |
+| Log bằng chứng theo hệ điều hành | ✅ | Windows (MinGW, MSVC) và Ubuntu 24.04: kat, xval, ctest, negative, env (kết quả Ubuntu giống Windows: KAT 31/31, xval 0 lỗi, ctest 4/4, mã thoát 14/3/4/10/4/1) |
 | CI | ❌ (tùy chọn) | Chưa có workflow |
 
 ## 5. Build và đóng gói
@@ -80,20 +80,19 @@ Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ ch�
 | Phần bảo mật: rò rỉ timing/cache của S-box dạng bảng, T-table, constant-time, tái dùng keystream (two-time pad), CTR chỉ bảo mật, cần MAC, không phải AEAD, AES-NI | ✅ | `docs/lab2-main-report.md` / `.pdf` mục 5.1 đến 5.3 |
 | Threat model, misuse, secure defaults, fail-closed, limitations | ✅ | Mục 5.4 |
 | So sánh Windows và Linux, bài học | ✅ | Mục 4.6, 6.2, 6.3 |
-| Báo cáo Lab 2 (PDF) | 🟡 | Đã viết từ số liệu thật. Cần **sinh lại** sau khi có log Ubuntu 24.04 (bảng bằng chứng đang ghi "chưa có") |
+| Báo cáo Lab 2 (PDF, 14 trang) | ✅ | `docs/lab2-main-report.pdf`, sinh từ số liệu và log thật, đã gồm log Ubuntu 24.04. MSSV 25521257 đã cập nhật trên bìa |
 | PDF/DOCX duy nhất cho cả 6 lab (≥ 60 trang), cam kết liêm chính, khai báo AI, bảng tự chấm | ❌ | Làm sau khi xong các lab |
 
 ## 8. Việc còn lại
 
-1. **Bạn, trên Windows**: không còn việc benchmark nào.
-2. **Bạn, trên Ubuntu 24.04**: 4 log (KAT, xval, ctest, negative) và dựng lại binary release tĩnh (`LINUX_RUNBOOK.md` mục 7 và 7b).
-3. **Mình**: chạy `python scripts/plot_compare.py`, sinh lại báo cáo và PDF.
+1. Không còn việc chạy nào cho Lab 2.
+2. Đã xác nhận: binary Windows dùng để đo là `release/windows/aestool_ref_mingw.exe` (theo lịch sử lệnh PowerShell); MSSV 25521257.
+3. Báo cáo gộp 6 lab (≥ 60 trang) kèm cam kết liêm chính, khai báo AI và bảng tự chấm: làm sau khi xong các lab.
 4. Tùy chọn: CI, GUI (đã có `gui/aestool_gui.py` nhưng gọi đường dẫn `Output/` cũ, chưa cập nhật), đo AES-NI/AES-192/256 chính thức.
 
 ## 9. Hạn chế đã biết (ghi trung thực trong báo cáo)
 
 - Bản `table` và `ttable` không constant-time (đúng chủ ý của đề để phân tích rò rỉ cache). `computed` không có bảng tra phụ thuộc bí mật nhưng chưa được kiểm chứng bằng công cụ constant-time.
-- Binary `release/ubuntu/aestool_gcc` hiện có được dựng trong WSL2 (Ubuntu 26.04); phải dựng lại trên Ubuntu 24.04 (`LINUX_RUNBOOK.md` mục 7b) để loại bỏ hoàn toàn WSL2.
 - Hai dòng SHA-256 của `kat/vectors.json` trong `env_windows.txt` và `env_ubuntu.txt` khác nhau chỉ do kiểu xuống dòng (CRLF/LF), nội dung giống nhau.
 - Windows Clang chưa được kiểm chứng.
 - Giá trị `computed` ở 1 MiB đo với 2 thao tác mỗi khối (lệch protocol có chủ ý, vì chạy ~1 MB/s).
