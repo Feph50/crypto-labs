@@ -1,0 +1,15 @@
+== Cross-validation vs OpenSSL and Crypto++: aestool_ref (Ubuntu 24.04, GCC) ==
+date : 2026-11-19T14:04:00Z
+git  : 01bd357
+
+PASS  pure AES-128-CTR == openssl  (216/216 cases, 3 backends)
+PASS  pure AES-128-CTR == cryptopp  (216/216 cases, 3 backends)
+PASS  pure AES-192-CTR == openssl  (216/216 cases, 4 backends)
+PASS  pure AES-256-CTR == openssl  (216/216 cases, 4 backends)
+PASS  pure XTS-AES-128 == openssl  (213/213 cases incl. ciphertext stealing, 4 backends)
+PASS  pure XTS-AES-256 == openssl  (213/213 cases incl. ciphertext stealing, 4 backends)
+PASS  pure AES-192-CTR == cryptopp  (216/216 cases, 4 backends)
+PASS  pure AES-256-CTR == cryptopp  (216/216 cases, 4 backends)
+
+Summary: 1722 cross-validation cases, 0 failed
+[exit code: 0]

@@ -1,0 +1,27 @@
+== ctest: GCC on Ubuntu 24.04 (Release) ==
+date : 2026-11-19T14:07:06Z
+git  : 01bd357
+g++  : g++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+cmake: cmake version 3.28.3
+openssl : Version: 3.0.13-0ubuntu3.16
+cryptopp: Version: 8.9.0-1.1build1
+catch2  : Version: 3.4.0-1build1
+
+Test project /data/lngu/crypto-labs/lab2/build_ubuntu_gcc
+    Start 1: lab2_unit_tests
+1/4 Test #1: lab2_unit_tests ..................   Passed    0.05 sec
+    Start 2: lab2_kat_runner
+2/4 Test #2: lab2_kat_runner ..................   Passed    0.01 sec
+    Start 3: lab2_cli_end_to_end
+3/4 Test #3: lab2_cli_end_to_end ..............   Passed    0.12 sec
+    Start 4: lab2_cross_validation
+4/4 Test #4: lab2_cross_validation ............   Passed    0.83 sec
+
+100% tests passed, 0 tests failed out of 4
+
+Total Test time (real) =   1.02 sec
+
+-- unit tests (Catch2) summary:
+===============================================================================
+All tests passed (3276 assertions in 32 test cases)
+
