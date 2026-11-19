@@ -1,0 +1,52 @@
+// Crypto++ headers in one place. The include prefix differs between installs:
+//   MSYS2 / flat include dir: <rsa.h>      Ubuntu (libcrypto++-dev) and vcpkg: <cryptopp/rsa.h>
+#pragma once
+#if __has_include(<cryptopp/rsa.h>)
+#include <cryptopp/aes.h>
+#include <cryptopp/asn.h>
+#include <cryptopp/cryptlib.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/gcm.h>
+#include <cryptopp/integer.h>
+#include <cryptopp/oaep.h>
+#include <cryptopp/osrng.h>
+#include <cryptopp/pubkey.h>
+#include <cryptopp/queue.h>
+#include <cryptopp/rsa.h>
+#include <cryptopp/secblock.h>
+#include <cryptopp/sha.h>
+#include <cryptopp/cpu.h>
+#include <cryptopp/config.h>
+#elif __has_include(<crypto++/rsa.h>)
+#include <crypto++/aes.h>
+#include <crypto++/asn.h>
+#include <crypto++/cryptlib.h>
+#include <crypto++/filters.h>
+#include <crypto++/gcm.h>
+#include <crypto++/integer.h>
+#include <crypto++/oaep.h>
+#include <crypto++/osrng.h>
+#include <crypto++/pubkey.h>
+#include <crypto++/queue.h>
+#include <crypto++/rsa.h>
+#include <crypto++/secblock.h>
+#include <crypto++/sha.h>
+#include <crypto++/cpu.h>
+#include <crypto++/config.h>
+#else
+#include <aes.h>
+#include <asn.h>
+#include <cryptlib.h>
+#include <filters.h>
+#include <gcm.h>
+#include <integer.h>
+#include <oaep.h>
+#include <osrng.h>
+#include <pubkey.h>
+#include <queue.h>
+#include <rsa.h>
+#include <secblock.h>
+#include <sha.h>
+#include <cpu.h>
+#include <config.h>
+#endif

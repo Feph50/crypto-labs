@@ -39,3 +39,11 @@ lab1_neg_run/
 
 # Keep prebuilt release binaries in release/
 !release/**
+
+# Lab 3: generated key material, scratch data and test directories (never commit keys)
+lab3/*.pem
+lab3/*.der
+lab3/*.meta.json
+lab3/neg_tmp/
+lab3/testdata/
+lab3/build_rel/

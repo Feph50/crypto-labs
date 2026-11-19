@@ -1,0 +1,8 @@
+# rsabench environment
+# CPU        : 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
+# Threads    : 16 logical
+# OS         : Windows
+# Compiler   : GCC 16.2.0
+# Build      : Release  flags: -O3 -DNDEBUG
+# Crypto++   : 8.9.0  (AES-NI yes, CLMUL yes, SSE4.1 yes)
+# Reminder   : set the CPU governor to 'performance' (Linux) / 'High performance' (Windows) for fair runs

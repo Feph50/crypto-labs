@@ -1,0 +1,46 @@
+﻿== commit ==
+cfb44dc370bf63fde240c14a39becb7ef09ae466
+== kat sha256 ==
+053ab71437dded0d901ee43252222dfea903ba0fc446f4a846807e192ae0f371  kat/vectors.json
+== compiler / cmake / libraries ==
+g++.exe (Rev4, Built by MSYS2 project) 16.2.0   [MinGW-w64]
+cl 19.51.36260 (MSVC, VS 2026 Community)
+cmake version 4.4.3
+MinGW: crypto++ 8.9.0-2, nlohmann-json 3.12.0 (pacman); MSVC: cryptopp 2026-03-02 (vcpkg x64-windows-static), nlohmann-json 3.11.3 (FetchContent)
+== cpu ==
+
+
+Name                      : 11th Gen Intel(R) Core(TM) i7-11800H @ 2.30GHz
+NumberOfCores             : 8
+NumberOfLogicalProcessors : 16
+MaxClockSpeed             : 2304
+
+
+
+== ram ==
+
+
+RAM_GB : 31.7
+
+
+
+== os ==
+
+
+Caption     : Microsoft Windows 11 Pro
+Version     : 10.0.26200
+BuildNumber : 26200
+
+
+
+== disk ==
+
+
+FriendlyName : SAMSUNG MZVL2512HCJQ-00BL7
+MediaType    : SSD
+Size         : 512110190592
+
+
+
+== power plan ==
+Power Scheme GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (High performance)

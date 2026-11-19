@@ -1,0 +1,23 @@
+== ctest: MSVC - Release, /MT, static Crypto++ from vcpkg ==
+date : Thu 11/19/2026 21:44:06.21
+git  : cfb44dc
+Microsoft (R) C/C++ Optimizing Compiler Version 19.51.36260 for x64
+cmake: cmake version 4.3.1-msvc1
+cryptopp: 2026-03-02 vcpkg x64-windows-static (Crypto++ 8.9.0)
+nlohmann-json: v3.11.3 (FetchContent)
+catch2  : v3.5.3 (FetchContent)
+
+Test project C:/Users/ThinkPad/AppData/Local/Temp/claude/01a574b694523bd9/9b81a01d-f8a0-4b11-a249-efcbddb4f7e4/scratchpad/l3_msvc
+    Start 1: lab3_unit_tests
+1/3 Test #1: lab3_unit_tests ..................   Passed    2.74 sec
+    Start 2: lab3_kat_runner
+2/3 Test #2: lab3_kat_runner ..................   Passed    0.29 sec
+    Start 3: lab3_cli_end_to_end
+3/3 Test #3: lab3_cli_end_to_end ..............   Passed    3.00 sec
+
+100% tests passed, 0 tests failed out of 3
+
+Total Test time (real) =   6.05 sec
+
+-- unit tests (Catch2) summary:
+All tests passed (855 assertions in 45 test cases)
