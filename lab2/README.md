@@ -230,7 +230,7 @@ Với MSVC + Ninja luôn truyền `-DCMAKE_BUILD_TYPE=Release` (mặc định c�
 
 | Thành phần | Yêu cầu / đã dùng |
 |---|---|
-| CMake | >= 3.20 (đã chạy: MinGW MSYS2, MSVC 19.51, Ubuntu 26.04 / CMake 4.2) |
+| CMake | >= 3.20 (đã chạy: MinGW MSYS2, MSVC 19.51, Ubuntu 24.04 / CMake 3.28) |
 | C++ | C++17 (lõi AES/CTR chỉ dùng STL; OpenSSL và Crypto++ chỉ nằm trong `aestool_ref`) |
 | OpenSSL | >= 1.1 (đã chạy: 3.6.4 MinGW, vcpkg MSVC, 3.5.5 Ubuntu), tùy chọn |
 | Crypto++ | >= 8.x (đã chạy: 8.9.0), tùy chọn |
@@ -569,14 +569,11 @@ $AESREF bench --bits 128 --sizes 1MiB --backends table --ref all --runs 30 --csv
 $AESREF bench --bits 128 --sizes 100MiB --backends table --ref all --runs 30 --csv $OUT/bench_aes128_100MiB.csv
 $AESREF bench --bits 128 --sizes 1GiB --backends table --ref all --runs 30 --csv $OUT/bench_aes128_1GiB.csv
 
-# (2) Table S-box so với computed S-box, cùng cấu hình: 4 KiB x 1000 thao tác (đúng protocol)
-$AESREF bench --bits 128 --sizes 4KiB --backends table,computed --ref none --runs 30 --csv $OUT/bench_sbox_4KiB.csv
-
-# (3) computed ở 1 MiB: chậm (~1 MB/s) nên chỉ 2 thao tác mỗi khối (sai lệch so với protocol, ghi trong báo cáo)
+# (2) computed ở 1 MiB: chậm (~1 MB/s) nên chỉ 2 thao tác mỗi khối (sai lệch so với protocol, ghi trong báo cáo)
 $AESREF bench --bits 128 --sizes 1MiB --backends computed --ops 2 --ref none --runs 30 --csv $OUT/bench_computed_1MiB.csv
 $AESREF bench --bits 128 --sizes 100MiB --backends computed --ops 1 --ref none --runs 30 --csv $OUT/bench_computed_100MiB.csv   # ~1,7 giờ
 
-# (4) Bonus AES-192 / AES-256
+# (3) Bonus AES-192 / AES-256
 $AESREF bench --bits 192 --sizes 1MiB --backends table,ttable,aesni --ref all --runs 30 --csv $OUT/bench_aes192.csv
 $AESREF bench --bits 256 --sizes 1MiB --backends table,ttable,aesni --ref all --runs 30 --csv $OUT/bench_aes256.csv
 ```

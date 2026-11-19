@@ -14,8 +14,7 @@ chỉ là **chạy các lệnh benchmark ở mục 3 (Windows) và mục 4 (Linu
 | Phân tích S-box dạng bảng và S-box tính toán (`computed`), bộ nhớ, cache, branch prediction, so sánh với Crypto++; bảng MB/s và biểu đồ | Đề Lab 2 |
 | Warm-up 1-2 s; khối ~1000 thao tác; lặp 30-100 lần; mean, median, SD, CI 95%; bảng phần cứng/OS; governor/power plan; biểu đồ có error bar | Quy tắc chung của đề |
 | Cách chạy cụ thể (lệnh, `--ops`, `--runs`, thứ tự) | **Đề không quy định.** Các lệnh dưới là lựa chọn của dự án để đúng quy tắc chung |
-| `computed` ở 1 MiB (2 thao tác mỗi khối) và 100 MiB (1 thao tác mỗi khối), lệnh 3 và 3b bên dưới | Đề không nói rõ so sánh table với computed ở kích thước nào; đọc theo nghĩa đen thì ở các kích thước đã liệt kê. Lệch protocol có chủ ý: `computed` chạy ~1 MB/s nên 1000 thao tác 1 MiB mất ~17 phút mỗi lần lặp. 1 GiB không khả thi. **Ghi rõ trong báo cáo** |
-| `computed` ở 4 KiB với đủ 1000 thao tác (lệnh 2) | Cấu hình cùng protocol cho so sánh table và computed |
+| `computed` ở 1 MiB (2 thao tác mỗi khối) và 100 MiB (1 thao tác mỗi khối), lệnh 2 và 2b bên dưới | Đề không nói rõ so sánh table với computed ở kích thước nào; đọc theo nghĩa đen thì ở các kích thước đã liệt kê. Lệch protocol có chủ ý: `computed` chạy ~1 MB/s nên 1000 thao tác 1 MiB mất ~17 phút mỗi lần lặp. 1 GiB không khả thi. **Ghi rõ trong báo cáo** |
 
 ## 1. Hợp đồng đo (giống hệt giữa hai hệ điều hành)
 
@@ -28,7 +27,7 @@ chỉ là **chạy các lệnh benchmark ở mục 3 (Windows) và mục 4 (Linu
 | Số lần lặp | `--runs 30` | `--runs 30` |
 | Luồng | 1 (mặc định) | 1 |
 | Tham số khác | **không** đổi `--warmup`, `--ops`, `--budget-mb` ngoài các lệnh dưới | giống Windows |
-| Phần cứng | **cùng một máy vật lý** | cùng máy (dual boot hoặc USB). **WSL2 chỉ để thử**, không dùng cho số đo chính thức |
+| Phần cứng | **cùng một máy vật lý** | cùng máy (dual boot): **Ubuntu 24.04 LTS cài trực tiếp**. Không dùng WSL2 hay máy ảo cho bất kỳ log hay số đo nào |
 
 Chạy **tuần tự**, không chạy hai benchmark cùng lúc, không làm việc khác trên máy. Nếu bị gián đoạn thì xóa CSV và đo lại cả lệnh đó.
 
@@ -89,24 +88,19 @@ $R = ".\release\windows\aestool_ref_mingw.exe"; $O = "output\windows\bench"; mkd
 ```
 
 ```powershell
-# (2) Table S-box so với computed S-box, cùng cấu hình 4 KiB x 1000 thao tác   (~4 phút)
-& $R bench --bits 128 --sizes 4KiB --backends table,computed --ref none --runs 30 --csv "$O\bench_sbox_4KiB.csv"
-```
-
-```powershell
-# (3) computed ở 1 MiB, chỉ 2 thao tác mỗi khối (lệch protocol có chủ ý)   (~2 phút)
+# (2) computed ở 1 MiB, chỉ 2 thao tác mỗi khối (lệch protocol có chủ ý)   (~2 phút)
 & $R bench --bits 128 --sizes 1MiB --backends computed --ops 2 --ref none --runs 30 --csv "$O\bench_computed_1MiB.csv"
 ```
 
 ```powershell
-# (3b) computed ở 100 MiB, 1 thao tác mỗi khối (lệch protocol có chủ ý)   (~1,7 giờ; thêm --dir enc để chỉ đo mã hóa, ~50 phút)
+# (2b) computed ở 100 MiB, 1 thao tác mỗi khối (lệch protocol có chủ ý)   (~1,7 giờ; thêm --dir enc để chỉ đo mã hóa, ~50 phút)
 & $R bench --bits 128 --sizes 100MiB --backends computed --ops 1 --ref none --runs 30 --csv "$O\bench_computed_100MiB.csv"
 ```
 
 (`computed` ở 1 GiB không khả thi: ~17 phút mỗi thao tác, 30 lần lặp mã hóa và giải mã ~17 giờ. Đề ghi 1 GiB là "nếu khả thi"; báo cáo ghi rõ lý do.)
 
 ```powershell
-# (4) TÙY CHỌN, bonus AES-192 và AES-256   (~5 phút mỗi lệnh)
+# (3) TÙY CHỌN, bonus AES-192 và AES-256   (~5 phút mỗi lệnh)
 & $R bench --bits 192 --sizes 1MiB --backends table,ttable,aesni --ref all --runs 30 --csv "$O\bench_aes192.csv"
 & $R bench --bits 256 --sizes 1MiB --backends table,ttable,aesni --ref all --runs 30 --csv "$O\bench_aes256.csv"
 ```
@@ -120,7 +114,6 @@ R=./build_ubuntu_gcc/aestool_ref; O=output/ubuntu/bench
 $R bench --bits 128 --sizes 1MiB --backends table --ref all --runs 30 --csv $O/bench_aes128_1MiB.csv
 $R bench --bits 128 --sizes 100MiB --backends table --ref all --runs 30 --csv $O/bench_aes128_100MiB.csv
 $R bench --bits 128 --sizes 1GiB --backends table --ref all --runs 30 --csv $O/bench_aes128_1GiB.csv
-$R bench --bits 128 --sizes 4KiB --backends table,computed --ref none --runs 30 --csv $O/bench_sbox_4KiB.csv
 $R bench --bits 128 --sizes 1MiB --backends computed --ops 2 --ref none --runs 30 --csv $O/bench_computed_1MiB.csv
 $R bench --bits 128 --sizes 100MiB --backends computed --ops 1 --ref none --runs 30 --csv $O/bench_computed_100MiB.csv     # ~1,7 giờ; thêm --dir enc nếu muốn ~50 phút
 $R bench --bits 192 --sizes 1MiB --backends table,ttable,aesni --ref all --runs 30 --csv $O/bench_aes192.csv
@@ -129,8 +122,8 @@ $R bench --bits 256 --sizes 1MiB --backends table,ttable,aesni --ref all --runs 
 
 ## 5. Ghi lại môi trường
 
-Windows và Linux: log `env_<os>.txt` đã có trong `output/<os>/` (tạo bằng lệnh ở [TEST_EVIDENCE.md](TEST_EVIDENCE.md) mục 5). Khi đo chính thức trên máy Linux thật,
-chạy lại lệnh đó để `env_ubuntu.txt` ghi đúng governor và phần cứng (bản hiện có được tạo trong WSL2: không có `cpufreq`).
+Windows và Linux: log `env_<os>.txt` có trong `output/<os>/` (lệnh ở [TEST_EVIDENCE.md](TEST_EVIDENCE.md) mục 5). `env_ubuntu.txt` được tạo trên Ubuntu 24.04.2 cài trực tiếp
+(GCC 13.3, governor `performance`).
 
 ## 6. Đưa kết quả về một chỗ, vẽ biểu đồ
 
@@ -157,7 +150,7 @@ Sau khi có đủ CSV, mình sinh bảng thống kê, biểu đồ so sánh và 
 - [ ] `ctest` 4/4 trên cả hai hệ điều hành.
 - [ ] Cùng một máy vật lý, đã cắm điện; Windows **High performance**, Linux governor **performance**.
 - [ ] Không chạy việc khác trong lúc đo; chạy tuần tự từng lệnh.
-- [ ] Đúng tên các file CSV ở mục 3 và 4: bắt buộc `bench_aes128_{1MiB,100MiB,1GiB}`, `bench_sbox_4KiB`, `bench_computed_{1MiB,100MiB}`; tùy chọn (bonus) `bench_aes192`, `bench_aes256`.
+- [ ] Đúng tên các file CSV ở mục 3 và 4: bắt buộc `bench_aes128_{1MiB,100MiB,1GiB}`, `bench_computed_{1MiB,100MiB}`; tùy chọn (bonus) `bench_aes192`, `bench_aes256`.
 - [ ] Linux chạy **đúng cùng bộ lệnh** như Windows (cùng `--backends`, `--ops`, `--dir`).
 - [ ] (Khuyến nghị) Đo mỗi hệ điều hành 2 lần và so hai file; nếu chênh quá vài phần trăm, kiểm tra nhiệt độ, nguồn điện, tiến trình nền.
 

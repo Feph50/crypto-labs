@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 from markdown_it import MarkdownIt
@@ -221,6 +222,17 @@ def main():
            "--no-pdf-header-footer", f"--virtual-time-budget={a.wait}", f"--print-to-pdf={raw_pdf}",
            f"--user-data-dir={tmp_dir / 'profile'}", html_file.as_uri()]
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600)
+    # Recent Edge builds return from the launcher process BEFORE the PDF is written: wait for the file to appear
+    # and for its size to stop changing.
+    deadline = time.time() + 300
+    last = -1
+    while time.time() < deadline:
+        if raw_pdf.exists():
+            size = raw_pdf.stat().st_size
+            if size > 0 and size == last:
+                break
+            last = size
+        time.sleep(1.5)
     if not raw_pdf.exists():
         sys.exit("the browser produced no PDF")
     pages = stamp_page_numbers(str(raw_pdf), a.pdf, a.title)

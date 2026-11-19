@@ -1,7 +1,8 @@
 # Lab 2 — Đối chiếu yêu cầu (đủ / thiếu / việc còn lại)
 
 Đối chiếu với đề Lab 2 trong `Cryptography_Labs.docx` (tóm tắt ở `docs/FINAL_LABS_REQUIREMENTS.md`) và các quy tắc chung của đề. Trạng thái được kiểm tra bằng cách đọc
-code và **chạy thật** trên MinGW-w64 GCC 16.2, MSVC 19.51 và Ubuntu 26.04 trong WSL2 (GCC 15.2): `ctest` 4/4, KAT 31/31, cross-validation 1722 ca, 0 lỗi.
+code và **chạy thật** trên Windows (MinGW-w64 GCC 16.2, MSVC 19.51): `ctest` 4/4, KAT 31/31, cross-validation 1722 ca, 0 lỗi. Ubuntu chỉ dùng **Ubuntu 24.04 cài trực tiếp**
+(GCC 13.3); log WSL2 cũ đã bị xóa. Hiện Ubuntu có số đo benchmark và `env_ubuntu.txt`; log KAT/xval/ctest/negative của Ubuntu đang chờ chạy (`LINUX_RUNBOOK.md` mục 7).
 
 Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ chưa có.
 
@@ -47,7 +48,7 @@ Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ ch�
 | Cross-validation: giống hệt Crypto++ hoặc OpenSSL | ✅ | Cả hai: 1722 ca (`xval_*.txt`) |
 | Negative: sai key, sai IV, ciphertext bị sửa; giải thích vì sao CTR không phát hiện | ✅ | `negative_*.txt` mục B, C, D (lật 1 bit ciphertext thì lật đúng 1 bit plaintext); giải thích: viết trong báo cáo |
 | Unit test Catch2, `ctest` pass trên Windows và Linux | ✅ | 4 test (unit 32 case / 3276 assertion, KAT, CLI end-to-end, cross-validation) |
-| Log bằng chứng theo hệ điều hành | ✅ | `output/windows/` (MinGW, MSVC) và `output/ubuntu/` (WSL2): kat, xval, ctest, negative, env |
+| Log bằng chứng theo hệ điều hành | 🟡 | Windows (MinGW, MSVC): đủ kat, xval, ctest, negative, env. Ubuntu 24.04: có `env_ubuntu.txt`; **thiếu** kat, xval, ctest, negative (cần chạy `LINUX_RUNBOOK.md` mục 7) |
 | CI | ❌ (tùy chọn) | Chưa có workflow |
 
 ## 5. Build và đóng gói
@@ -65,32 +66,34 @@ Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ ch�
 | Yêu cầu | Trạng thái | Ghi chú |
 |---|:---:|---|
 | Protocol: warm-up 1-2 s, khối ~1000 thao tác, 30-100 lần | ✅ (code) | `bench`: warm-up 1,5 s mỗi cấu hình, `ops = min(1000, 256 MiB / size)`, `--runs 30` |
-| 1 MiB, 100 MiB, 1 GiB; mã hóa và giải mã | ✅ (code) · 🟡 (số liệu) | Đã thử cú pháp từng lệnh, kể cả 1 GiB. **Số liệu đầy đủ do bạn chạy** (`BENCHMARK_RUNBOOK.md`) |
+| 1 MiB, 100 MiB, 1 GiB; mã hóa và giải mã | ✅ | Đã đo trên Windows và Ubuntu 24.04, 30 lần lặp (`output/<os>/bench/bench_aes128_*.csv`) |
 | Mean, median, SD, CI 95%; bảng phần cứng/OS; governor | ✅ (công cụ) | `scripts/csv_to_stats_table.py`; `bench` in phần cứng và cờ build |
-| Table S-box so với computed S-box | ✅ (code) · 🟡 (số liệu) | Lệnh 2 và 3 của runbook |
-| So sánh với Crypto++ (và OpenSSL) | ✅ (code) · 🟡 (số liệu) | `--ref all` trong `aestool_ref` |
-| Phân tích bộ nhớ, cache, branch prediction | 🟡 | Viết trong báo cáo sau khi có số liệu; ghi rõ phần suy luận so với phần đo |
-| Bảng MB/s và biểu đồ có error bar | 🟡 | `scripts/plot_bench.py` sẵn sàng, đã thử trên CSV thử |
+| Table S-box so với computed S-box | ✅ | `table` và `computed` đo ở 1 MiB và 100 MiB trên cả hai OS (báo cáo mục 4.4); `computed` lệch protocol có chủ ý (2 và 1 thao tác mỗi khối), đã ghi rõ. Không đo thêm cấu hình 4 KiB |
+| So sánh với Crypto++ (và OpenSSL) | ✅ | `--ref all`, có trong các CSV |
+| Phân tích bộ nhớ, cache, branch prediction | ✅ (suy luận) | Báo cáo mục 4.5; bộ nhớ lấy từ mã, cache và nhánh là **suy luận, không đo** (ghi rõ) |
+| Bảng MB/s và biểu đồ có error bar | ✅ | Báo cáo mục 4.3 đến 4.6; `scripts/plot_compare.py` sinh `output/compare/*.png` |
 
 ## 7. Báo cáo
 
 | Yêu cầu | Trạng thái | Ghi chú |
 |---|:---:|---|
-| Phần bảo mật: rò rỉ timing/cache của S-box dạng bảng, T-table, constant-time, tái dùng keystream (two-time pad), CTR chỉ bảo mật, cần MAC, không phải AEAD, AES-NI | ❌ | Báo cáo cũ `docs/lab2-main-report.md` lỗi thời (ghi 18/18 KAT, số đo cũ). Sẽ viết lại sau khi có số liệu |
-| Threat model, misuse, secure defaults, fail-closed, limitations | ❌ | Như trên |
-| So sánh Windows và Linux, bài học | ❌ | Cần số liệu Linux |
-| PDF/DOCX duy nhất cho cả 6 lab (≥ 60 trang) | ❌ | Làm sau khi xong các lab |
+| Phần bảo mật: rò rỉ timing/cache của S-box dạng bảng, T-table, constant-time, tái dùng keystream (two-time pad), CTR chỉ bảo mật, cần MAC, không phải AEAD, AES-NI | ✅ | `docs/lab2-main-report.md` / `.pdf` mục 5.1 đến 5.3 |
+| Threat model, misuse, secure defaults, fail-closed, limitations | ✅ | Mục 5.4 |
+| So sánh Windows và Linux, bài học | ✅ | Mục 4.6, 6.2, 6.3 |
+| Báo cáo Lab 2 (PDF) | 🟡 | Đã viết từ số liệu thật. Cần **sinh lại** sau khi có log Ubuntu 24.04 (bảng bằng chứng đang ghi "chưa có") |
+| PDF/DOCX duy nhất cho cả 6 lab (≥ 60 trang), cam kết liêm chính, khai báo AI, bảng tự chấm | ❌ | Làm sau khi xong các lab |
 
 ## 8. Việc còn lại
 
-1. **Bạn**: chạy benchmark trên Windows rồi Linux theo [BENCHMARK_RUNBOOK.md](BENCHMARK_RUNBOOK.md) (5 lệnh mỗi hệ điều hành).
-2. Khi chạy Linux trên máy thật: sinh lại `env_ubuntu.txt` (governor, phần cứng) và nếu muốn, chạy lại log KAT/ctest/negative để log Ubuntu không phải từ WSL2.
-3. Mình: bảng thống kê, biểu đồ, `lab2-main-report.md` và PDF (chỉ nội dung đề yêu cầu).
-4. Tùy chọn: CI, GUI (đã có `gui/aestool_gui.py` nhưng gọi đường dẫn `Output/` cũ, chưa cập nhật).
+1. **Bạn, trên Windows**: không còn việc benchmark nào.
+2. **Bạn, trên Ubuntu 24.04**: 4 log (KAT, xval, ctest, negative) và dựng lại binary release tĩnh (`LINUX_RUNBOOK.md` mục 7 và 7b).
+3. **Mình**: chạy `python scripts/plot_compare.py`, sinh lại báo cáo và PDF.
+4. Tùy chọn: CI, GUI (đã có `gui/aestool_gui.py` nhưng gọi đường dẫn `Output/` cũ, chưa cập nhật), đo AES-NI/AES-192/256 chính thức.
 
 ## 9. Hạn chế đã biết (ghi trung thực trong báo cáo)
 
 - Bản `table` và `ttable` không constant-time (đúng chủ ý của đề để phân tích rò rỉ cache). `computed` không có bảng tra phụ thuộc bí mật nhưng chưa được kiểm chứng bằng công cụ constant-time.
-- Log Ubuntu hiện tạo trong WSL2, không phải Linux gốc; số đo chính thức phải chạy trên Linux thật cùng máy.
+- Binary `release/ubuntu/aestool_gcc` hiện có được dựng trong WSL2 (Ubuntu 26.04); phải dựng lại trên Ubuntu 24.04 (`LINUX_RUNBOOK.md` mục 7b) để loại bỏ hoàn toàn WSL2.
+- Hai dòng SHA-256 của `kat/vectors.json` trong `env_windows.txt` và `env_ubuntu.txt` khác nhau chỉ do kiểu xuống dòng (CRLF/LF), nội dung giống nhau.
 - Windows Clang chưa được kiểm chứng.
 - Giá trị `computed` ở 1 MiB đo với 2 thao tác mỗi khối (lệch protocol có chủ ý, vì chạy ~1 MB/s).

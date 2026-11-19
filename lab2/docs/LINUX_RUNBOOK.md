@@ -1,6 +1,6 @@
 # Lab 2 — Việc cần làm trên Linux (chạy benchmark, cùng cấu hình với Windows)
 
-Bản rút gọn, chỉ có lệnh bash để chạy trên **Ubuntu LTS thật** (không phải WSL2), cùng máy vật lý với Windows. Chi tiết và lý do nằm ở
+Bản rút gọn, chỉ có lệnh bash để chạy trên **Ubuntu 24.04 LTS cài trực tiếp** (không dùng WSL2), cùng máy vật lý với Windows. Chi tiết và lý do nằm ở
 [BENCHMARK_RUNBOOK.md](BENCHMARK_RUNBOOK.md). Mọi lệnh gõ trực tiếp, không dùng file `.sh`.
 
 ## 1. Cài đặt (một lần)
@@ -72,19 +72,13 @@ $R bench --bits 128 --sizes 100MiB --backends table --ref all --runs 30 --csv $O
 $R bench --bits 128 --sizes 1GiB --backends table --ref all --runs 30 --csv $O/bench_aes128_1GiB.csv
 ```
 
-### Bước 2: so sánh table với computed, cùng cấu hình 4 KiB x 1000 thao tác (~4 phút)
-
-```bash
-$R bench --bits 128 --sizes 4KiB --backends table,computed --ref none --runs 30 --csv $O/bench_sbox_4KiB.csv
-```
-
-### Bước 3: `computed` ở 1 MiB (~2 phút)
+### Bước 2: `computed` ở 1 MiB (~2 phút)
 
 ```bash
 $R bench --bits 128 --sizes 1MiB --backends computed --ops 2 --ref none --runs 30 --csv $O/bench_computed_1MiB.csv
 ```
 
-### Bước 4: `computed` ở 100 MiB (~1,7 giờ; chạy khi không dùng máy)
+### Bước 3: `computed` ở 100 MiB (~1,7 giờ; chạy khi không dùng máy)
 
 ```bash
 $R bench --bits 128 --sizes 100MiB --backends computed --ops 1 --ref none --runs 30 --csv $O/bench_computed_100MiB.csv
@@ -103,7 +97,7 @@ $R bench --bits 256 --sizes 1MiB --backends table,aesni --ref all --runs 30 --cs
 
 Chỉ chạy nếu bạn đã chạy các lệnh này trên Windows. Không đổi `--warmup`, `--ops`, `--budget-mb` ngoài các lệnh trên; không dùng `--threads`.
 
-## 6. Ghi lại môi trường (trên Linux thật, thay file `env_ubuntu.txt` tạo từ WSL2)
+## 6. Ghi lại môi trường (Ubuntu 24.04)
 
 ```bash
 F=output/ubuntu/env_ubuntu.txt
@@ -126,9 +120,52 @@ cat "$F"
 
 So sánh dòng `kat sha256` với `output/windows/env_windows.txt`: phải giống nhau.
 
-## 7. (Tùy chọn) Tạo lại log KAT / xval / ctest / negative trên Linux thật
+## 7. Log bằng chứng trên Ubuntu 24.04 (BẮT BUỘC: log cũ tạo từ WSL2 đã bị xóa)
 
-Các lệnh nằm ở [TEST_EVIDENCE.md](TEST_EVIDENCE.md) (mục 2, 3, 4). Làm bước này nếu muốn log Ubuntu không phải từ WSL2.
+Chạy trong `~/crypto-labs/lab2`, sau khi đã build ở mục 4 (thư mục `build_ubuntu_gcc`).
+
+Log KAT:
+
+```bash
+mkdir -p output/ubuntu
+T=./build_ubuntu_gcc/aestool; R=./build_ubuntu_gcc/aestool_ref
+{ echo "== Known Answer Tests: aestool (Ubuntu 24.04, GCC) =="; echo "date : $(date -u +%Y-%m-%dT%H:%M:%SZ)"; echo "git  : $(git rev-parse --short HEAD)"; echo "kat  : kat/vectors.json  sha256 $(sha256sum kat/vectors.json | cut -c1-64)"; echo; $T --kat kat/vectors.json; echo "[exit code: $?]"; } 2>&1 | tee output/ubuntu/kat_ubuntu_gcc.txt
+```
+
+Log cross-validation (OpenSSL và Crypto++):
+
+```bash
+{ echo "== Cross-validation vs OpenSSL and Crypto++: aestool_ref (Ubuntu 24.04, GCC) =="; echo "date : $(date -u +%Y-%m-%dT%H:%M:%SZ)"; echo "git  : $(git rev-parse --short HEAD)"; echo; $R xval --ref all --cases 200; echo "[exit code: $?]"; } 2>&1 | tee output/ubuntu/xval_ubuntu_gcc.txt
+```
+
+Log `ctest` (dùng thư mục build ở mục 4):
+
+```bash
+cd build_ubuntu_gcc
+{ echo "== ctest: GCC on Ubuntu 24.04 (Release) =="; echo "date : $(date -u +%Y-%m-%dT%H:%M:%SZ)"; echo "git  : $(git rev-parse --short HEAD)"; echo "g++  : $(g++ --version | head -1)"; echo "cmake: $(cmake --version | head -1)"; echo "openssl : $(dpkg -s libssl-dev | grep ^Version)"; echo "cryptopp: $(dpkg -s libcrypto++-dev | grep ^Version)"; echo "catch2  : $(dpkg -s catch2 2>/dev/null | grep ^Version)"; echo; ctest --output-on-failure; echo; echo "-- unit tests (Catch2) summary:"; ./aes_tests | tail -3; } 2>&1 | tee ../output/ubuntu/ctest_ubuntu_gcc.txt
+cd ..
+```
+
+Log test âm tính: mở [TEST_EVIDENCE.md](TEST_EVIDENCE.md), mục 4, **sao chép nguyên khối lệnh** (đã đặt sẵn `T=./build_ubuntu_gcc/aestool`, `OUT=output/ubuntu/negative_ubuntu_gcc.txt`) và dán vào terminal.
+Kiểm tra sau khi chạy xong:
+
+```bash
+rm -r neg_tmp
+grep -h "^\[exit code" output/ubuntu/negative_ubuntu_gcc.txt | sort | uniq -c    # mong đợi: 14 x 0, 3 x 1, 4 x 2, 10 x 3, 4 x 4, 1 x 5
+grep -c "WRITTEN (BAD)" output/ubuntu/negative_ubuntu_gcc.txt                  # mong đợi: 0
+```
+
+## 7b. Binary release tĩnh dựng trên Ubuntu 24.04 (thay binary cũ dựng trong WSL2)
+
+```bash
+mkdir build_rel && cd build_rel
+cmake .. -DCMAKE_BUILD_TYPE=Release -DLAB2_STATIC_RUNTIME=ON
+cmake --build .
+ctest --output-on-failure
+cp aestool ../release/ubuntu/aestool_gcc
+cd .. && file release/ubuntu/aestool_gcc | cut -c1-120      # mong đợi: statically linked
+rm -r build_rel
+```
 
 ## 8. Đưa kết quả về repo
 
