@@ -1,7 +1,6 @@
 # Lab 3 — Đối chiếu yêu cầu (đủ / thiếu / việc còn lại)
 
-Đối chiếu với đề Lab 3 trong `Cryptography_Labs.docx` và các quy tắc chung của đề. Trạng thái được kiểm tra bằng cách đọc code và **chạy thật** trên Windows (MinGW-w64 GCC 16.2, MSVC 19.51):
-`ctest` 3/3, KAT 124/124, unit test 45 case (855 assertion), CLI end-to-end 38 kiểm tra. **Ubuntu 24.04 chưa chạy** (xem `UBUNTU_FINISH.md`).
+Đối chiếu với đề Lab 3 trong `Cryptography_Labs.docx` và các quy tắc chung của đề. Trạng thái được kiểm tra bằng cách đọc code và **chạy thật** trên Windows (MinGW-w64 GCC 16.2, MSVC 19.51) và Ubuntu 24.04 (GCC 13.3): `ctest` 3/3 trên cả ba môi trường, KAT 124/124, unit test 45 case (855 assertion), CLI end-to-end 38 kiểm tra, test âm tính giống hệt nhau (29/3/10/20 lần exit 0/1/2/3). Benchmark đã chạy trên Windows và Ubuntu (30 lần lặp mỗi ca).
 
 Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ chưa có · ➖ không làm (có chủ ý).
 
@@ -34,19 +33,19 @@ Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ ch�
 | Sửa header envelope → thất bại | ✅ | mục G (iv, wrapped_key, modulus, trường thêm, header_len, magic, cắt cụt) |
 | Kiểm tra ciphertext hỏng, label sai, cỡ khóa không hỗ trợ, mã hóa sai | ✅ | mục H, I, J |
 | Thông báo lỗi rõ, không rò rỉ; fail closed khi phân tích | ✅ | một thông báo chung `Error: decryption failed.`; không để lại tệp đầu ra |
-| Unit test tự động; `ctest` pass trên Windows và Linux | 🟡 | Windows: 3/3 (MinGW và MSVC). Ubuntu: chờ chạy |
+| Unit test tự động; `ctest` pass trên Windows và Linux | ✅ | Windows (MinGW, MSVC) và Ubuntu 24.04: 3/3 |
 | KAT (`--kat vectors.json`, PASS/FAIL từng ca) từ nguồn chính thức | ✅ | Wycheproof (OAEP) và NIST CAVP (GCM); `kat/SOURCES.md` |
 | Đối chiếu chéo với thư viện khác | ✅ | OpenSSL giải mã bản mã Crypto++ (có label); `docs/TEST_EVIDENCE.md` mục K |
-| Log bằng chứng theo hệ điều hành | 🟡 | Windows (MinGW, MSVC): đủ kat, ctest, negative, env. Ubuntu: chờ chạy |
+| Log bằng chứng theo hệ điều hành | ✅ | kat, ctest, negative, env cho Windows (MinGW, MSVC) và Ubuntu 24.04 |
 
 ## 3. Build và đóng gói (rubric: build và tài liệu 5)
 
 | Yêu cầu | Trạng thái | Ghi chú |
 |---|:---:|---|
-| CMake, out-of-source, 4 lệnh | ✅ | đã chạy trên MinGW và MSVC; Ubuntu chờ chạy |
+| CMake, out-of-source, 4 lệnh | ✅ | đã chạy trên MinGW, MSVC và Ubuntu 24.04 |
 | Không phải sửa đường dẫn | ✅ | không có đường dẫn cứng; thư viện tự tìm |
 | README: phụ thuộc kèm phiên bản, cài đặt, build, ví dụ CLI, hạn chế | ✅ | `README.md` |
-| Binary Windows và Linux | 🟡 | Windows: `release/windows/` (MinGW, MSVC, tĩnh). Ubuntu: dựng trên 24.04 (chờ chạy) |
+| Binary Windows và Linux | ✅ | `release/windows/` (MinGW, MSVC, tĩnh) và `release/ubuntu/` (tĩnh, dựng trên 24.04) |
 | CLI chuẩn chung (`--in/--text --out --encode --verbose`...) | ✅ | `--threads` không áp dụng cho `rsatool` (không có tác vụ song song) |
 | Ngẫu nhiên an toàn, không `rand()` | ✅ | `AutoSeededRandomPool` (đã grep) |
 
@@ -54,18 +53,18 @@ Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ ch�
 
 | Yêu cầu | Trạng thái | Ghi chú |
 |---|:---:|---|
-| Thời gian sinh khóa, mã hóa, giải mã RSA; so sánh 3072 và 4096 | ✅ (công cụ) · 🟡 (số liệu) | `rsabench --suites keygen,rsa`; **bạn chạy** theo `BENCHMARK_RUNBOOK.md` |
-| Thông lượng AES-GCM; hybrid 1 KiB / 1 MiB / 100 MiB | ✅ (công cụ) · 🟡 (số liệu) | `--suites aesgcm,hybrid` |
+| Thời gian sinh khóa, mã hóa, giải mã RSA; so sánh 3072 và 4096 | ✅ | `output/<os>/bench/bench_keygen.csv`, `bench_rsa.csv` |
+| Thông lượng AES-GCM; hybrid 1 KiB / 1 MiB / 100 MiB | ✅ | `bench_aesgcm.csv`, `bench_hybrid.csv` |
 | Protocol: warm-up, khối thao tác, 30 lần lặp, mean/median/SD/CI95 | ✅ | `rsabench` + `scripts/analyze_bench.py`; độ lệch (keygen 1 khóa mỗi lần lặp, khối ~1,5 s) ghi rõ |
 | Bảng phần cứng/OS, biểu đồ có thanh sai số | ✅ (công cụ) | `bench_env.txt`, `env_*.txt`, 5 biểu đồ |
-| Phân tích (giải mã so với mã hóa RSA, cỡ khóa, ưu thế hybrid, vì sao đối xứng áp đảo, bộ nhớ và CPU) | ❌ | viết trong báo cáo sau khi có số liệu |
+| Phân tích (giải mã so với mã hóa RSA, cỡ khóa, ưu thế hybrid, vì sao đối xứng áp đảo, bộ nhớ và CPU) | ✅ | báo cáo mục 5.4 (phần ngoại suy và suy luận được ghi rõ) |
 
 ## 5. Báo cáo (rubric: 10)
 
 | Yêu cầu | Trạng thái | Ghi chú |
 |---|:---:|---|
-| Thảo luận bắt buộc: vì sao OAEP an toàn (IND-CCA2), vì sao PKCS#1 v1.5 không an toàn, giới hạn `mLen`, vì sao RSA không mã hóa file lớn trực tiếp | ❌ | chưa viết |
-| Phần bảo mật chung (threat model, misuse, secure defaults, fail-closed, limitations), so sánh Windows và Ubuntu, bài học | ❌ | chưa viết |
+| Thảo luận bắt buộc: vì sao OAEP an toàn (IND-CCA2), vì sao PKCS#1 v1.5 không an toàn, giới hạn `mLen`, vì sao RSA không mã hóa file lớn trực tiếp | ✅ | `docs/lab3-main-report.pdf` mục 3 |
+| Phần bảo mật chung (threat model, misuse, secure defaults, fail-closed, limitations), so sánh Windows và Ubuntu, bài học | ✅ | báo cáo mục 5.6, 6, 7 |
 | PDF/DOCX duy nhất cho cả 6 lab (≥ 60 trang) | ❌ | làm sau khi xong các lab |
 
 ## 6. Bonus
@@ -77,9 +76,9 @@ Ký hiệu: ✅ đạt · 🟡 đạt một phần / cần bạn làm · ❌ ch�
 
 ## 7. Việc còn lại
 
-1. **Bạn, trên Windows**: chạy 4 lệnh benchmark (`BENCHMARK_RUNBOOK.md` mục 2).
-2. **Bạn, trên Ubuntu 24.04**: làm theo `UBUNTU_FINISH.md` (build, log, binary tĩnh, benchmark).
-3. **Mình**: biểu đồ, bảng thống kê, báo cáo Lab 3 và PDF.
+1. Không còn việc chạy nào cho Lab 3.
+2. Hạn chế của số liệu Ubuntu: governor ghi trong `env_ubuntu.txt` là `powersave`; nếu muốn đúng protocol, đặt `performance` và chạy lại 4 lệnh benchmark.
+3. Báo cáo gộp 6 lab (≥ 60 trang) kèm cam kết liêm chính, khai báo AI và bảng tự chấm: làm sau khi xong các lab.
 
 ## 8. Hạn chế đã biết
 
